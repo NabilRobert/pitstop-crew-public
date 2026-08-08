@@ -1,6 +1,6 @@
 # Recommendation Agent — "Rico"
 
-**Model:** GPT-5 (or Gemini equivalent) — needs to produce prose a human trusts, so the stronger tier earns its keep here
+**Model:** `gpt-5.4`, via Sumopod (OpenAI-compatible gateway) — needs to produce prose a human trusts, so the stronger tier earns its keep here
 **Role:** Turns analysis into plain-language, actionable suggestions
 
 ## Purpose

@@ -1,6 +1,6 @@
 # Critic Agent
 
-**Model:** GPT-5 — deliberately the strongest tier available, not a cheaper one. A critic reviewing GPT-5 output needs to be at least as capable as what it's reviewing, or it just rubber-stamps things it can't evaluate.
+**Model:** `gpt-5.4`, via Sumopod (OpenAI-compatible gateway) — deliberately the strongest tier available, not a cheaper one. A critic reviewing `gpt-5.4` output needs to be at least as capable as what it's reviewing, or it just rubber-stamps things it can't evaluate.
 **Role:** Cross-cutting review, not a pipeline step
 
 ## Purpose

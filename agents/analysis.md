@@ -1,6 +1,6 @@
 # Analysis Agent — "Anna"
 
-**Model:** GPT-mini
+**Model:** `gpt-5-mini`, via Sumopod (OpenAI-compatible gateway)
 **Role:** Trend / anomaly detection + audience segment performance
 
 ## Purpose

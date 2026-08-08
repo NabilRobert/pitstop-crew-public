@@ -1,6 +1,6 @@
 # Summary Agent — "Sammy"
 
-**Model:** GPT-5
+**Model:** `gpt-5.4`, via Sumopod (OpenAI-compatible gateway)
 **Role:** Periodic / on-demand digest
 
 ## Purpose

@@ -1,14 +1,16 @@
-"""Thin OpenAI client wrapper — kept swappable so agent logic can be tested
-with a fake client, and so a model/provider change is a one-line edit."""
+"""OpenAI-SDK-shaped client wrapper, routed through Sumopod (OpenAI-
+compatible gateway) rather than OpenAI directly. Kept swappable so agent
+logic can be tested with a fake client, and so a model/provider change is
+a one-line edit."""
 
 import json
 
 from openai import OpenAI
 
-from app.config import OPENAI_API_KEY
+from app.config import SUMOPOD_API_KEY, SUMOPOD_BASE_URL
 
 MODEL_MINI = "gpt-5-mini"  # Orca, Anna — see agents/*.md for the reasoning
-MODEL_FULL = "gpt-5"       # Rico, Sammy, Critic
+MODEL_FULL = "gpt-5.4"     # Rico, Sammy, Critic
 
 _client: OpenAI | None = None
 
@@ -16,9 +18,9 @@ _client: OpenAI | None = None
 def get_client() -> OpenAI:
     global _client
     if _client is None:
-        if not OPENAI_API_KEY:
-            raise RuntimeError("OPENAI_API_KEY not set — add it to .env")
-        _client = OpenAI(api_key=OPENAI_API_KEY)
+        if not SUMOPOD_API_KEY:
+            raise RuntimeError("sumopod-api-key not set — add it to .env")
+        _client = OpenAI(api_key=SUMOPOD_API_KEY, base_url=SUMOPOD_BASE_URL)
     return _client
 
 

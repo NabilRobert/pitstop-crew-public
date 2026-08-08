@@ -22,8 +22,12 @@ GADS_LOGIN_CUSTOMER_ID = os.environ.get("gads-login-customer-id")  # the MCC id
 # under the MCC. Not yet confirmed which applies here.
 GADS_TARGET_CUSTOMER_ID = os.environ.get("gads-target-customer-id", GADS_LOGIN_CUSTOMER_ID)
 
-# Added by later tasks — not required yet.
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+# AI layer — routed through Sumopod (OpenAI-compatible gateway), not OpenAI
+# directly. Host confirmed as ai.sumopod.com; the exact path is NOT
+# confirmed from official docs (sparse at time of writing) — SUMOPOD_BASE_URL
+# is overridable in .env in case the default guess below is wrong.
+SUMOPOD_API_KEY = os.environ.get("sumopod-api-key")
+SUMOPOD_BASE_URL = os.environ.get("SUMOPOD_BASE_URL", "https://ai.sumopod.com/v1")
 
 # Email — Resend primary, Gmail SMTP fallback (PROJECT.md → Automation).
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")

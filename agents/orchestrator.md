@@ -1,6 +1,6 @@
 # Orchestrator Agent — "Orca"
 
-**Model:** GPT-mini (or Gemini equivalent) — simple dispatch logic, doesn't need a strong-tier model
+**Model:** `gpt-5-mini`, via Sumopod (OpenAI-compatible gateway) — simple dispatch logic, doesn't need a strong-tier model
 **Role:** Coordinator
 
 ## Purpose

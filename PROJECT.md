@@ -75,7 +75,7 @@ The critic doesn't retrain any model — API-based LLMs are stateless, nothing a
 
 ### Cost guardrails (decided)
 Recommendation, Summary, and Critic all run on the expensive tier daily, indefinitely, unattended — worth a floor under it:
-- **OpenAI platform-level budget cap + alert** (Settings → Billing → Usage limits) — a monthly spend cap and notification threshold, set once in the dashboard, no code required
+- **Provider-level budget cap + alert** — now routed through Sumopod (OpenAI-compatible gateway, see Tech Stack Decisions) rather than OpenAI directly, so this cap needs to be set in Sumopod's own dashboard, not OpenAI's. Not yet confirmed whether Sumopod exposes an equivalent spend-cap feature — worth checking.
 - **Per-run cost logging** — each pipeline run's token usage (from the API response) is logged as part of the per-run log already decided under Automation, so cost trends are visible over time, not just the monthly total
 - **Hard cap on critic revision passes** (e.g. max 2 revisions per agent per run) — prevents a pathological critique↔revise loop from spiraling before the monthly budget cap would even catch it
 - **Data storage:** needs a database to store historical pulls, not just live queries each time — start with SQLite for simplicity, can migrate to Postgres later if needed.
