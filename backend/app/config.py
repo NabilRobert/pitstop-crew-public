@@ -15,7 +15,12 @@ GADS_DEVELOPER_TOKEN = os.environ.get("gads-api-token")
 GADS_CLIENT_ID = os.environ.get("client-id")
 GADS_CLIENT_SECRET = os.environ.get("client-secret")
 GADS_REFRESH_TOKEN = os.environ.get("gads-refresh-token")
-GADS_LOGIN_CUSTOMER_ID = os.environ.get("gads-login-customer-id")
+GADS_LOGIN_CUSTOMER_ID = os.environ.get("gads-login-customer-id")  # the MCC id
+# The account actually being queried. Defaults to the MCC id, which is only
+# correct if the MCC itself is the working account — set this separately in
+# .env (gads-target-customer-id) if the real account is a distinct client
+# under the MCC. Not yet confirmed which applies here.
+GADS_TARGET_CUSTOMER_ID = os.environ.get("gads-target-customer-id", GADS_LOGIN_CUSTOMER_ID)
 
 # Added by later tasks — not required yet.
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
