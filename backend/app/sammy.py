@@ -16,10 +16,15 @@ claims).
 {SHARED_GUARDRAILS}"""
 
 
-def summarize(analysis: str, recommendation: str, period: str) -> str:
+def summarize(analysis: str, recommendation: str, period: str, critic_feedback: str | None = None) -> str:
     user_prompt = (
         f"Period: {period}\n\nAnalysis:\n{analysis}\n\nRecommendation:\n{recommendation}"
     )
+    if critic_feedback:
+        user_prompt += (
+            f"\n\nA critic reviewed your previous summary and found:\n{critic_feedback}"
+            f"\n\nRevise your summary to address this."
+        )
     return complete(MODEL_FULL, SYSTEM_PROMPT, user_prompt)
 
 

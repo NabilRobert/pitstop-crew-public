@@ -50,7 +50,11 @@ CREATE TABLE IF NOT EXISTS segment_performance (
 
 -- Output from every AI sub-agent (Anna/analysis, Rico/recommendation,
 -- Sammy/summary, critic). Critic rows link back to the output they
--- critiqued via `critiques_id`, and `status` tracks the revise loop.
+-- critiqued via `critiques_id`; a revised draft links back to the draft
+-- it revised via `revises_id` — the two are distinct so the full chain
+-- (original draft -> critique -> revision) is reconstructable for the
+-- "why trail" Standout Feature, not just the latest content overwritten
+-- in place. `status` tracks where a row sits in that chain.
 -- `outcome`/`outcome_checked_at` back the retrospective accuracy
 -- tracking Standout Feature — set later, once real outcome data exists,
 -- not at generation time.
@@ -62,6 +66,7 @@ CREATE TABLE IF NOT EXISTS ai_outputs (
     campaign_id         INTEGER REFERENCES campaigns(id),   -- NULL if account-wide
     segment_id          INTEGER REFERENCES segments(id),    -- NULL if not segment-specific
     critiques_id        INTEGER REFERENCES ai_outputs(id),  -- set only on critic rows
+    revises_id          INTEGER REFERENCES ai_outputs(id),  -- set only on revised drafts -> the draft it revised
     content             TEXT NOT NULL,
     status              TEXT NOT NULL DEFAULT 'draft' CHECK (status IN (
                             'draft', 'revised', 'approved', 'flagged'

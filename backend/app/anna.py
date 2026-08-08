@@ -14,5 +14,11 @@ have no write access to live campaigns; you only read the data provided.
 {SHARED_GUARDRAILS}"""
 
 
-def analyze(performance_data: str) -> str:
-    return complete(MODEL_MINI, SYSTEM_PROMPT, performance_data)
+def analyze(performance_data: str, critic_feedback: str | None = None) -> str:
+    user_prompt = performance_data
+    if critic_feedback:
+        user_prompt += (
+            f"\n\nA critic reviewed your previous analysis and found:\n{critic_feedback}"
+            f"\n\nRevise your analysis to address this."
+        )
+    return complete(MODEL_MINI, SYSTEM_PROMPT, user_prompt)
