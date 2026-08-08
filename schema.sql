@@ -2,7 +2,7 @@
 -- Source-agnostic: `data_source` on campaigns lets the same tables serve
 -- both live and demo data, switched by the UI toggle described in PROJECT.md.
 
-CREATE TABLE campaigns (
+CREATE TABLE IF NOT EXISTS campaigns (
     id                INTEGER PRIMARY KEY,
     google_campaign_id TEXT,                 -- NULL for demo campaigns
     name              TEXT NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE campaigns (
 );
 
 -- Daily campaign-level performance (impressions, clicks, cost, conversions).
-CREATE TABLE campaign_performance (
+CREATE TABLE IF NOT EXISTS campaign_performance (
     id             INTEGER PRIMARY KEY,
     campaign_id    INTEGER NOT NULL REFERENCES campaigns(id),
     date           DATE NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE campaign_performance (
 
 -- Dimension table: one row per distinct segment value (device, geography,
 -- demographic bucket, in-market/affinity/custom audience).
-CREATE TABLE segments (
+CREATE TABLE IF NOT EXISTS segments (
     id            INTEGER PRIMARY KEY,
     segment_type  TEXT NOT NULL CHECK (segment_type IN (
                       'age_range', 'gender', 'household_income',
@@ -36,7 +36,7 @@ CREATE TABLE segments (
 );
 
 -- Daily performance broken out by segment, per campaign.
-CREATE TABLE segment_performance (
+CREATE TABLE IF NOT EXISTS segment_performance (
     id             INTEGER PRIMARY KEY,
     campaign_id    INTEGER NOT NULL REFERENCES campaigns(id),
     segment_id     INTEGER NOT NULL REFERENCES segments(id),
@@ -54,7 +54,7 @@ CREATE TABLE segment_performance (
 -- `outcome`/`outcome_checked_at` back the retrospective accuracy
 -- tracking Standout Feature — set later, once real outcome data exists,
 -- not at generation time.
-CREATE TABLE ai_outputs (
+CREATE TABLE IF NOT EXISTS ai_outputs (
     id                  INTEGER PRIMARY KEY,
     agent_type          TEXT NOT NULL CHECK (agent_type IN (
                             'analysis', 'recommendation', 'summary', 'critic'
@@ -74,7 +74,7 @@ CREATE TABLE ai_outputs (
 -- On-demand Q&A against Rico or Sammy, tied to the report being asked
 -- about. Backs the Ask feature (agents/recommendation.md, agents/summary.md)
 -- and the Time Machine + Ask Standout Feature.
-CREATE TABLE ask_log (
+CREATE TABLE IF NOT EXISTS ask_log (
     id          INTEGER PRIMARY KEY,
     output_id   INTEGER NOT NULL REFERENCES ai_outputs(id),
     agent_type  TEXT NOT NULL CHECK (agent_type IN ('recommendation', 'summary')),
@@ -87,7 +87,7 @@ CREATE TABLE ask_log (
 -- date. Generation stays a pure function of (date, seed, forced_state),
 -- so this table is the only place state gets overridden from the default
 -- Markov-chain draw.
-CREATE TABLE demo_state_overrides (
+CREATE TABLE IF NOT EXISTS demo_state_overrides (
     date          DATE PRIMARY KEY,
     forced_state  TEXT NOT NULL CHECK (forced_state IN ('good', 'bad', 'standstill', 'volatile')),
     set_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -96,7 +96,7 @@ CREATE TABLE demo_state_overrides (
 -- One row per cron run (daily pipeline, weekly report, or weekly feedback
 -- job). Backs per-run logging, the system health page, dead-man's-switch
 -- checks (MAX(finished_at) WHERE status='success'), and cost guardrails.
-CREATE TABLE pipeline_runs (
+CREATE TABLE IF NOT EXISTS pipeline_runs (
     id             INTEGER PRIMARY KEY,
     run_type       TEXT NOT NULL CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback')),
     started_at     TIMESTAMP NOT NULL,
@@ -107,8 +107,8 @@ CREATE TABLE pipeline_runs (
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_campaign_performance_date ON campaign_performance(date);
-CREATE INDEX idx_segment_performance_date ON segment_performance(date);
-CREATE INDEX idx_ai_outputs_campaign ON ai_outputs(campaign_id);
-CREATE INDEX idx_ask_log_output ON ask_log(output_id);
-CREATE INDEX idx_pipeline_runs_type_status ON pipeline_runs(run_type, status);
+CREATE INDEX IF NOT EXISTS idx_campaign_performance_date ON campaign_performance(date);
+CREATE INDEX IF NOT EXISTS idx_segment_performance_date ON segment_performance(date);
+CREATE INDEX IF NOT EXISTS idx_ai_outputs_campaign ON ai_outputs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_ask_log_output ON ask_log(output_id);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_type_status ON pipeline_runs(run_type, status);
