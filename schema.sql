@@ -67,6 +67,10 @@ CREATE TABLE IF NOT EXISTS ai_outputs (
     segment_id          INTEGER REFERENCES segments(id),    -- NULL if not segment-specific
     critiques_id        INTEGER REFERENCES ai_outputs(id),  -- set only on critic rows
     revises_id          INTEGER REFERENCES ai_outputs(id),  -- set only on revised drafts -> the draft it revised
+    report_date         DATE,                  -- the demo/live "as-of" date this output concerns —
+                                                 -- NOT the same as created_at, which is wall-clock
+                                                 -- insert time and can drift from report_date once
+                                                 -- Time Machine fast-forwards demo mode ahead of "today"
     content             TEXT NOT NULL,
     status              TEXT NOT NULL DEFAULT 'draft' CHECK (status IN (
                             'draft', 'revised', 'approved', 'flagged'

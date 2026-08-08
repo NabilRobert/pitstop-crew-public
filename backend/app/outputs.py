@@ -1,5 +1,7 @@
 """CRUD helpers over ai_outputs."""
 
+from datetime import date
+
 from app.db import get_connection
 
 
@@ -11,15 +13,19 @@ def insert_output(
     segment_id: int | None = None,
     critiques_id: int | None = None,
     revises_id: int | None = None,
+    report_date: date | None = None,
 ) -> int:
     with get_connection() as conn:
         cur = conn.execute(
             """
             INSERT INTO ai_outputs
-                (agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                (agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id, report_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id),
+            (
+                agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id,
+                report_date.isoformat() if report_date else None,
+            ),
         )
         return cur.lastrowid
 
