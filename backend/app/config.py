@@ -19,6 +19,12 @@ GADS_LOGIN_CUSTOMER_ID = os.environ.get("gads-login-customer-id")
 
 # Added by later tasks — not required yet.
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
+# Email — Resend primary, Gmail SMTP fallback (PROJECT.md → Automation).
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "reports@example.com")
+REPORT_RECIPIENT_EMAIL = os.environ.get("REPORT_RECIPIENT_EMAIL")
+GMAIL_USER = os.environ.get("GMAIL_USER")
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")  # Gmail app password, not the account password
 
 DATA_SOURCE = os.environ.get("DATA_SOURCE", "demo")  # "demo" or "live"
