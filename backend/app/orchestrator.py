@@ -38,6 +38,7 @@ def _run_agent_chain(target_date: date, period: str, days: int) -> dict:
         lambda feedback: anna.analyze(performance_data, feedback),
         performance_data,
         report_date=target_date,
+        period=period,
     )
     analysis_content = outputs.get_output(analysis_id)["content"]
 
@@ -46,6 +47,7 @@ def _run_agent_chain(target_date: date, period: str, days: int) -> dict:
         lambda feedback: rico.recommend(analysis_content, feedback),
         performance_data,
         report_date=target_date,
+        period=period,
     )
     recommendation_content = outputs.get_output(recommendation_id)["content"]
 
@@ -54,6 +56,7 @@ def _run_agent_chain(target_date: date, period: str, days: int) -> dict:
         lambda feedback: sammy.summarize(analysis_content, recommendation_content, period, feedback),
         performance_data,
         report_date=target_date,
+        period=period,
     )
 
     return {

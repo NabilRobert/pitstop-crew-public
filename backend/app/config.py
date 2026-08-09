@@ -40,5 +40,6 @@ GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")  # Gmail app password,
 DATA_SOURCE = os.environ.get("DATA_SOURCE", "demo")  # "demo" or "live"
 
 # Frontend origin, for CORS (see PROJECT.md — domain deferred, so this
-# defaults to localhost for dev; set the real Vercel URL in .env at deploy time).
-FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000")
+# defaults to localhost for dev; set the real Vercel URL in .env at deploy
+# time). Vite's default dev port is 5173, not 3000.
+FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173")

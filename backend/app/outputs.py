@@ -14,18 +14,19 @@ def insert_output(
     critiques_id: int | None = None,
     revises_id: int | None = None,
     report_date: date | None = None,
+    period: str | None = None,
 ) -> int:
     with get_connection() as conn:
         cur = conn.execute(
             """
             INSERT INTO ai_outputs
-                (agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id, report_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                (agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id, report_date, period)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
                 agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id,
-                report_date.isoformat() if report_date else None,
+                report_date.isoformat() if report_date else None, period,
             ),
         )
         return cur.fetchone()["id"]
@@ -39,6 +40,22 @@ def update_status(output_id: int, status: str) -> None:
 def get_output(output_id: int) -> dict | None:
     with get_connection() as conn:
         row = conn.execute("SELECT * FROM ai_outputs WHERE id = %s", (output_id,)).fetchone()
+        return dict(row) if row else None
+
+
+def get_latest_by_agent(agent_type: str, period: str) -> dict | None:
+    """Most recent finalized (approved/flagged) output for an agent+period —
+    backs "today's report" on the dashboard."""
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT * FROM ai_outputs
+            WHERE agent_type = %s AND period = %s AND status IN ('approved', 'flagged')
+            ORDER BY report_date DESC, created_at DESC
+            LIMIT 1
+            """,
+            (agent_type, period),
+        ).fetchone()
         return dict(row) if row else None
 
 

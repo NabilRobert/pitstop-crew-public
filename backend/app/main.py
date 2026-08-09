@@ -10,8 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app import ask as ask_module
-from app import outputs, pipeline_runs
-from app.config import FRONTEND_ORIGIN
+from app import outputs, pipeline_runs, reporting
+from app.config import DATA_SOURCE, FRONTEND_ORIGIN
 from app.demo import time_machine
 from app.demo.markov import STATES
 
@@ -38,6 +38,29 @@ def system_health():
         "last_successful_daily_run": last_daily,
         "recent_runs": pipeline_runs.get_recent_runs(limit=20),
     }
+
+
+@app.get("/config")
+def get_config():
+    """Backs the Demo Mode badge — always visible when active, per PROJECT.md."""
+    return {"data_source": DATA_SOURCE}
+
+
+@app.get("/campaigns")
+def list_campaigns():
+    return reporting.list_campaigns()
+
+
+@app.get("/performance")
+def get_performance(days: int = 30):
+    return reporting.get_performance_series(days=days)
+
+
+@app.get("/reports/latest")
+def get_latest_report(period: str = "daily"):
+    if period not in ("daily", "weekly"):
+        raise HTTPException(status_code=400, detail="period must be 'daily' or 'weekly'")
+    return reporting.get_latest_report(period)
 
 
 @app.get("/outputs/{output_id}")

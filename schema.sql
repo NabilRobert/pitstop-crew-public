@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS ai_outputs (
                                                  -- NOT the same as created_at, which is wall-clock
                                                  -- insert time and can drift from report_date once
                                                  -- Time Machine fast-forwards demo mode ahead of "today"
+    period              TEXT CHECK (period IN ('daily', 'weekly')),  -- which cadence produced this row;
+                                                 -- NULL was possible pre-migration, always set going forward
     content             TEXT NOT NULL,
     status              TEXT NOT NULL DEFAULT 'draft' CHECK (status IN (
                             'draft', 'revised', 'approved', 'flagged'
@@ -121,5 +123,6 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
 CREATE INDEX IF NOT EXISTS idx_campaign_performance_date ON campaign_performance(date);
 CREATE INDEX IF NOT EXISTS idx_segment_performance_date ON segment_performance(date);
 CREATE INDEX IF NOT EXISTS idx_ai_outputs_campaign ON ai_outputs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_ai_outputs_period_agent ON ai_outputs(period, agent_type, report_date);
 CREATE INDEX IF NOT EXISTS idx_ask_log_output ON ask_log(output_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_type_status ON pipeline_runs(run_type, status);
