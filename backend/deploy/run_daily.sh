@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Crontab target — see PROJECT.md → Automation ("plain crontab, 6am") and
-# deploy/README.md for the full setup. Wraps run_daily.py with logging,
-# since cron discards stdout/stderr unless redirected.
+# deploy/README.md for the full setup. Wraps the compiled runDaily.js with
+# logging, since cron discards stdout/stderr unless redirected. Runs the
+# built output (dist/), not tsx-on-the-fly, for production robustness —
+# `npm run build` must have been run first (see README.md).
 
 set -euo pipefail
 
@@ -12,8 +14,8 @@ LOG_FILE="$LOG_DIR/run_daily.log"
 mkdir -p "$LOG_DIR"
 
 {
-    echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") — starting run_daily ==="
+    echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") — starting runDaily ==="
     cd "$BACKEND_DIR"
-    "$BACKEND_DIR/.venv/bin/python3" scripts/run_daily.py
-    echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") — run_daily finished ==="
+    node dist/scripts/runDaily.js
+    echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") — runDaily finished ==="
 } >> "$LOG_FILE" 2>&1

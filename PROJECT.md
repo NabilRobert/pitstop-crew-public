@@ -33,25 +33,18 @@ The "save the types of users attracted to the ad" feature should be reframed and
 - An MCC was set up and the working account linked to it
 
 ## Auth / API Setup Progress
-1. ✅ Developer token obtained via API Center inside the MCC (Tools & Settings → Setup → API Center). Likely at Test account access level pending Google's Basic Access review.
+1. ✅ Developer token obtained via API Center inside the MCC (Tools & Settings → Setup → API Center). Test account access level, pending Google's Basic Access review — **still pending**; live calls currently fail with `DEVELOPER_TOKEN_NOT_APPROVED`, confirmed against the real API (see "Live mode" below).
 2. ✅ Intended Use statement submitted, describing this as a personal/single-account reporting + AI recommendation tool, read-only, no automated bid/budget changes.
-3. ✅ OAuth Client ID + Secret created in Google Cloud Console (APIs & Services → Credentials → OAuth client ID), type **Web application**.
-   - Authorized JavaScript origins: `http://localhost:8080` (placeholder, update to real domain at deploy time)
-   - Authorized redirect URIs: `http://localhost:8080/oauth2callback` (placeholder, update at deploy time)
-4. ⬜ Refresh token — script provided (`generate_refresh_token.py`) using `google-auth-oauthlib`'s `InstalledAppFlow`. Not yet run/completed. User has the developer token and other credentials in hand, to be provided when live integration work starts.
+3. ✅ OAuth Client ID + Secret created in Google Cloud Console (APIs & Services → Credentials → OAuth client ID), type **Web application**. Note from actually going through this: the console UI has moved to a "Google Auth Platform" layout (Overview / Branding / **Audience** / Clients / Data Access tabs) — Test users now live under **Audience**, not a section on the client page itself. The OAuth consent screen defaults to "Testing" status, which blocks *everyone*, including the developer, until their account is added there.
+   - Authorized redirect URIs: needs the *exact* URI the auth flow requests, trailing slash included (`http://localhost:8080/`) — a mismatch here is `Error 400: redirect_uri_mismatch`, the most common snag in this whole flow.
+4. ✅ Refresh token obtained — `backend/scripts/generateRefreshToken.ts` (`google-auth-library`'s `OAuth2Client`), run interactively by the user (this step can't be done by an AI agent — it's a real browser OAuth consent tied to a personal Google account). Uses `access_type=offline` + `prompt=consent` to force Google to re-issue a token even if an earlier attempt already completed a grant (Google only issues one on the very first grant otherwise). `gads-refresh-token` and `gads-login-customer-id` are both in `.env`.
+5. ✅ Account access confirmed — the Google account used for OAuth needed to be explicitly added as a user on the MCC (`Tools & Settings → Access and security`) before the API stopped returning `NOT_ADS_USER`.
 
-### Target `google-ads.yaml` structure
-```yaml
-developer_token: "..."
-client_id: "..."
-client_secret: "..."
-refresh_token: "..."
-login_customer_id: "..."   # MCC ID, no dashes
-```
+No `google-ads.yaml` file — credentials load straight from `.env` via the client library's config-object constructor, keeping every secret in the one place the rest of the app already uses (see `backend/src/googleAdsClient.ts`).
 
 ## Tech Stack Decisions
-- **Backend language: Python** — the only client library Google officially maintains alongside Java/PHP/Ruby/.NET/Perl. No official Node.js library exists (community one available but not first choice here).
-- **Frontend:** separate, static (HTML/JS or a framework), deployed on **Vercel** — calls the Python backend, never calls Google Ads API directly, and never holds the client secret or refresh token.
+- **Backend language: TypeScript / Node** (`backend/`, Express) — was Python through early development; converted once the user decided a single-language stack (frontend already Vue/JS) was worth more than keeping Google's officially-maintained Google Ads client library. That trade-off is real and explicit: Python is one of the languages Google officially maintains a client for (alongside Java/PHP/Ruby/.NET/Perl); Node/TS has no official library, so live-mode Google Ads calls now go through `google-ads-api`, a community-maintained package. Everything else — schema, agent prompts, cron cadence, cost guardrails — ported over unchanged; only the implementation language changed. Full conversion was verified end-to-end against the real Postgres DB, Sumopod AI, Google Ads API, and email delivery before the Python version was deleted.
+- **Frontend:** Vue 3 + Vite + Tailwind v4 (`frontend/`), deployed on **Vercel** — calls the backend, never calls Google Ads API directly, and never holds the client secret or refresh token. No login for v1 (decided) — this boundary stays open.
 - **AI layer:** takes structured performance data (JSON from stored DB, not raw API calls) and generates recommendations via prompt. Should NOT have write access to make live changes to campaigns — recommendations only, surfaced to the user for manual action, at least in v1. **Per-agent model/provider assignments live in `agents/` — see that folder for the authoritative source, not this line**, to avoid the doc drifting out of sync with itself as agents get added or reassigned.
 
 ### Sub-agents
@@ -78,12 +71,12 @@ Recommendation, Summary, and Critic all run on the expensive tier daily, indefin
 - **Provider-level budget cap + alert** — now routed through Sumopod (OpenAI-compatible gateway, see Tech Stack Decisions) rather than OpenAI directly, so this cap needs to be set in Sumopod's own dashboard, not OpenAI's. Not yet confirmed whether Sumopod exposes an equivalent spend-cap feature — worth checking.
 - **Per-run cost logging** — each pipeline run's token usage (from the API response) is logged as part of the per-run log already decided under Automation, so cost trends are visible over time, not just the monthly total
 - **Hard cap on critic revision passes** (e.g. max 2 revisions per agent per run) — prevents a pathological critique↔revise loop from spiraling before the monthly budget cap would even catch it
-- **Data storage:** Postgres, hosted on Sumopod/Sumobase (`PITSTOP_DB_STRING`) — was SQLite through early development, migrated once a hosted instance was provisioned. Sits behind PgBouncer (port 6432, not Postgres's native 5432) — psycopg's server-side prepared statements don't work correctly under PgBouncer's transaction pooling, so connections are opened with `prepare_threshold=None` (see `backend/app/db.py`).
+- **Data storage:** Postgres, hosted on Sumopod/Sumobase (`PITSTOP_DB_STRING`) — was SQLite through early development, migrated once a hosted instance was provisioned. Sits behind PgBouncer (port 6432, not Postgres's native 5432) — this bit the original Python/psycopg version (server-side prepared statements don't survive PgBouncer's transaction pooling, needed `prepare_threshold=None`), but node-postgres (`pg`, now used in `backend/src/db.ts`) doesn't name/cache prepared statements for plain queries by default, so it's unaffected — verified with 10 repeated identical parameterized queries before trusting it.
 
 ## Architecture
 ```
 Browser (frontend)
-   → Python backend (VPS or serverless)
+   → Node/TypeScript backend (VPS)
       → Google Ads API (dev token + OAuth + refresh token) → pulls performance + segment data
       → Database (stores historical pulls)
       → AI model (reads stored data, generates recommendations)
@@ -99,18 +92,18 @@ Browser (frontend)
 No VPS provisioned yet.
 
 ## Immediate Next Steps
-1. Database schema — v1 draft in `schema.sql` (campaigns, campaign_performance, segments, segment_performance, ai_outputs, ask_log, demo_state_overrides, pipeline_runs); expect it to keep evolving as Standout Features get built out
-2. Build the synthetic/demo dataset (see Demo Mode section) with deliberate trend/anomaly/segment patterns
-3. Build and test the AI recommendation layer against the demo dataset first — don't wait on live data to start this
-4. Build the frontend to display performance, trends, and recommendations, including the Demo Mode toggle/badge
-5. In parallel: run `generate_refresh_token.py` to get the refresh token
-6. Build and test `google-ads.yaml` config with a live GAQL query (start with basic campaign performance, last 30 days)
-7. Get at least one real campaign live and spending — once available, swap into the same pipeline built for demo mode
-8. Decide on hosting (VPS vs serverless vs cron+Sheets bridge) for the Python backend
-9. Build the data-fetching backend logic for live mode
-10. Testing/error handling: loading states, no-data states, API failure states, expired token handling
-11. Security pass before making repo public: `.gitignore` for credentials, environment variables instead of hardcoded secrets, README note on missing credentials
-12. Write the README with screenshots/demo walkthrough and a short "why I built this" section
+1. ✅ Database schema — `schema.sql` (campaigns, campaign_performance, segments, segment_performance, ai_outputs, ask_log, demo_state_overrides, pipeline_runs), applied to the real hosted Postgres DB
+2. ✅ Synthetic/demo dataset — Markov chain generator with the deliberate decline/spike/outperforming-segment patterns, verified working
+3. ✅ AI recommendation layer built and tested against the demo dataset — real end-to-end runs confirmed, including the critic loop correctly flagging thin-data overconfidence
+4. ✅ Frontend built — Reports dashboard with the Demo Mode badge, verified against the real backend
+5. ✅ Refresh token obtained (see Auth / API Setup Progress)
+6. ✅ Live GAQL query tested against the real API — reaches Google correctly, currently blocked only by `DEVELOPER_TOKEN_NOT_APPROVED` (Basic Access still pending)
+7. ⬜ Get at least one real campaign live and spending — once available, swap into the same pipeline built for demo mode
+8. ✅ Hosting decided — VPS via Sumopod (not yet provisioned; deploy scripts in `backend/deploy/` are ready for when it is)
+9. ✅ Data-fetching backend logic for live mode built (`backend/src/damon.ts`'s `syncLiveWindow`) — basic campaign performance only, per this list's original step 6 scope
+10. ⬜ Testing/error handling: loading states, no-data states, API failure states, expired token handling — backend has failure alerting + dead-man's-switch; frontend loading/error states exist but haven't been stress-tested
+11. ⬜ Security pass before making repo public: `.gitignore` for credentials (done), environment variables instead of hardcoded secrets (done), README note on missing credentials (not written yet)
+12. ⬜ Write the README with screenshots/demo walkthrough and a short "why I built this" section
 
 ## Demo / Simulated Data Mode
 Since the real Google Ads account has no live campaigns yet (and won't have meaningful historical data for weeks), the app should support a **Demo Mode** alongside live mode. This is not a throwaway hack — it's a permanent, valuable part of the product.
@@ -173,7 +166,7 @@ Demo mode reuses the **same 6am cron job** as live mode — it just advances the
 - **Dead-man's-switch monitoring (decided)** — failure alerting only fires if the pipeline runs and then fails; it says nothing if the cron job never fires at all (VPS reboot, systemd misconfig, disk full). Add an external heartbeat check that expects a daily ping and alerts if one doesn't arrive, so a silently-not-running pipeline gets caught too.
 - **Email provider (decided): Resend**, with Gmail SMTP using the user's own address as a simple fallback — either works fine at single-user volume.
 - **Cron mechanism: plain crontab** for v1 — least moving parts, survives reboots on its own, doesn't require the backend web process to stay running. A systemd timer is a cheap upgrade later if built-in logging (`journalctl`) becomes worth the extra setup. Deploy scripts/instructions are in `backend/deploy/` — written ahead of actually provisioning the VPS, ready to use once it exists.
-- **Database backup (decided, resolved the earlier Known Gap):** Sumopod/Sumobase's own backup policy for the hosted Postgres instance isn't documented anywhere findable, so this doesn't rely on it — `backend/scripts/backup_db.py` runs `pg_dump` (custom format, `pg_restore`-compatible) daily at 5:30am, ahead of the 6am pipeline, with a 14-day local retention window. Verified against the real hosted DB: produces a valid dump covering all 8 tables, and old backups actually get pruned. Off-site upload (S3/Backblaze) isn't wired up yet — local-to-the-VPS retention only for now.
+- **Database backup (decided, resolved the earlier Known Gap):** Sumopod/Sumobase's own backup policy for the hosted Postgres instance isn't documented anywhere findable, so this doesn't rely on it — `backend/scripts/backupDb.ts` runs `pg_dump` (custom format, `pg_restore`-compatible) daily at 5:30am, ahead of the 6am pipeline, with a 14-day local retention window. Verified against the real hosted DB: produces a valid dump covering all 8 tables, and old backups actually get pruned. Off-site upload (S3/Backblaze) isn't wired up yet — local-to-the-VPS retention only for now.
 - **WhatsApp (WAHA)** — deferred to v2, see below.
 
 ## Standout Features (decided, v1)

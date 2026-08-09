@@ -5,9 +5,9 @@
 # (timedatectl) rather than assuming UTC, since "6am" should mean 6am for
 # the person reading the report, not 6am UTC.
 
-0 6 * * * /path/to/google-ads/backend/deploy/run_daily.sh
+0 6 * * * /path/to/google-ads/backend-ts/deploy/run_daily.sh
 
 # DB backup — runs before the daily pipeline so a bad run never overwrites
 # the last known-good backup window. Requires `postgresql-client` installed
 # on the host (apt install postgresql-client) for pg_dump.
-30 5 * * * cd /path/to/google-ads/backend && .venv/bin/python3 scripts/backup_db.py >> logs/backup.log 2>&1
+30 5 * * * cd /path/to/google-ads/backend-ts && node dist/scripts/backupDb.js >> logs/backup.log 2>&1

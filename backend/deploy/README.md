@@ -6,32 +6,35 @@ Run through this once the Sumopod VPS exists.
 ## 1. Get the code on the box
 ```bash
 git clone <repo-url> google-ads
-cd google-ads/backend
+cd google-ads/backend-ts
 ```
 
-## 2. Python environment
+## 2. Node environment
 ```bash
-python3 -m venv .venv
-./.venv/bin/pip install -r requirements.txt
+npm install
+npm run build   # compiles src/ + scripts/ to dist/ — the deploy scripts run the built output, not tsx
 ```
 
 ## 3. Environment variables
 Copy `.env.example` (repo root) to `.env` (repo root, one level up from
-`backend/`) and fill in every value — same credentials already in use
+`backend-ts/`) and fill in every value — same credentials already in use
 locally (Sumopod DB connection string, Sumopod AI key, Google Ads
 credentials, email provider). `.env` is gitignored; it has to be created
 fresh on the VPS, not committed.
 
 ## 4. Verify before scheduling anything
 ```bash
-./.venv/bin/python3 -c "
-from app.db import get_connection
-with get_connection() as conn:
-    print('DB OK')
+node -e "
+import('./dist/db.js').then(async ({query}) => {
+  console.log('DB OK:', await query('SELECT 1'));
+  process.exit(0);
+});
 "
-./.venv/bin/python3 -c "
-from app.llm import complete, MODEL_MINI
-print(complete(MODEL_MINI, 'You are a test.', 'Say OK'))
+node -e "
+import('./dist/llm.js').then(async ({complete, MODEL_MINI}) => {
+  console.log(await complete(MODEL_MINI, 'You are a test.', 'Say OK'));
+  process.exit(0);
+});
 "
 ```
 Both should succeed before moving on — if either fails, fix it before
@@ -46,27 +49,42 @@ sudo timedatectl set-timezone Asia/Jakarta   # or whichever is correct
 timedatectl   # confirm
 ```
 
-## 6. Install the crontab entry
+## 6. Install `postgresql-client` (for pg_dump, used by the backup script)
+```bash
+sudo apt install postgresql-client
+```
+
+## 7. Install the crontab entries
 ```bash
 crontab -e
 ```
-Paste in the line from `deploy/crontab.txt`, with the path adjusted to
+Paste in both lines from `deploy/crontab.txt`, with the path adjusted to
 where the repo actually lives on this box.
 
-## 7. Confirm it's wired up
+## 8. Confirm it's wired up
 ```bash
-crontab -l                      # confirm the entry saved
+crontab -l                      # confirm the entries saved
 ./deploy/run_daily.sh           # run it once manually, right now
 tail -f logs/run_daily.log      # watch it run
 ```
 A manual run exercises the exact same script cron will call — if it
 works here, it'll work at 6am.
 
-## 8. CORS
+## 9. CORS
 Once the frontend is deployed to Vercel, set `FRONTEND_ORIGIN` in `.env`
-to the real Vercel URL (currently defaults to `http://localhost:3000`).
+to the real Vercel URL (currently defaults to `http://localhost:5173`).
+
+## Redeploying after code changes
+```bash
+git pull
+npm install   # only if dependencies changed
+npm run build
+```
+No restart needed for the cron-based scripts (each run is a fresh
+process); only matters if a long-running process (e.g. the API server)
+is also kept up via something like pm2/systemd.
 
 ## Logs
-`backend/logs/run_daily.log` — append-only, not rotated yet. Worth adding
-`logrotate` once this has been running a while and the file's grown large;
-not needed on day one.
+`backend-ts/logs/run_daily.log` — append-only, not rotated yet. Worth
+adding `logrotate` once this has been running a while and the file's
+grown large; not needed on day one.
