@@ -173,6 +173,7 @@ Demo mode reuses the **same 6am cron job** as live mode — it just advances the
 - **Dead-man's-switch monitoring (decided)** — failure alerting only fires if the pipeline runs and then fails; it says nothing if the cron job never fires at all (VPS reboot, systemd misconfig, disk full). Add an external heartbeat check that expects a daily ping and alerts if one doesn't arrive, so a silently-not-running pipeline gets caught too.
 - **Email provider (decided): Resend**, with Gmail SMTP using the user's own address as a simple fallback — either works fine at single-user volume.
 - **Cron mechanism: plain crontab** for v1 — least moving parts, survives reboots on its own, doesn't require the backend web process to stay running. A systemd timer is a cheap upgrade later if built-in logging (`journalctl`) becomes worth the extra setup. Deploy scripts/instructions are in `backend/deploy/` — written ahead of actually provisioning the VPS, ready to use once it exists.
+- **Database backup (decided, resolved the earlier Known Gap):** Sumopod/Sumobase's own backup policy for the hosted Postgres instance isn't documented anywhere findable, so this doesn't rely on it — `backend/scripts/backup_db.py` runs `pg_dump` (custom format, `pg_restore`-compatible) daily at 5:30am, ahead of the 6am pipeline, with a 14-day local retention window. Verified against the real hosted DB: produces a valid dump covering all 8 tables, and old backups actually get pruned. Off-site upload (S3/Backblaze) isn't wired up yet — local-to-the-VPS retention only for now.
 - **WhatsApp (WAHA)** — deferred to v2, see below.
 
 ## Standout Features (decided, v1)
@@ -189,7 +190,6 @@ Beyond the core pipeline — the features meant to make this demo-able, not just
 
 ## Known Gaps (noted, not yet decided)
 - **Frontend has no auth and is publicly deployed on Vercel.** The "no auth" decision elsewhere is about the backend↔frontend API boundary, not the Reports UI itself — anyone with the URL can currently see real ad performance data. Needs a decision (password gate vs. accepting security-through-obscurity for v1).
-- **No confirmed backup plan for the database.** Now a hosted Postgres instance on Sumopod/Sumobase rather than a local SQLite file, which likely changes this — managed Postgres services often include their own backups — but that hasn't been confirmed for this instance specifically. The entire value of this app is historical data, and Google Ads doesn't retain unlimited lookback to reconstruct from, so this is still worth explicitly checking rather than assuming.
 
 ## V2 / Future Plans
 

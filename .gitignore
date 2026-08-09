@@ -19,5 +19,8 @@ venv/
 # Logs
 backend/logs/
 
+# DB backups — contain real data, never committed
+backend/backups/
+
 # OS
 .DS_Store
