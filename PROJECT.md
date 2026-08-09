@@ -172,7 +172,7 @@ Demo mode reuses the **same 6am cron job** as live mode — it just advances the
 - **Per-run logging** — separate from failure alerts. Every run (success or failure) logs what was pulled, what each agent produced, and what the critic flagged, so quality issues (a bad or boring recommendation on an otherwise "successful" run) are debuggable after the fact, not just uptime issues.
 - **Dead-man's-switch monitoring (decided)** — failure alerting only fires if the pipeline runs and then fails; it says nothing if the cron job never fires at all (VPS reboot, systemd misconfig, disk full). Add an external heartbeat check that expects a daily ping and alerts if one doesn't arrive, so a silently-not-running pipeline gets caught too.
 - **Email provider (decided): Resend**, with Gmail SMTP using the user's own address as a simple fallback — either works fine at single-user volume.
-- **Cron mechanism: plain crontab** for v1 — least moving parts, survives reboots on its own, doesn't require the backend web process to stay running. A systemd timer is a cheap upgrade later if built-in logging (`journalctl`) becomes worth the extra setup.
+- **Cron mechanism: plain crontab** for v1 — least moving parts, survives reboots on its own, doesn't require the backend web process to stay running. A systemd timer is a cheap upgrade later if built-in logging (`journalctl`) becomes worth the extra setup. Deploy scripts/instructions are in `backend/deploy/` — written ahead of actually provisioning the VPS, ready to use once it exists.
 - **WhatsApp (WAHA)** — deferred to v2, see below.
 
 ## Standout Features (decided, v1)

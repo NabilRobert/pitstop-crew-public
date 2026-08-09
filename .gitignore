@@ -16,5 +16,8 @@ venv/
 *.sqlite
 *.sqlite3
 
+# Logs
+backend/logs/
+
 # OS
 .DS_Store

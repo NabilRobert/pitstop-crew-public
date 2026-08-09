@@ -1,0 +1,8 @@
+# Install with: crontab -e, then paste the line below (adjust the path to
+# wherever the repo actually lives on the VPS).
+#
+# Runs daily at 6am server time — set the VPS's timezone deliberately
+# (timedatectl) rather than assuming UTC, since "6am" should mean 6am for
+# the person reading the report, not 6am UTC.
+
+0 6 * * * /path/to/google-ads/backend/deploy/run_daily.sh

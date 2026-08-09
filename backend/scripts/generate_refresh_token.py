@@ -31,7 +31,19 @@ def main():
         }
     }
     flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES)
-    credentials = flow.run_local_server(port=8080)
+    # prompt="consent" forces Google to re-issue a refresh token even if this
+    # account already granted access in an earlier attempt — Google normally
+    # only issues one on the very first grant, and a prior attempt may have
+    # completed the grant before failing on a later step (e.g. the redirect
+    # mismatch), leaving no refresh token returned on retry without this.
+    credentials = flow.run_local_server(port=8080, access_type="offline", prompt="consent")
+
+    if not credentials.refresh_token:
+        raise SystemExit(
+            "No refresh token returned even with prompt=consent — try revoking "
+            "this app's access at https://myaccount.google.com/permissions and "
+            "running this script again."
+        )
 
     print("\nAdd this to .env as gads-refresh-token:\n")
     print(credentials.refresh_token)
