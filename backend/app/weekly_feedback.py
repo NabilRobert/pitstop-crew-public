@@ -41,7 +41,7 @@ def run(as_of: date | None = None) -> str | None:
 
 
 def _get_week_critiques(as_of: date) -> list[dict]:
-    start = (as_of - timedelta(days=7)).isoformat()
+    start = as_of - timedelta(days=7)
     with get_connection() as conn:
         rows = conn.execute(
             """
@@ -50,7 +50,7 @@ def _get_week_critiques(as_of: date) -> list[dict]:
             JOIN ai_outputs reviewed ON reviewed.id = critic.critiques_id
             WHERE critic.agent_type = 'critic'
               AND critic.content != '(no issues found)'
-              AND critic.created_at >= ?
+              AND critic.created_at >= %s
             ORDER BY critic.created_at
             """,
             (start,),

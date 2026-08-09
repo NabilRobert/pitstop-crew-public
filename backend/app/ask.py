@@ -19,7 +19,8 @@ def ask(output_id: int, question: str) -> int:
     if agent_type not in ASKABLE_AGENTS:
         raise ValueError(f"Only recommendation/summary outputs are askable, got {agent_type!r}")
 
-    end_date = date.fromisoformat(output["report_date"]) if output["report_date"] else date.today()
+    # Postgres hands back a real `date` object for a DATE column, not a string.
+    end_date = output["report_date"] or date.today()
     supporting_data = build_performance_context(
         campaign_id=output["campaign_id"],
         segment_id=output["segment_id"],
@@ -36,15 +37,15 @@ def ask(output_id: int, question: str) -> int:
 def _log_ask(output_id: int, agent_type: str, question: str, answer: str) -> int:
     with get_connection() as conn:
         cur = conn.execute(
-            "INSERT INTO ask_log (output_id, agent_type, question, answer) VALUES (?, ?, ?, ?)",
+            "INSERT INTO ask_log (output_id, agent_type, question, answer) VALUES (%s, %s, %s, %s) RETURNING id",
             (output_id, agent_type, question, answer),
         )
-        return cur.lastrowid
+        return cur.fetchone()["id"]
 
 
 def get_ask_history(output_id: int) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT * FROM ask_log WHERE output_id = ? ORDER BY created_at", (output_id,)
+            "SELECT * FROM ask_log WHERE output_id = %s ORDER BY created_at", (output_id,)
         ).fetchall()
         return [dict(r) for r in rows]

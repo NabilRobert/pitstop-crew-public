@@ -26,10 +26,10 @@ def build_performance_context(
                 FROM segment_performance sp
                 JOIN campaigns c ON c.id = sp.campaign_id
                 JOIN segments s ON s.id = sp.segment_id
-                WHERE sp.segment_id = ? AND sp.date BETWEEN ? AND ?
+                WHERE sp.segment_id = %s AND sp.date BETWEEN %s AND %s
                 ORDER BY sp.date
                 """,
-                (segment_id, start_date.isoformat(), end_date.isoformat()),
+                (segment_id, start_date, end_date),
             ).fetchall()
         elif campaign_id is not None:
             rows = conn.execute(
@@ -38,10 +38,10 @@ def build_performance_context(
                        cp.cost_micros, cp.conversions
                 FROM campaign_performance cp
                 JOIN campaigns c ON c.id = cp.campaign_id
-                WHERE cp.campaign_id = ? AND cp.date BETWEEN ? AND ?
+                WHERE cp.campaign_id = %s AND cp.date BETWEEN %s AND %s
                 ORDER BY cp.date
                 """,
-                (campaign_id, start_date.isoformat(), end_date.isoformat()),
+                (campaign_id, start_date, end_date),
             ).fetchall()
         else:
             rows = conn.execute(
@@ -50,10 +50,10 @@ def build_performance_context(
                        cp.cost_micros, cp.conversions
                 FROM campaign_performance cp
                 JOIN campaigns c ON c.id = cp.campaign_id
-                WHERE cp.date BETWEEN ? AND ?
+                WHERE cp.date BETWEEN %s AND %s
                 ORDER BY cp.date, c.name
                 """,
-                (start_date.isoformat(), end_date.isoformat()),
+                (start_date, end_date),
             ).fetchall()
 
     return json.dumps([dict(r) for r in rows], default=str)

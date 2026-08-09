@@ -1,24 +1,26 @@
--- Google Ads AI Performance Dashboard — SQLite schema (v1 draft)
+-- Google Ads AI Performance Dashboard — Postgres schema (v1), hosted on
+-- Sumopod/Sumobase. Was SQLite through early development; migrated once a
+-- hosted Postgres instance (PITSTOP_DB_STRING) was provisioned.
 -- Source-agnostic: `data_source` on campaigns lets the same tables serve
 -- both live and demo data, switched by the UI toggle described in PROJECT.md.
 
 CREATE TABLE IF NOT EXISTS campaigns (
-    id                INTEGER PRIMARY KEY,
+    id                SERIAL PRIMARY KEY,
     google_campaign_id TEXT,                 -- NULL for demo campaigns
     name              TEXT NOT NULL,
     status            TEXT,                  -- e.g. 'enabled', 'paused', 'removed'
     data_source       TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
-    created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Daily campaign-level performance (impressions, clicks, cost, conversions).
 CREATE TABLE IF NOT EXISTS campaign_performance (
-    id             INTEGER PRIMARY KEY,
+    id             SERIAL PRIMARY KEY,
     campaign_id    INTEGER NOT NULL REFERENCES campaigns(id),
     date           DATE NOT NULL,
     impressions    INTEGER NOT NULL DEFAULT 0,
     clicks         INTEGER NOT NULL DEFAULT 0,
-    cost_micros    INTEGER NOT NULL DEFAULT 0,   -- Google Ads API convention: currency in micros
+    cost_micros    BIGINT NOT NULL DEFAULT 0,   -- Google Ads API convention: currency in micros
     conversions    REAL NOT NULL DEFAULT 0,
     UNIQUE (campaign_id, date)
 );
@@ -26,7 +28,7 @@ CREATE TABLE IF NOT EXISTS campaign_performance (
 -- Dimension table: one row per distinct segment value (device, geography,
 -- demographic bucket, in-market/affinity/custom audience).
 CREATE TABLE IF NOT EXISTS segments (
-    id            INTEGER PRIMARY KEY,
+    id            SERIAL PRIMARY KEY,
     segment_type  TEXT NOT NULL CHECK (segment_type IN (
                       'age_range', 'gender', 'household_income',
                       'device', 'geography', 'in_market', 'affinity', 'custom'
@@ -37,13 +39,13 @@ CREATE TABLE IF NOT EXISTS segments (
 
 -- Daily performance broken out by segment, per campaign.
 CREATE TABLE IF NOT EXISTS segment_performance (
-    id             INTEGER PRIMARY KEY,
+    id             SERIAL PRIMARY KEY,
     campaign_id    INTEGER NOT NULL REFERENCES campaigns(id),
     segment_id     INTEGER NOT NULL REFERENCES segments(id),
     date           DATE NOT NULL,
     impressions    INTEGER NOT NULL DEFAULT 0,
     clicks         INTEGER NOT NULL DEFAULT 0,
-    cost_micros    INTEGER NOT NULL DEFAULT 0,
+    cost_micros    BIGINT NOT NULL DEFAULT 0,
     conversions    REAL NOT NULL DEFAULT 0,
     UNIQUE (campaign_id, segment_id, date)
 );
@@ -59,7 +61,7 @@ CREATE TABLE IF NOT EXISTS segment_performance (
 -- tracking Standout Feature — set later, once real outcome data exists,
 -- not at generation time.
 CREATE TABLE IF NOT EXISTS ai_outputs (
-    id                  INTEGER PRIMARY KEY,
+    id                  SERIAL PRIMARY KEY,
     agent_type          TEXT NOT NULL CHECK (agent_type IN (
                             'analysis', 'recommendation', 'summary', 'critic'
                         )),
@@ -76,20 +78,20 @@ CREATE TABLE IF NOT EXISTS ai_outputs (
                             'draft', 'revised', 'approved', 'flagged'
                         )),
     outcome             TEXT CHECK (outcome IN ('correct', 'incorrect', 'inconclusive')),
-    outcome_checked_at  TIMESTAMP,
-    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    outcome_checked_at  TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- On-demand Q&A against Rico or Sammy, tied to the report being asked
 -- about. Backs the Ask feature (agents/recommendation.md, agents/summary.md)
 -- and the Time Machine + Ask Standout Feature.
 CREATE TABLE IF NOT EXISTS ask_log (
-    id          INTEGER PRIMARY KEY,
+    id          SERIAL PRIMARY KEY,
     output_id   INTEGER NOT NULL REFERENCES ai_outputs(id),
     agent_type  TEXT NOT NULL CHECK (agent_type IN ('recommendation', 'summary')),
     question    TEXT NOT NULL,
     answer      TEXT NOT NULL,
-    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Time Machine pins for demo mode: forcing a specific state for a future
@@ -99,21 +101,21 @@ CREATE TABLE IF NOT EXISTS ask_log (
 CREATE TABLE IF NOT EXISTS demo_state_overrides (
     date          DATE PRIMARY KEY,
     forced_state  TEXT NOT NULL CHECK (forced_state IN ('good', 'bad', 'standstill', 'volatile')),
-    set_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    set_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- One row per cron run (daily pipeline, weekly report, or weekly feedback
 -- job). Backs per-run logging, the system health page, dead-man's-switch
 -- checks (MAX(finished_at) WHERE status='success'), and cost guardrails.
 CREATE TABLE IF NOT EXISTS pipeline_runs (
-    id             INTEGER PRIMARY KEY,
+    id             SERIAL PRIMARY KEY,
     run_type       TEXT NOT NULL CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback')),
-    started_at     TIMESTAMP NOT NULL,
-    finished_at    TIMESTAMP,
+    started_at     TIMESTAMPTZ NOT NULL,
+    finished_at    TIMESTAMPTZ,
     status         TEXT NOT NULL DEFAULT 'success' CHECK (status IN ('success', 'failure', 'partial')),
-    cost_usd_micros INTEGER,              -- estimated OpenAI cost this run, USD in micros
+    cost_usd_micros BIGINT,               -- estimated OpenAI cost this run, USD in micros
     error_message  TEXT,                  -- NULL unless status != 'success'
-    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_campaign_performance_date ON campaign_performance(date);

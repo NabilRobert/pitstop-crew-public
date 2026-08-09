@@ -78,7 +78,7 @@ Recommendation, Summary, and Critic all run on the expensive tier daily, indefin
 - **Provider-level budget cap + alert** — now routed through Sumopod (OpenAI-compatible gateway, see Tech Stack Decisions) rather than OpenAI directly, so this cap needs to be set in Sumopod's own dashboard, not OpenAI's. Not yet confirmed whether Sumopod exposes an equivalent spend-cap feature — worth checking.
 - **Per-run cost logging** — each pipeline run's token usage (from the API response) is logged as part of the per-run log already decided under Automation, so cost trends are visible over time, not just the monthly total
 - **Hard cap on critic revision passes** (e.g. max 2 revisions per agent per run) — prevents a pathological critique↔revise loop from spiraling before the monthly budget cap would even catch it
-- **Data storage:** needs a database to store historical pulls, not just live queries each time — start with SQLite for simplicity, can migrate to Postgres later if needed.
+- **Data storage:** Postgres, hosted on Sumopod/Sumobase (`PITSTOP_DB_STRING`) — was SQLite through early development, migrated once a hosted instance was provisioned. Sits behind PgBouncer (port 6432, not Postgres's native 5432) — psycopg's server-side prepared statements don't work correctly under PgBouncer's transaction pooling, so connections are opened with `prepare_threshold=None` (see `backend/app/db.py`).
 
 ## Architecture
 ```
@@ -189,7 +189,7 @@ Beyond the core pipeline — the features meant to make this demo-able, not just
 
 ## Known Gaps (noted, not yet decided)
 - **Frontend has no auth and is publicly deployed on Vercel.** The "no auth" decision elsewhere is about the backend↔frontend API boundary, not the Reports UI itself — anyone with the URL can currently see real ad performance data. Needs a decision (password gate vs. accepting security-through-obscurity for v1).
-- **No backup plan for the database.** SQLite lives on one VPS with no redundancy. The entire value of this app is historical data — losing the VPS loses all of it, and Google Ads doesn't retain unlimited lookback to reconstruct from. Needs a decision on where/how to back it up (e.g. daily copy to S3/Backblaze).
+- **No confirmed backup plan for the database.** Now a hosted Postgres instance on Sumopod/Sumobase rather than a local SQLite file, which likely changes this — managed Postgres services often include their own backups — but that hasn't been confirmed for this instance specifically. The entire value of this app is historical data, and Google Ads doesn't retain unlimited lookback to reconstruct from, so this is still worth explicitly checking rather than assuming.
 
 ## V2 / Future Plans
 

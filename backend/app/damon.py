@@ -64,7 +64,7 @@ def sync_live_window(start_date: date, end_date: date) -> int:
                 """
                 INSERT INTO campaign_performance
                     (campaign_id, date, impressions, clicks, cost_micros, conversions)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT(campaign_id, date) DO UPDATE SET
                     impressions = excluded.impressions,
                     clicks = excluded.clicks,
@@ -82,18 +82,18 @@ def sync_live_window(start_date: date, end_date: date) -> int:
 
 def _get_or_create_live_campaign(conn, google_campaign_id, name: str, status: str) -> int:
     row = conn.execute(
-        "SELECT id FROM campaigns WHERE google_campaign_id = ?", (str(google_campaign_id),)
+        "SELECT id FROM campaigns WHERE google_campaign_id = %s", (str(google_campaign_id),)
     ).fetchone()
     if row:
         conn.execute(
-            "UPDATE campaigns SET name = ?, status = ? WHERE id = ?", (name, status, row["id"])
+            "UPDATE campaigns SET name = %s, status = %s WHERE id = %s", (name, status, row["id"])
         )
         return row["id"]
     cur = conn.execute(
-        "INSERT INTO campaigns (google_campaign_id, name, status, data_source) VALUES (?, ?, ?, 'live')",
+        "INSERT INTO campaigns (google_campaign_id, name, status, data_source) VALUES (%s, %s, %s, 'live') RETURNING id",
         (str(google_campaign_id), name, status),
     )
-    return cur.lastrowid
+    return cur.fetchone()["id"]
 
 
 def _upsert_day(day_data: dict) -> None:
@@ -118,7 +118,7 @@ def _upsert_day(day_data: dict) -> None:
                 """
                 INSERT INTO campaign_performance
                     (campaign_id, date, impressions, clicks, cost_micros, conversions)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT(campaign_id, date) DO UPDATE SET
                     impressions = excluded.impressions,
                     clicks = excluded.clicks,
@@ -136,7 +136,7 @@ def _upsert_day(day_data: dict) -> None:
                 """
                 INSERT INTO segment_performance
                     (campaign_id, segment_id, date, impressions, clicks, cost_micros, conversions)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT(campaign_id, segment_id, date) DO UPDATE SET
                     impressions = excluded.impressions,
                     clicks = excluded.clicks,
@@ -153,25 +153,25 @@ def _upsert_day(day_data: dict) -> None:
 def _get_or_create_campaign(conn, campaign_key: str) -> int:
     name = next(c["name"] for c in profile.CAMPAIGNS if c["key"] == campaign_key)
     row = conn.execute(
-        "SELECT id FROM campaigns WHERE name = ? AND data_source = 'demo'", (name,)
+        "SELECT id FROM campaigns WHERE name = %s AND data_source = 'demo'", (name,)
     ).fetchone()
     if row:
         return row["id"]
     cur = conn.execute(
-        "INSERT INTO campaigns (name, data_source, status) VALUES (?, 'demo', 'enabled')", (name,)
+        "INSERT INTO campaigns (name, data_source, status) VALUES (%s, 'demo', 'enabled') RETURNING id", (name,)
     )
-    return cur.lastrowid
+    return cur.fetchone()["id"]
 
 
 def _get_or_create_segment(conn, segment_type: str, segment_value: str) -> int:
     row = conn.execute(
-        "SELECT id FROM segments WHERE segment_type = ? AND segment_value = ?",
+        "SELECT id FROM segments WHERE segment_type = %s AND segment_value = %s",
         (segment_type, segment_value),
     ).fetchone()
     if row:
         return row["id"]
     cur = conn.execute(
-        "INSERT INTO segments (segment_type, segment_value) VALUES (?, ?)",
+        "INSERT INTO segments (segment_type, segment_value) VALUES (%s, %s) RETURNING id",
         (segment_type, segment_value),
     )
-    return cur.lastrowid
+    return cur.fetchone()["id"]

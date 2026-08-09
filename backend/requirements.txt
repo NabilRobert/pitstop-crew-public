@@ -5,3 +5,4 @@ fastapi==0.115.6
 uvicorn==0.34.0
 google-ads==31.2.0
 google-auth-oauthlib==1.2.1
+psycopg[binary]==3.2.10

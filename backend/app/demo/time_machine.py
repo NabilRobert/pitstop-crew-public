@@ -15,19 +15,20 @@ def set_override(target_date: date, forced_state: str) -> None:
         raise ValueError(f"forced_state must be one of {STATES}, got {forced_state!r}")
     with get_connection() as conn:
         conn.execute(
-            "INSERT INTO demo_state_overrides (date, forced_state) VALUES (?, ?) "
+            "INSERT INTO demo_state_overrides (date, forced_state) VALUES (%s, %s) "
             "ON CONFLICT(date) DO UPDATE SET forced_state = excluded.forced_state, "
             "set_at = CURRENT_TIMESTAMP",
-            (target_date.isoformat(), forced_state),
+            (target_date, forced_state),
         )
 
 
 def get_overrides() -> dict[date, str]:
+    # Postgres hands back real `date` objects for a DATE column, not strings.
     with get_connection() as conn:
         rows = conn.execute("SELECT date, forced_state FROM demo_state_overrides").fetchall()
-    return {date.fromisoformat(r["date"]): r["forced_state"] for r in rows}
+    return {r["date"]: r["forced_state"] for r in rows}
 
 
 def clear_override(target_date: date) -> None:
     with get_connection() as conn:
-        conn.execute("DELETE FROM demo_state_overrides WHERE date = ?", (target_date.isoformat(),))
+        conn.execute("DELETE FROM demo_state_overrides WHERE date = %s", (target_date,))

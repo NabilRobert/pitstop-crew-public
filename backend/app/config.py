@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(REPO_ROOT / ".env")
 
-DB_PATH = REPO_ROOT / "backend" / "data.db"
+# Postgres, hosted on Sumopod (Sumobase) — replaced the local SQLite file.
+DATABASE_URL = os.environ.get("PITSTOP_DB_STRING")
 
 # Google Ads credentials — keys match what's already in the repo's .env.
 GADS_DEVELOPER_TOKEN = os.environ.get("gads-api-token")

@@ -12,13 +12,13 @@ VALID_RUN_TYPES = ("daily", "weekly", "weekly_feedback")
 def start_run(run_type: str) -> int:
     if run_type not in VALID_RUN_TYPES:
         raise ValueError(f"run_type must be one of {VALID_RUN_TYPES}, got {run_type!r}")
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
     with get_connection() as conn:
         cur = conn.execute(
-            "INSERT INTO pipeline_runs (run_type, started_at, status) VALUES (?, ?, 'success')",
+            "INSERT INTO pipeline_runs (run_type, started_at, status) VALUES (%s, %s, 'success') RETURNING id",
             (run_type, now),
         )
-        return cur.lastrowid
+        return cur.fetchone()["id"]
 
 
 def finish_run(
@@ -27,13 +27,13 @@ def finish_run(
     cost_usd_micros: int | None = None,
     error_message: str | None = None,
 ) -> None:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
     with get_connection() as conn:
         conn.execute(
             """
             UPDATE pipeline_runs
-            SET finished_at = ?, status = ?, cost_usd_micros = ?, error_message = ?
-            WHERE id = ?
+            SET finished_at = %s, status = %s, cost_usd_micros = %s, error_message = %s
+            WHERE id = %s
             """,
             (now, status, cost_usd_micros, error_message, run_id),
         )
@@ -69,7 +69,7 @@ def get_last_successful_run(run_type: str) -> dict | None:
         row = conn.execute(
             """
             SELECT * FROM pipeline_runs
-            WHERE run_type = ? AND status = 'success'
+            WHERE run_type = %s AND status = 'success'
             ORDER BY finished_at DESC LIMIT 1
             """,
             (run_type,),
@@ -81,11 +81,11 @@ def get_recent_runs(run_type: str | None = None, limit: int = 20) -> list[dict]:
     with get_connection() as conn:
         if run_type:
             rows = conn.execute(
-                "SELECT * FROM pipeline_runs WHERE run_type = ? ORDER BY started_at DESC LIMIT ?",
+                "SELECT * FROM pipeline_runs WHERE run_type = %s ORDER BY started_at DESC LIMIT %s",
                 (run_type, limit),
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT ?", (limit,)
+                "SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT %s", (limit,)
             ).fetchall()
         return [dict(r) for r in rows]

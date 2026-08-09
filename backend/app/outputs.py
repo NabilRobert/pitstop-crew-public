@@ -20,24 +20,25 @@ def insert_output(
             """
             INSERT INTO ai_outputs
                 (agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id, report_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (
                 agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id,
                 report_date.isoformat() if report_date else None,
             ),
         )
-        return cur.lastrowid
+        return cur.fetchone()["id"]
 
 
 def update_status(output_id: int, status: str) -> None:
     with get_connection() as conn:
-        conn.execute("UPDATE ai_outputs SET status = ? WHERE id = ?", (status, output_id))
+        conn.execute("UPDATE ai_outputs SET status = %s WHERE id = %s", (status, output_id))
 
 
 def get_output(output_id: int) -> dict | None:
     with get_connection() as conn:
-        row = conn.execute("SELECT * FROM ai_outputs WHERE id = ?", (output_id,)).fetchone()
+        row = conn.execute("SELECT * FROM ai_outputs WHERE id = %s", (output_id,)).fetchone()
         return dict(row) if row else None
 
 
@@ -48,12 +49,12 @@ def get_why_trail(output_id: int) -> list[dict]:
         trail = []
         current_id = output_id
         while current_id is not None:
-            row = conn.execute("SELECT * FROM ai_outputs WHERE id = ?", (current_id,)).fetchone()
+            row = conn.execute("SELECT * FROM ai_outputs WHERE id = %s", (current_id,)).fetchone()
             if row is None:
                 break
             row = dict(row)
             critique = conn.execute(
-                "SELECT * FROM ai_outputs WHERE critiques_id = ?", (current_id,)
+                "SELECT * FROM ai_outputs WHERE critiques_id = %s", (current_id,)
             ).fetchone()
             if critique:
                 row["critique"] = dict(critique)
