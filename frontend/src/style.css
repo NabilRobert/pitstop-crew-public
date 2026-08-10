@@ -74,3 +74,70 @@ h1, h2, h3, h4 {
 * {
   scrollbar-color: var(--color-border-strong) transparent;
 }
+
+/* Rendered agent-output markdown (ReportSection, AskPanel, WhyTrailPanel) —
+   hand-written rather than a typography-plugin dependency, since it only
+   needs to cover the handful of element types the agents actually write. */
+.agent-prose {
+  color: var(--color-ink-soft);
+  line-height: 1.7;
+}
+.agent-prose > :first-child { margin-top: 0; }
+.agent-prose > :last-child { margin-bottom: 0; }
+.agent-prose p { margin: 0.9em 0; }
+.agent-prose h1, .agent-prose h2, .agent-prose h3, .agent-prose h4 {
+  margin: 1.2em 0 0.5em;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.agent-prose h1 { font-size: 1.15em; }
+.agent-prose h2 { font-size: 1.08em; }
+.agent-prose h3, .agent-prose h4 { font-size: 1em; text-transform: uppercase; letter-spacing: 0.03em; color: var(--color-ink-faint); }
+.agent-prose strong { color: var(--color-ink); font-weight: 700; }
+.agent-prose ul, .agent-prose ol { margin: 0.7em 0; padding-left: 1.3em; }
+.agent-prose li { margin: 0.3em 0; }
+.agent-prose ul { list-style-type: disc; }
+.agent-prose ol { list-style-type: decimal; }
+.agent-prose code { font-family: var(--font-mono); font-size: 0.9em; background: var(--color-surface-raised); padding: 0.1em 0.35em; border-radius: 3px; }
+.agent-prose hr { border: none; border-top: 1px solid var(--color-border); margin: 1.2em 0; }
+.agent-prose a { color: var(--color-giallo); text-decoration: underline; }
+
+/* Shared pure-CSS hover/focus tooltip — used by GradeBadge's grade
+   rationale and .critic-highlight's per-issue reason below. No JS
+   positioning library; the tooltip text lives in the data-tooltip attr. */
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: normal;
+  width: max-content;
+  max-width: 260px;
+  z-index: 30;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+/* Critic-flagged phrases inline in rendered report content — see
+   renderReportContent() in lib/markdown.js. */
+.agent-prose mark.critic-highlight {
+  background: var(--color-flag-caution-soft);
+  border-bottom: 2px dotted var(--color-flag-caution);
+  color: inherit;
+  padding: 0 1px;
+}

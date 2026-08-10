@@ -15,6 +15,9 @@ export interface AiOutput {
   status: string
   outcome: string | null
   outcome_checked_at: string | null
+  grade: string | null
+  grade_rationale: string | null
+  issues: { quote: string; reason: string }[] | null
   created_at: string
 }
 
@@ -28,13 +31,18 @@ export interface InsertOutputArgs {
   revisesId?: number | null
   reportDate?: string | null
   period?: string | null
+  /** Set only on critic rows — see schema.sql. */
+  grade?: string | null
+  gradeRationale?: string | null
+  issues?: { quote: string; reason: string }[] | null
 }
 
 export async function insertOutput(args: InsertOutputArgs): Promise<number> {
   const rows = await query<{ id: number }>(
     `INSERT INTO ai_outputs
-        (agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id, report_date, period)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        (agent_type, content, status, campaign_id, segment_id, critiques_id, revises_id, report_date, period,
+         grade, grade_rationale, issues)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING id`,
     [
       args.agentType,
@@ -46,6 +54,9 @@ export async function insertOutput(args: InsertOutputArgs): Promise<number> {
       args.revisesId ?? null,
       args.reportDate ?? null,
       args.period ?? null,
+      args.grade ?? null,
+      args.gradeRationale ?? null,
+      args.issues ? JSON.stringify(args.issues) : null,
     ]
   )
   return rows[0].id
@@ -66,6 +77,32 @@ export async function getLatestByAgent(agentType: string, period: string): Promi
      ORDER BY report_date DESC, created_at DESC
      LIMIT 1`,
     [agentType, period]
+  )
+}
+
+/** Like getLatestByAgent, but pinned to an exact report_date instead of
+ * "most recent" — backs report history/detail pages. */
+export async function getByAgentAndDate(
+  agentType: string,
+  period: string,
+  date: string
+): Promise<AiOutput | null> {
+  return queryOne<AiOutput>(
+    `SELECT * FROM ai_outputs
+     WHERE agent_type = $1 AND period = $2 AND report_date = $3 AND status IN ('approved', 'flagged')
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [agentType, period, date]
+  )
+}
+
+/** The most recent critique of a given output — backs the grade badge
+ * and inline highlight-on-hover UI. Reuses the same lookup getWhyTrail
+ * already does inline, factored out since reporting.ts needs it too. */
+export async function getLatestCritique(outputId: number): Promise<AiOutput | null> {
+  return queryOne<AiOutput>(
+    'SELECT * FROM ai_outputs WHERE critiques_id = $1 ORDER BY created_at DESC LIMIT 1',
+    [outputId]
   )
 }
 

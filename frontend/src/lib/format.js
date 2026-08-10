@@ -9,6 +9,17 @@ export function formatMicrosAsIDR(micros) {
   }).format(value)
 }
 
+// pipeline_runs.cost_usd_micros — estimated LLM spend per run, USD in micros.
+export function formatMicrosAsUSD(micros) {
+  if (micros === null || micros === undefined) return '—'
+  const value = micros / 1_000_000
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 4,
+  }).format(value)
+}
+
 export function formatNumber(n) {
   return new Intl.NumberFormat('en-US').format(n ?? 0)
 }
@@ -23,5 +34,16 @@ export function formatDate(dateStr) {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+  })
+}
+
+export function formatDateTime(dateStr) {
+  if (!dateStr) return '—'
+  return new Date(dateStr).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }

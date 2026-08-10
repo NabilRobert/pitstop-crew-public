@@ -1,62 +1,86 @@
-// Cron entrypoint: `0 6 * * * node dist/scripts/runDaily.js` (see
-// PROJECT.md → Automation: plain crontab, 6am). Runs the daily pipeline,
-// and on Mondays also the weekly rollup + weekly feedback job. Emails the
-// report on success, or a failure alert on any exception — per
-// PROJECT.md, failures are surfaced, never silently skipped.
+// Cron entrypoint: `*/15 * * * * node dist/scripts/runDaily.js` (see
+// backend/deploy/crontab.txt). Runs every 15 minutes but only actually
+// fires the pipeline once it's past the configured run time (see
+// backend/src/settings.ts) AND it hasn't already succeeded today — so the
+// crontab line itself no longer encodes the run time, the Settings page
+// does. On Mondays, also runs the weekly rollup + weekly feedback job
+// once past the weekly run time. Emails the report on success, or a
+// failure alert on any exception — per PROJECT.md, failures are
+// surfaced, never silently skipped.
 
 import { runDaily, runWeekly, type RunResult } from '../src/orchestrator.js'
 import { formatReportEmail, formatFailureAlert, formatWeeklyFeedbackEmail } from '../src/reports.js'
 import { runWeeklyFeedback } from '../src/weeklyFeedback.js'
-import { REPORT_RECIPIENT_EMAIL } from '../src/config.js'
-import { sendEmail } from '../src/emailDelivery.js'
+import { deliverReport as deliver } from '../src/emailDelivery.js'
+import { getSettings } from '../src/settings.js'
+import { getLastSuccessfulRun, type RunType } from '../src/pipelineRuns.js'
 
-async function deliver(runType: string, subject: string, body: string): Promise<void> {
-  if (!REPORT_RECIPIENT_EMAIL) {
-    console.log(`[${runType}] REPORT_RECIPIENT_EMAIL not set — skipping email, printing instead:`)
-    console.log(subject)
-    console.log(body)
-    return
-  }
-  await sendEmail(REPORT_RECIPIENT_EMAIL, subject, body)
+/** HH:MM in server-local time — matches how plain crontab itself fires,
+ * and how the Settings page's run-time fields are labeled. */
+function currentLocalTime(): string {
+  return new Date().toTimeString().slice(0, 5)
+}
+
+async function alreadyRanToday(runType: RunType, todayUtc: string): Promise<boolean> {
+  const last = await getLastSuccessfulRun(runType)
+  if (!last?.finished_at) return false
+  return new Date(last.finished_at).toISOString().slice(0, 10) === todayUtc
 }
 
 async function main() {
+  const settings = await getSettings()
+  const now = currentLocalTime()
   const today = new Date().toISOString().slice(0, 10)
   const isMonday = new Date(today + 'T00:00:00Z').getUTCDay() === 1
 
-  let dailyResult: RunResult
+  if (now < settings.daily_run_time) {
+    console.log(`Daily run not due yet (now=${now}, due=${settings.daily_run_time})`)
+  } else if (await alreadyRanToday('daily', today)) {
+    console.log(`Daily run already succeeded today (${today}) — skipping`)
+  } else {
+    let dailyResult: RunResult
+    try {
+      dailyResult = await runDaily(today)
+      const { subject, body } = await formatReportEmail(dailyResult, today, 'daily')
+      await deliver('daily', subject, body)
+      console.log(`Daily run complete for ${today}`)
+    } catch (err) {
+      const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
+      const { subject, body } = formatFailureAlert('daily', message)
+      await deliver('daily', subject, body)
+      throw err
+    }
+  }
+
+  if (!isMonday) return
+
+  if (now < settings.weekly_run_time) {
+    console.log(`Weekly run not due yet (now=${now}, due=${settings.weekly_run_time})`)
+    return
+  }
+  if (await alreadyRanToday('weekly', today)) {
+    console.log(`Weekly run already succeeded today (${today}) — skipping`)
+    return
+  }
+
   try {
-    dailyResult = await runDaily(today)
-    const { subject, body } = await formatReportEmail(dailyResult, today, 'daily')
-    await deliver('daily', subject, body)
-    console.log(`Daily run complete for ${today}`)
+    const weeklyResult = await runWeekly(today)
+    const { subject, body } = await formatReportEmail(weeklyResult, today, 'weekly')
+    await deliver('weekly', subject, body)
+    console.log(`Weekly run complete for ${today}`)
   } catch (err) {
     const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
-    const { subject, body } = formatFailureAlert('daily', message)
-    await deliver('daily', subject, body)
+    const { subject, body } = formatFailureAlert('weekly', message)
+    await deliver('weekly', subject, body)
     throw err
   }
 
-  if (isMonday) {
-    try {
-      const weeklyResult = await runWeekly(today)
-      const { subject, body } = await formatReportEmail(weeklyResult, today, 'weekly')
-      await deliver('weekly', subject, body)
-      console.log(`Weekly run complete for ${today}`)
-    } catch (err) {
-      const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
-      const { subject, body } = formatFailureAlert('weekly', message)
-      await deliver('weekly', subject, body)
-      throw err
-    }
-
-    const suggestion = await runWeeklyFeedback(today)
-    if (suggestion) {
-      const { subject, body } = formatWeeklyFeedbackEmail(suggestion)
-      await deliver('weekly_feedback', subject, body)
-    } else {
-      console.log('No recurring critic patterns this week — nothing to suggest.')
-    }
+  const suggestion = await runWeeklyFeedback(today)
+  if (suggestion) {
+    const { subject, body } = formatWeeklyFeedbackEmail(suggestion)
+    await deliver('weekly_feedback', subject, body)
+  } else {
+    console.log('No recurring critic patterns this week — nothing to suggest.')
   }
 }
 

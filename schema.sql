@@ -84,6 +84,25 @@ CREATE TABLE IF NOT EXISTS ai_outputs (
     created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Strict A-F grading + structured per-issue quotes, set only on critic
+-- rows (parallel to critiques_id/revises_id above) — backs the grade
+-- badge and the inline highlight-on-hover UI. See backend/src/critic.ts
+-- for the rubric these are graded against.
+ALTER TABLE ai_outputs ADD COLUMN IF NOT EXISTS grade TEXT CHECK (grade IN ('A', 'B', 'C', 'D', 'F'));
+ALTER TABLE ai_outputs ADD COLUMN IF NOT EXISTS grade_rationale TEXT;
+ALTER TABLE ai_outputs ADD COLUMN IF NOT EXISTS issues JSONB;
+
+-- Weekly critic-pattern -> suggested-prompt-patch drafts (weeklyFeedback.ts).
+-- Previously only ever emailed and discarded; persisted now so the
+-- Learning page can show a history of what's actually been suggested,
+-- alongside the flag-rate trend (backend/src/learning.ts).
+CREATE TABLE IF NOT EXISTS weekly_feedback_suggestions (
+    id         SERIAL PRIMARY KEY,
+    week_of    DATE NOT NULL,
+    content    TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- On-demand Q&A against Rico or Sammy, tied to the report being asked
 -- about. Backs the Ask feature (agents/recommendation.md, agents/summary.md)
 -- and the Time Machine + Ask Standout Feature.
@@ -119,6 +138,18 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     error_message  TEXT,                  -- NULL unless status != 'success'
     created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- App-wide config, key/value. Currently just the pipeline's daily/weekly
+-- run times (HH:MM, server-local) — see backend/src/settings.ts and the
+-- Settings page. runDaily.ts polls these instead of the run time being
+-- baked into the crontab line.
+CREATE TABLE IF NOT EXISTS app_settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+INSERT INTO app_settings (key, value) VALUES ('daily_run_time', '06:00') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('weekly_run_time', '06:00') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('grade_forces_revision', 'false') ON CONFLICT (key) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_campaign_performance_date ON campaign_performance(date);
 CREATE INDEX IF NOT EXISTS idx_segment_performance_date ON segment_performance(date);

@@ -32,6 +32,14 @@ pg.types.setTypeParser(1082, (val: string) => val)
 // nonsense figures (garbled digit strings, "Rp∞"). OID 20 = int8/bigint.
 pg.types.setTypeParser(20, (val: string) => Number(val))
 
+// Same bug, different trigger: SUM(bigint_column) returns NUMERIC (not
+// BIGINT), which pg also stringifies by default for the same
+// arbitrary-precision-safety reason — surfaced by the new
+// getSegmentBreakdown() aggregate query (SUM(cost_micros) came back as
+// "26688000000", a string). Same justification as OID 20 above: this
+// app's values never approach JS's safe integer range. OID 1700 = numeric.
+pg.types.setTypeParser(1700, (val: string) => Number(val))
+
 let pool: pg.Pool | null = null
 
 function getPool(): pg.Pool {

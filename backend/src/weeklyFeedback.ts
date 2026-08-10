@@ -40,13 +40,20 @@ async function getWeekCritiques(asOf: string): Promise<WeekCritique[]> {
 }
 
 /** Returns the suggestion text, or null if there were no critiques this
- * week to learn from. */
+ * week to learn from. Persists the suggestion (see weekly_feedback_suggestions
+ * in schema.sql) so the Learning page can show a history of what's been
+ * suggested over time — previously this was only ever emailed and discarded. */
 export async function runWeeklyFeedback(asOf?: string): Promise<string | null> {
   const target = asOf ?? new Date().toISOString().slice(0, 10)
   return trackRun('weekly_feedback', async () => {
     const critiques = await getWeekCritiques(target)
     if (critiques.length === 0) return null
     const userPrompt = critiques.map((c) => `[${c.reviewed_agent_type}] ${c.content}`).join('\n\n')
-    return complete(MODEL_FULL, SYSTEM_PROMPT, userPrompt)
+    const suggestion = await complete(MODEL_FULL, SYSTEM_PROMPT, userPrompt)
+    await query('INSERT INTO weekly_feedback_suggestions (week_of, content) VALUES ($1, $2)', [
+      target,
+      suggestion,
+    ])
+    return suggestion
   })
 }

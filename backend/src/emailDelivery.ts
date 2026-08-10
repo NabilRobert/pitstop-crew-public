@@ -4,6 +4,7 @@
 
 import nodemailer from 'nodemailer'
 import { GMAIL_APP_PASSWORD, GMAIL_USER, RESEND_API_KEY, RESEND_FROM_EMAIL } from './config.js'
+import { getSettings } from './settings.js'
 
 export async function sendEmail(to: string, subject: string, body: string): Promise<void> {
   if (RESEND_API_KEY) {
@@ -15,6 +16,25 @@ export async function sendEmail(to: string, subject: string, body: string): Prom
       'No email provider configured — set RESEND_API_KEY, or GMAIL_USER + GMAIL_APP_PASSWORD, in .env'
     )
   }
+}
+
+/** The single delivery path for both the scheduled cron pipeline
+ * (runDaily.ts) and manually-triggered runs (POST /pipeline/run in
+ * main.ts) — reads the recipient from settings.ts (Settings page →
+ * "Report recipient email") so both paths pick up the same override.
+ * Prints instead of sending when no recipient is configured, matching
+ * this project's existing "surfaced, never silently skipped" principle
+ * for anything report-related. */
+export async function deliverReport(runType: string, subject: string, body: string): Promise<void> {
+  const settings = await getSettings()
+  const recipient = settings.report_recipient_email
+  if (!recipient) {
+    console.log(`[${runType}] No report recipient configured — skipping email, printing instead:`)
+    console.log(subject)
+    console.log(body)
+    return
+  }
+  await sendEmail(recipient, subject, body)
 }
 
 async function sendViaResend(to: string, subject: string, body: string): Promise<void> {

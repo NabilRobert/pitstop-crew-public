@@ -4,11 +4,20 @@ import { api } from '../lib/api'
 import { formatMicrosAsIDR, formatNumber, formatPercent, formatDate } from '../lib/format'
 import MetricCard from '../components/MetricCard.vue'
 import CampaignTable from '../components/CampaignTable.vue'
-import ReportPanel from '../components/ReportPanel.vue'
+import StatusPill from '../components/StatusPill.vue'
+import ReportTabs from '../components/ReportTabs.vue'
+import ReportDrawer from '../components/ReportDrawer.vue'
+import AskPanel from '../components/AskPanel.vue'
+import WhyTrailPanel from '../components/WhyTrailPanel.vue'
+import TrendChart from '../components/TrendChart.vue'
+import CampaignBarChart from '../components/CampaignBarChart.vue'
+import SegmentBreakdownChart from '../components/SegmentBreakdownChart.vue'
+import { useReportDrawer } from '../lib/useReportDrawer'
 
 const loading = ref(true)
 const error = ref(null)
 const performance = ref([])
+const segmentPerformance = ref([])
 const dailyReport = ref({ analysis: null, recommendation: null, summary: null })
 const systemHealth = ref(null)
 
@@ -52,14 +61,24 @@ const lastRunLabel = computed(() => {
   return run ? formatDate(run.finished_at) : 'never'
 })
 
+const latestReportLink = computed(() => {
+  const date = dailyReport.value?.summary?.report_date
+  return date ? `/reports/daily/${date}` : null
+})
+
+const { activeDrawer, openDrawer, closeDrawer } = useReportDrawer()
+const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? 'Ask about this report' : 'Why this?')
+
 onMounted(async () => {
   try {
-    const [perf, report, health] = await Promise.all([
+    const [perf, segPerf, report, health] = await Promise.all([
       api.performance(30),
+      api.segmentPerformance(30),
       api.latestReport('daily'),
       api.systemHealth(),
     ])
     performance.value = perf
+    segmentPerformance.value = segPerf
     dailyReport.value = report
     systemHealth.value = health
   } catch (e) {
@@ -96,20 +115,53 @@ onMounted(async () => {
         <MetricCard label="Cost" :value="formatMicrosAsIDR(totals.cost_micros)" accent="rosso" />
       </div>
 
+      <div class="mb-8">
+        <TrendChart :series="performance" />
+      </div>
+
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div class="lg:col-span-3">
-          <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
-            Campaigns
-          </h2>
-          <CampaignTable :rows="campaignRows" />
+        <div class="lg:col-span-3 space-y-6">
+          <CampaignBarChart :rows="campaignRows" />
+          <div>
+            <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
+              Campaigns
+            </h2>
+            <CampaignTable :rows="campaignRows" />
+          </div>
         </div>
         <div class="lg:col-span-2">
-          <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
-            AI Report
-          </h2>
-          <ReportPanel :report="dailyReport" period="daily" />
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
+              AI Report
+            </h2>
+            <div class="flex items-center gap-3">
+              <StatusPill v-if="dailyReport.summary" :status="dailyReport.summary.status" />
+              <router-link
+                v-if="latestReportLink"
+                :to="latestReportLink"
+                class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-ink"
+              >
+                View full report →
+              </router-link>
+            </div>
+          </div>
+          <ReportTabs
+            :report="dailyReport"
+            default-tab="summary"
+            @ask="openDrawer('ask', $event)"
+            @why-trail="openDrawer('why-trail', $event)"
+          />
         </div>
       </div>
+
+      <div class="mt-8">
+        <SegmentBreakdownChart :rows="segmentPerformance" />
+      </div>
+
+      <ReportDrawer :open="!!activeDrawer" :title="drawerTitle()" @close="closeDrawer">
+        <WhyTrailPanel v-if="activeDrawer?.type === 'why-trail'" :key="activeDrawer.outputId" :output-id="activeDrawer.outputId" />
+        <AskPanel v-else-if="activeDrawer?.type === 'ask'" :key="activeDrawer.outputId" :output-id="activeDrawer.outputId" />
+      </ReportDrawer>
     </template>
   </main>
 </template>

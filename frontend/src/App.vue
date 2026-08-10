@@ -1,9 +1,12 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, provide } from 'vue'
 import TopBar from './components/TopBar.vue'
+import ConsolePanel from './components/ConsolePanel.vue'
 import { api } from './lib/api'
+import { consoleOpen } from './lib/consoleState'
 
 const dataSource = ref('demo')
+provide('dataSource', dataSource)
 
 onMounted(async () => {
   try {
@@ -16,8 +19,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <TopBar :data-source="dataSource" />
+  <div class="min-h-screen" :class="consoleOpen ? 'pb-56' : 'pb-10'">
+    <TopBar />
     <router-view />
+    <ConsolePanel />
   </div>
 </template>
