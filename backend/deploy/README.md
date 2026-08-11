@@ -25,13 +25,13 @@ fresh on the VPS, not committed.
 ## 4. Verify before scheduling anything
 ```bash
 node -e "
-import('./dist/db.js').then(async ({query}) => {
+import('./dist/src/data/db.js').then(async ({query}) => {
   console.log('DB OK:', await query('SELECT 1'));
   process.exit(0);
 });
 "
 node -e "
-import('./dist/llm.js').then(async ({complete, MODEL_MINI}) => {
+import('./dist/src/agents/llm.js').then(async ({complete, MODEL_MINI}) => {
   console.log(await complete(MODEL_MINI, 'You are a test.', 'Say OK'));
   process.exit(0);
 });

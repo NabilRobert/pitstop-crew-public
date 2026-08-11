@@ -139,6 +139,17 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Which pipeline_runs row produced a given ai_outputs row — lets a report
+-- be looked up by the exact generation it came from instead of just
+-- report_date, so two runs generated on the same calendar date (e.g. a
+-- manual re-run after the scheduled one already fired) are each their own
+-- reachable report rather than one silently shadowing the other in the
+-- Reports list. NULL on rows from before this column existed. See
+-- backend/src/reporting.ts. Declared here, after pipeline_runs exists,
+-- since it references that table.
+ALTER TABLE ai_outputs ADD COLUMN IF NOT EXISTS pipeline_run_id INTEGER REFERENCES pipeline_runs(id);
+CREATE INDEX IF NOT EXISTS idx_ai_outputs_pipeline_run ON ai_outputs(pipeline_run_id);
+
 -- App-wide config, key/value. Currently just the pipeline's daily/weekly
 -- run times (HH:MM, server-local) — see backend/src/settings.ts and the
 -- Settings page. runDaily.ts polls these instead of the run time being
@@ -150,6 +161,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 INSERT INTO app_settings (key, value) VALUES ('daily_run_time', '06:00') ON CONFLICT (key) DO NOTHING;
 INSERT INTO app_settings (key, value) VALUES ('weekly_run_time', '06:00') ON CONFLICT (key) DO NOTHING;
 INSERT INTO app_settings (key, value) VALUES ('grade_forces_revision', 'false') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('report_language', 'en') ON CONFLICT (key) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_campaign_performance_date ON campaign_performance(date);
 CREATE INDEX IF NOT EXISTS idx_segment_performance_date ON segment_performance(date);

@@ -5,9 +5,9 @@
 # weekly run time (Settings page, backend/src/settings.ts) and hasn't
 # already succeeded today — the crontab line itself no longer encodes the
 # run time, so changing it doesn't need a VPS login. Times are compared in
-# server-local time, so set the VPS's timezone deliberately (timedatectl)
-# rather than assuming UTC — "6am" should mean 6am for the person reading
-# the report, not 6am UTC.
+# WIB (Asia/Jakarta, UTC+7 — see backend/src/timezone.ts), pinned in code,
+# so this is correct regardless of what timezone the VPS's own OS is set
+# to — "6am" always means 6am in Indonesia.
 
 */15 * * * * /path/to/google-ads/backend/deploy/run_daily.sh
 

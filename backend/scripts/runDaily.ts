@@ -7,31 +7,31 @@
 // once past the weekly run time. Emails the report on success, or a
 // failure alert on any exception — per PROJECT.md, failures are
 // surfaced, never silently skipped.
+//
+// Everything here is evaluated in WIB (see ../src/timezone.ts), not the
+// VPS's own OS timezone — the Settings page's run-time fields, "today"'s
+// date, and the Monday check all mean Indonesia time regardless of where
+// the server actually lives.
 
-import { runDaily, runWeekly, type RunResult } from '../src/orchestrator.js'
-import { formatReportEmail, formatFailureAlert, formatWeeklyFeedbackEmail } from '../src/reports.js'
-import { runWeeklyFeedback } from '../src/weeklyFeedback.js'
-import { deliverReport as deliver } from '../src/emailDelivery.js'
-import { getSettings } from '../src/settings.js'
-import { getLastSuccessfulRun, type RunType } from '../src/pipelineRuns.js'
+import { runDaily, runWeekly, type RunResult } from '../src/pipeline/orchestrator.js'
+import { formatReportEmail, formatFailureAlert, formatWeeklyFeedbackEmail } from '../src/reporting/reports.js'
+import { runWeeklyFeedback } from '../src/pipeline/weeklyFeedback.js'
+import { deliverReport as deliver } from '../src/platform/emailDelivery.js'
+import { getSettings } from '../src/platform/settings.js'
+import { getLastSuccessfulRun, type RunType } from '../src/pipeline/pipelineRuns.js'
+import { wibDate, wibTime, isWibMonday } from '../src/platform/timezone.js'
 
-/** HH:MM in server-local time — matches how plain crontab itself fires,
- * and how the Settings page's run-time fields are labeled. */
-function currentLocalTime(): string {
-  return new Date().toTimeString().slice(0, 5)
-}
-
-async function alreadyRanToday(runType: RunType, todayUtc: string): Promise<boolean> {
+async function alreadyRanToday(runType: RunType, todayWib: string): Promise<boolean> {
   const last = await getLastSuccessfulRun(runType)
   if (!last?.finished_at) return false
-  return new Date(last.finished_at).toISOString().slice(0, 10) === todayUtc
+  return wibDate(new Date(last.finished_at)) === todayWib
 }
 
 async function main() {
   const settings = await getSettings()
-  const now = currentLocalTime()
-  const today = new Date().toISOString().slice(0, 10)
-  const isMonday = new Date(today + 'T00:00:00Z').getUTCDay() === 1
+  const now = wibTime()
+  const today = wibDate()
+  const isMonday = isWibMonday()
 
   if (now < settings.daily_run_time) {
     console.log(`Daily run not due yet (now=${now}, due=${settings.daily_run_time})`)

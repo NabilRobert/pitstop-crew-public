@@ -11,7 +11,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdir, readdir, stat, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { DATABASE_URL, REPO_ROOT } from '../src/config.js'
+import { DATABASE_URL, REPO_ROOT } from '../src/platform/config.js'
 
 const execFileAsync = promisify(execFile)
 

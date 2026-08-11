@@ -6,10 +6,10 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import pg from 'pg'
-import { DATABASE_URL, REPO_ROOT, DATA_SOURCE } from '../src/config.js'
-import { query } from '../src/db.js'
-import * as timeMachine from '../src/demo/timeMachine.js'
-import type { State } from '../src/demo/markov.js'
+import { DATABASE_URL, REPO_ROOT, DATA_SOURCE } from '../src/platform/config.js'
+import { query } from '../src/data/db.js'
+import * as timeMachine from '../src/data/demo/timeMachine.js'
+import type { State } from '../src/data/demo/markov.js'
 
 const SEED_DAYS = 14
 const STATE_WEIGHTS: [State, number][] = [

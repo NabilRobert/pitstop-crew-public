@@ -2,11 +2,11 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/src/main.js",
+  "main": "dist/src/api/main.js",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch src/api/main.ts",
     "build": "tsc",
-    "start": "node dist/src/main.js"
+    "start": "node dist/src/api/main.js"
   },
   "keywords": [],
   "author": "",

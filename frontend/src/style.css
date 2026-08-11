@@ -20,7 +20,8 @@
   --color-ink-soft: #a3a0a8;
   --color-ink-faint: #6f6c74;
 
-  /* Ferrari brand */
+  /* Brand accent — theme-switchable, see [data-theme="blueprint"] below.
+     Defaults to the Ferrari palette. */
   --color-rosso: #e42528;
   --color-rosso-dark: #b81e21;
   --color-rosso-soft: #e4252826;
@@ -29,20 +30,68 @@
   --color-verde: #039b4e;
   --color-verde-soft: #039b4e26;
   --color-bianco: #ffffff;
+  --glow-1: #e4252814;
+  --glow-2: #f8e82310;
 
-  /* Racing-flag status semantics — reuse the brand hues with names that
-     read as state, not color, in component code. */
-  --color-flag-good: var(--color-verde);
-  --color-flag-good-soft: var(--color-verde-soft);
-  --color-flag-caution: var(--color-giallo);
-  --color-flag-caution-soft: var(--color-giallo-soft);
-  --color-flag-critical: var(--color-rosso);
-  --color-flag-critical-soft: var(--color-rosso-soft);
+  /* Racing-flag status semantics — fixed hex, deliberately NOT wired to
+     the brand accent variables above. These encode meaning (approved vs
+     flagged, grade severity), not brand identity, so a theme switch must
+     never change what "good"/"caution"/"critical" look like — losing that
+     at-a-glance color signal would make the dashboard harder to read, not
+     just differently styled. */
+  --color-flag-good: #039b4e;
+  --color-flag-good-soft: #039b4e26;
+  --color-flag-caution: #f8e823;
+  --color-flag-caution-soft: #f8e82326;
+  --color-flag-critical: #e42528;
+  --color-flag-critical-soft: #e4252826;
 
   /* Type */
   --font-display: 'Titillium Web', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+}
+
+/* "Blueprint" — a genuine light theme built from the palette proposed via
+   https://www.color-hex.com/color-palette/86164 (black / white / blue /
+   two grays) — not just a recolor of the dark theme's background. Flips
+   bg/surface/border/ink to light-on-dark's opposite AND swaps the brand
+   accents. Status-flag colors get their own light-safe hex here (still
+   green/amber/red, just darkened) rather than reusing the dark theme's
+   values — the original bright yellow flag-caution is nearly invisible
+   at ~1.2:1 contrast against a white background; keeping the SAME hex
+   across both themes only works when both share the same dark backdrop.
+   The attribute selector out-specificities Tailwind's plain :root/:host
+   theme-variable rule, so this doesn't need `!important` or source-order
+   tricks to win. */
+:root[data-theme='blueprint'] {
+  --color-bg: #f4f5f7;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ececef;
+  --color-border: #d7dade;
+  --color-border-strong: #b7bbc1;
+
+  --color-ink: #16181c;
+  --color-ink-soft: #4b4f57;
+  --color-ink-faint: #7d818a;
+
+  --color-rosso: #0090d1;
+  --color-rosso-dark: #00699a;
+  --color-rosso-soft: #0090d11f;
+  --color-giallo: #16181c;
+  --color-giallo-soft: #16181c14;
+  --color-verde: #8a8d92;
+  --color-verde-soft: #8a8d9224;
+  --color-bianco: #ffffff;
+  --glow-1: #0090d10d;
+  --glow-2: #00000008;
+
+  --color-flag-good: #067a3f;
+  --color-flag-good-soft: #067a3f1f;
+  --color-flag-caution: #9a6300;
+  --color-flag-caution-soft: #9a63001f;
+  --color-flag-critical: #c81e21;
+  --color-flag-critical-soft: #c81e211f;
 }
 
 body {
@@ -55,8 +104,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-image:
-    radial-gradient(ellipse 900px 500px at 15% -10%, #e4252814 0%, transparent 60%),
-    radial-gradient(ellipse 700px 500px at 100% 0%, #f8e82310 0%, transparent 55%);
+    radial-gradient(ellipse 900px 500px at 15% -10%, var(--glow-1) 0%, transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, var(--glow-2) 0%, transparent 55%);
   background-attachment: fixed;
 }
 

@@ -15,7 +15,7 @@
 import { createServer } from 'node:http'
 import { exec } from 'node:child_process'
 import { OAuth2Client } from 'google-auth-library'
-import { GADS_CLIENT_ID, GADS_CLIENT_SECRET } from '../src/config.js'
+import { GADS_CLIENT_ID, GADS_CLIENT_SECRET } from '../src/platform/config.js'
 
 const PORT = 8080
 const REDIRECT_URI = `http://localhost:${PORT}/`

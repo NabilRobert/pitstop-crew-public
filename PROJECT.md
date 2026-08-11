@@ -53,7 +53,8 @@ No `google-ads.yaml` file — credentials load straight from `.env` via the clie
 2. **"Anna" — Analysis agent** — trend/anomaly detection + audience segment performance, combined since both work off the same stored data
 3. **"Rico" — Recommendation agent** — turns analysis output into plain-language, actionable suggestions
 4. **"Sammy" — Summary agent** — periodic/on-demand digest, invoked separately only when needed
-5. **Critic agent** — not a pipeline step, cuts across all above. Its job is to find holes (weak evidence, thin sample size, overconfident claims, contradictions) in each agent's output and feed that criticism back into the originating agent for revision before anything surfaces to the user. Not yet named.
+5. **"Ciri" — Critic agent** — not a pipeline step, cuts across all above. Its job is to find holes (weak evidence, thin sample size, overconfident claims, contradictions) in each agent's output and feed that criticism back into the originating agent for revision before anything surfaces to the user. Also assigns a strict A–F grade with a documented rubric — see `backend/src/critic.ts`.
+6. **"Emil" — Email delivery agent** — not an LLM either, cross-cutting like Damon and Orca. Sends the finished report (or a failure alert) to the configured recipient — Resend primary, Gmail SMTP fallback — see `backend/src/emailDelivery.ts`.
 
 **Model/provider assignment for each is in its file under `agents/`** — not repeated here, so this list can't drift out of sync with the actual per-agent spec the way it did before.
 
