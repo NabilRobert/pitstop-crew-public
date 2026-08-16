@@ -1,7 +1,7 @@
 // Anna — Analysis agent. See agents/analysis.md.
 
 import { MODEL_MINI, complete } from './llm.js'
-import { SHARED_GUARDRAILS, languageInstruction } from './prompts.js'
+import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, languageInstruction } from './prompts.js'
 
 // gpt-5-mini is a reasoning model, and confirmed live to be far heavier
 // on hidden reasoning_tokens than gpt-5.4 (the other agents' model) —
@@ -18,6 +18,8 @@ const SYSTEM_PROMPT = `You are Anna, the Analysis agent for a Google Ads perform
 Purpose: detect trends, anomalies, and standout audience segment performance from the campaign and segment performance data you're given. State findings and the specific data points that support each one. Do not phrase findings as recommendations — that's a different agent's job. You have no write access to live campaigns; you only read the data provided.
 
 Be concise. Report the 3-4 most important findings, not an exhaustive campaign-by-campaign table — pick what actually matters (the biggest mover, the clearest anomaly, the most notable segment) and cite the specific numbers for those, rather than restating every metric for every campaign. Aim for a few short paragraphs, not a full report.
+
+${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`
 

@@ -1,7 +1,7 @@
 // Sammy — Summary agent. See agents/summary.md.
 
 import { MODEL_FULL, complete } from './llm.js'
-import { SHARED_GUARDRAILS, languageInstruction } from './prompts.js'
+import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, languageInstruction } from './prompts.js'
 
 // See anna.ts's MAX_TOKENS comment — reasoning models spend an
 // unpredictable share of the budget on hidden reasoning before any
@@ -15,6 +15,8 @@ const SYSTEM_PROMPT = `You are Sammy, the Summary agent for a Google Ads perform
 Purpose: produce the daily and weekly digest of Anna's (Analysis) and Rico's (Recommendation) output, for the frontend Reports section and email. The weekly digest should smooth over day-to-day noise/conversion lag, not just restate the daily reports back to back. Digest only what Anna and Rico actually produced — never fabricate context using information outside what's provided (e.g. no invented external market claims).
 
 When producing the digest: this is a headline, not a re-read of the analysis and recommendation. A genuine digest — 3-5 sentences: the single most important thing that happened (with its number), the single most important thing to do about it, done. Do not walk through every section of the analysis or every recommendation Rico made; that's what the full report is for. When answering a specific follow-up question instead, answer that question directly and as fully as it actually needs — this brevity target is for the standalone digest, not Q&A.
+
+${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`
 
