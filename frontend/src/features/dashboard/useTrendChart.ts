@@ -1,15 +1,24 @@
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { CHART_COLORS, createBaseChartOptions } from '../../shared/utils/chartTheme'
 import { formatDate, formatNumber, formatMicrosAsIDR } from '../../shared/utils/format'
+import type { PerformanceRow } from '../../shared/api/types'
+import type { MetricDef } from './metrics'
 
-export function useTrendChart(seriesRef) {
-  const metric = ref('impressions')
+interface DayTotals {
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+}
 
-  const byDate = computed(() => {
-    const totals = new Map()
+export function useTrendChart(seriesRef: Ref<PerformanceRow[]>) {
+  const metric = ref<MetricDef['key']>('impressions')
+
+  const byDate = computed<[string, DayTotals][]>(() => {
+    const totals = new Map<string, DayTotals>()
     for (const row of seriesRef.value) {
       if (!totals.has(row.date)) totals.set(row.date, { impressions: 0, clicks: 0, cost_micros: 0, conversions: 0 })
-      const acc = totals.get(row.date)
+      const acc = totals.get(row.date)!
       acc.impressions += row.impressions
       acc.clicks += row.clicks
       acc.cost_micros += row.cost_micros
@@ -37,7 +46,7 @@ export function useTrendChart(seriesRef) {
   // meaningless as a raw number (millions of micros per day), so the axis
   // and tooltip both need the same per-metric formatter the rest of the
   // app already uses, not the raw stored value.
-  function formatMetricValue(value) {
+  function formatMetricValue(value: number): string {
     if (metric.value === 'cost_micros') return formatMicrosAsIDR(value)
     if (metric.value === 'conversions') return (value ?? 0).toFixed(1)
     return formatNumber(value)
@@ -47,10 +56,10 @@ export function useTrendChart(seriesRef) {
   // see chartTheme.js for why that matters (Chart.js mutates options
   // objects internally; sharing one across chart instances corrupts them).
   const chartOptions = createBaseChartOptions()
-  chartOptions.plugins.tooltip.callbacks = {
-    label: (context) => formatMetricValue(context.parsed.y),
+  chartOptions.plugins!.tooltip!.callbacks = {
+    label: (context: { parsed: { y: number | null } }) => formatMetricValue(context.parsed.y ?? 0),
   }
-  chartOptions.scales.y.ticks.callback = (value) => formatMetricValue(value)
+  chartOptions.scales!.y!.ticks!.callback = (value: number | string) => formatMetricValue(Number(value))
 
   return { metric, byDate, chartData, chartOptions }
 }

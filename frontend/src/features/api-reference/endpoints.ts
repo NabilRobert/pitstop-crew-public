@@ -1,4 +1,15 @@
-export const SECTIONS = [
+export interface ApiSection {
+  id: string
+  label: string
+}
+
+export interface EndpointDef {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  path: string
+  desc: string
+}
+
+export const SECTIONS: ApiSection[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'campaigns', label: 'Campaigns & performance' },
   { id: 'reports', label: 'Reports' },
@@ -10,13 +21,13 @@ export const SECTIONS = [
   { id: 'notes', label: 'Worth knowing' },
 ]
 
-export const CAMPAIGNS_ENDPOINTS = [
+export const CAMPAIGNS_ENDPOINTS: EndpointDef[] = [
   { method: 'GET', path: '/campaigns', desc: 'List all campaigns.' },
   { method: 'GET', path: '/performance?days=30', desc: 'Time-series performance for the trailing N days.' },
   { method: 'GET', path: '/segments/performance?days=30', desc: 'Performance broken down by audience segment.' },
 ]
 
-export const REPORTS_ENDPOINTS = [
+export const REPORTS_ENDPOINTS: EndpointDef[] = [
   { method: 'GET', path: '/reports?period=daily|weekly', desc: 'List available report dates.' },
   { method: 'GET', path: '/reports/latest?period=...', desc: 'The most recent report.' },
   {
@@ -26,14 +37,14 @@ export const REPORTS_ENDPOINTS = [
   },
 ]
 
-export const OUTPUTS_ENDPOINTS = [
+export const OUTPUTS_ENDPOINTS: EndpointDef[] = [
   { method: 'GET', path: '/outputs/:id', desc: 'Raw output record.' },
   { method: 'GET', path: '/outputs/:id/why-trail', desc: "The critic's revision history for that output." },
   { method: 'GET', path: '/outputs/:id/ask-history', desc: 'Prior Q&A on that output.' },
   { method: 'POST', path: '/ask', desc: 'Ask Rico/Sammy a follow-up question, {output_id, question}.' },
 ]
 
-export const PIPELINE_ENDPOINTS = [
+export const PIPELINE_ENDPOINTS: EndpointDef[] = [
   {
     method: 'GET',
     path: '/system-health',
@@ -56,7 +67,7 @@ export const PIPELINE_ENDPOINTS = [
   },
 ]
 
-export const SETTINGS_ENDPOINTS = [
+export const SETTINGS_ENDPOINTS: EndpointDef[] = [
   { method: 'GET', path: '/settings', desc: 'Current settings (run times, recipient email, etc.).' },
   {
     method: 'PUT',
@@ -65,12 +76,12 @@ export const SETTINGS_ENDPOINTS = [
   },
 ]
 
-export const LEARNING_ENDPOINTS = [
+export const LEARNING_ENDPOINTS: EndpointDef[] = [
   { method: 'GET', path: '/learning/flag-rate?weeks=8', desc: 'Trend of how often the critic flags issues.' },
   { method: 'GET', path: '/learning/suggestions?limit=20', desc: 'History of suggested prompt patches.' },
 ]
 
-export const TIME_MACHINE_ENDPOINTS = [
+export const TIME_MACHINE_ENDPOINTS: EndpointDef[] = [
   {
     method: 'POST',
     path: '/time-machine/override',
@@ -80,7 +91,7 @@ export const TIME_MACHINE_ENDPOINTS = [
   { method: 'DELETE', path: '/time-machine/override/:date', desc: 'Clear one.' },
 ]
 
-export const METHOD_COLOR = {
+export const METHOD_COLOR: Record<EndpointDef['method'], string> = {
   GET: 'text-flag-good',
   POST: 'text-rosso',
   PUT: 'text-flag-caution',

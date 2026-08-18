@@ -1,12 +1,13 @@
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
+import type { Report } from '../../shared/api/types'
 
 const VIEW_MODE_KEY = 'pitstop-report-view-mode'
 
-export function useReportDetail(idRef) {
-  const report = ref({ analysis: null, recommendation: null, summary: null })
+export function useReportDetail(idRef: Ref<string | number>) {
+  const report = ref<Report>({ analysis: null, recommendation: null, summary: null })
   const loading = ref(true)
-  const error = ref(null)
+  const error = ref<string | null>(null)
 
   const viewMode = ref(localStorage.getItem(VIEW_MODE_KEY) || 'columns')
   watch(viewMode, (mode) => localStorage.setItem(VIEW_MODE_KEY, mode))
@@ -17,7 +18,7 @@ export function useReportDetail(idRef) {
     try {
       report.value = await api.reportById(idRef.value)
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }

@@ -2,18 +2,31 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../../shared/api/api'
 import { formatDate } from '../../shared/utils/format'
+import type { PerformanceRow, SegmentPerformanceRow, Report, SystemHealth } from '../../shared/api/types'
+
+interface Totals {
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+}
+
+export interface CampaignRow extends Totals {
+  campaign: string
+  ctr: number
+}
 
 export function useDashboard() {
   const { t } = useI18n()
 
   const loading = ref(true)
-  const error = ref(null)
-  const performance = ref([])
-  const segmentPerformance = ref([])
-  const dailyReport = ref({ analysis: null, recommendation: null, summary: null })
-  const systemHealth = ref(null)
+  const error = ref<string | null>(null)
+  const performance = ref<PerformanceRow[]>([])
+  const segmentPerformance = ref<SegmentPerformanceRow[]>([])
+  const dailyReport = ref<Report>({ analysis: null, recommendation: null, summary: null })
+  const systemHealth = ref<SystemHealth | null>(null)
 
-  const totals = computed(() => {
+  const totals = computed<Totals>(() => {
     return performance.value.reduce(
       (acc, row) => {
         acc.impressions += row.impressions
@@ -28,14 +41,14 @@ export function useDashboard() {
 
   const ctr = computed(() => (totals.value.impressions ? (totals.value.clicks / totals.value.impressions) * 100 : 0))
 
-  const campaignRows = computed(() => {
-    const byCampaign = new Map()
+  const campaignRows = computed<CampaignRow[]>(() => {
+    const byCampaign = new Map<string, Totals & { campaign: string }>()
     for (const row of performance.value) {
       const key = row.campaign
       if (!byCampaign.has(key)) {
         byCampaign.set(key, { campaign: key, impressions: 0, clicks: 0, cost_micros: 0, conversions: 0 })
       }
-      const agg = byCampaign.get(key)
+      const agg = byCampaign.get(key)!
       agg.impressions += row.impressions
       agg.clicks += row.clicks
       agg.cost_micros += row.cost_micros
@@ -69,7 +82,7 @@ export function useDashboard() {
       dailyReport.value = report
       systemHealth.value = health
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }

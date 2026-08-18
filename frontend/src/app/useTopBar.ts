@@ -1,21 +1,21 @@
-import { computed, inject } from 'vue'
+import { computed, inject, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { setLocale, getLocale } from '../i18n/index.js'
+import { setLocale, getLocale, type Locale } from '../i18n/index.js'
 import { api } from '../shared/api/api'
 
 export function useTopBar() {
-  const dataSource = inject('dataSource')
+  const dataSource = inject<Ref<string>>('dataSource')
   const route = useRoute()
 
   // Manual prefix match instead of router-link's active-class: "/" as a
   // link path would otherwise match every route as a prefix.
-  function isActive(linkPath) {
+  function isActive(linkPath: string): boolean {
     return linkPath === '/' ? route.path === '/' : route.path.startsWith(linkPath)
   }
 
   const currentLocale = computed(() => getLocale())
 
-  function switchLocale(locale) {
+  function switchLocale(locale: Locale) {
     if (locale === currentLocale.value) return
     setLocale(locale)
     // Fire-and-forget: keep scheduled/manual report generation in sync with the

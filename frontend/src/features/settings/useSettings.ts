@@ -4,7 +4,7 @@ import { api } from '../../shared/api/api'
 export function useSettings() {
   const loading = ref(true)
   const saving = ref(false)
-  const error = ref(null)
+  const error = ref<string | null>(null)
   const saved = ref(false)
 
   const dailyRunTime = ref('06:00')
@@ -22,7 +22,7 @@ export function useSettings() {
       reportRecipientEmail.value = settings.report_recipient_email
       reportLanguage.value = settings.report_language
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }
@@ -47,7 +47,7 @@ export function useSettings() {
       reportLanguage.value = settings.report_language
       saved.value = true
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       saving.value = false
     }

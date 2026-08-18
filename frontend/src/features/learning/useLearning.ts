@@ -2,12 +2,13 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '../../shared/api/api'
 import { CHART_COLORS, createBaseChartOptions } from '../../shared/utils/chartTheme'
 import { formatDate } from '../../shared/utils/format'
+import type { FlagRateWeek, LearningSuggestion } from '../../shared/api/types'
 
 export function useLearning() {
   const loading = ref(true)
-  const error = ref(null)
-  const flagRate = ref([])
-  const suggestions = ref([])
+  const error = ref<string | null>(null)
+  const flagRate = ref<FlagRateWeek[]>([])
+  const suggestions = ref<LearningSuggestion[]>([])
 
   const chartData = computed(() => ({
     labels: flagRate.value.map((w) => formatDate(w.week)),
@@ -25,7 +26,7 @@ export function useLearning() {
   }))
 
   const chartOptions = createBaseChartOptions()
-  chartOptions.scales.y.ticks.callback = (v) => `${v}%`
+  chartOptions.scales!.y!.ticks!.callback = (v: number | string) => `${v}%`
 
   onMounted(async () => {
     try {
@@ -33,7 +34,7 @@ export function useLearning() {
       flagRate.value = rate
       suggestions.value = sugg
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }

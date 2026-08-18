@@ -1,11 +1,14 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-const props = defineProps({
-  grade: { type: String, default: null }, // 'A' | 'B' | 'C' | 'D' | 'F' | null
-  rationale: { type: String, default: '' },
-})
+const props = withDefaults(
+  defineProps<{
+    grade?: 'A' | 'B' | 'C' | 'D' | 'F' | null
+    rationale?: string | null
+  }>(),
+  { grade: null, rationale: '' }
+)
 
 const { t } = useI18n()
 

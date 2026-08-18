@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { theme, setTheme } from '../shared/composables/theme.js'
 import { navLinks } from './navLinks.js'

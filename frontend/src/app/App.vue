@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import TopBar from './TopBar.vue'
 import ConsolePanel from './ConsolePanel.vue'
 import { consoleOpen } from '../shared/composables/consoleState'

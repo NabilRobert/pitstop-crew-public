@@ -1,16 +1,21 @@
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue'
 import { BASE_URL } from '../shared/api/api'
+import type { ConsoleEvent } from '../shared/api/types'
 
-export const LEVEL_COLOR = { info: 'text-ink-soft', warn: 'text-flag-caution', error: 'text-flag-critical' }
+export const LEVEL_COLOR: Record<string, string> = {
+  info: 'text-ink-soft',
+  warn: 'text-flag-caution',
+  error: 'text-flag-critical',
+}
 
-export function formatTime(iso) {
+export function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-GB', { hour12: false })
 }
 
-export function useConsolePanel(logElRef) {
-  const events = ref([])
+export function useConsolePanel(logElRef: Ref<HTMLElement | null>) {
+  const events = ref<ConsoleEvent[]>([])
 
-  let source = null
+  let source: EventSource | null = null
 
   onMounted(() => {
     // Connect once, regardless of open/closed, so events aren't missed

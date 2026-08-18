@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDate } from '../utils/format'

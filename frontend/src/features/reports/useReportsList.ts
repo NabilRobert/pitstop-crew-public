@@ -1,16 +1,20 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { api, BASE_URL } from '../../shared/api/api'
 import { consoleOpen } from '../../shared/composables/consoleState'
+import type { ReportListEntry, ConsoleEvent } from '../../shared/api/types'
 
-export const STRIP_COLOR = { approved: 'var(--color-flag-good)', flagged: 'var(--color-flag-caution)' }
+export const STRIP_COLOR: Record<string, string> = {
+  approved: 'var(--color-flag-good)',
+  flagged: 'var(--color-flag-caution)',
+}
 
 export function useReportsList() {
-  const period = ref('daily')
-  const reports = ref([])
+  const period = ref<'daily' | 'weekly'>('daily')
+  const reports = ref<ReportListEntry[]>([])
   const loading = ref(true)
-  const error = ref(null)
+  const error = ref<string | null>(null)
   const generating = ref(false)
-  const generateError = ref(null)
+  const generateError = ref<string | null>(null)
 
   // Oldest -> newest, left -> right, so the strip reads like a timeline.
   const stripReports = computed(() => [...reports.value].reverse())
@@ -21,7 +25,7 @@ export function useReportsList() {
     try {
       reports.value = await api.reportsList(period.value)
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }
@@ -33,13 +37,13 @@ export function useReportsList() {
   // twice by the critic) can run well past any timeout short enough to
   // still feel responsive if it succeeds quickly. A generous fallback
   // timer still exists in case the SSE connection itself drops silently.
-  let generateSource = null
-  let fallbackTimer = null
+  let generateSource: EventSource | null = null
+  let fallbackTimer: ReturnType<typeof setTimeout> | null = null
 
   function stopWatchingRun() {
     generateSource?.close()
     generateSource = null
-    clearTimeout(fallbackTimer)
+    if (fallbackTimer) clearTimeout(fallbackTimer)
     fallbackTimer = null
   }
 
@@ -52,7 +56,7 @@ export function useReportsList() {
     try {
       await api.triggerRun(triggeredPeriod)
     } catch (e) {
-      generateError.value = e.message
+      generateError.value = e instanceof Error ? e.message : String(e)
       return
     }
     generating.value = true
@@ -62,7 +66,7 @@ export function useReportsList() {
     const label = triggeredPeriod === 'weekly' ? 'Weekly' : 'Daily'
     generateSource = new EventSource(`${BASE_URL}/console/stream`)
     generateSource.onmessage = (e) => {
-      const event = JSON.parse(e.data)
+      const event: ConsoleEvent = JSON.parse(e.data)
       if (event.timestamp <= triggeredAt) return // replayed backlog, not this run
       const isDone = event.message.startsWith(`${label} pipeline run complete`)
       const isFailed = event.level === 'error' && event.message.startsWith('Pipeline run failed')

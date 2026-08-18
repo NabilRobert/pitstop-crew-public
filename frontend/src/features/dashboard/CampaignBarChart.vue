@@ -1,14 +1,13 @@
-<script setup>
+<script setup lang="ts">
 import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Bar } from 'vue-chartjs'
 import { useCampaignBarChart } from './useCampaignBarChart'
+import type { CampaignRow } from './useDashboard'
 
 const { t } = useI18n()
 
-const props = defineProps({
-  rows: { type: Array, required: true }, // {campaign, conversions, ...}
-})
+const props = defineProps<{ rows: CampaignRow[] }>()
 
 const { sorted, chartData, chartOptions } = useCampaignBarChart(toRef(props, 'rows'))
 </script>

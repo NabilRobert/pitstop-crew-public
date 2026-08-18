@@ -1,7 +1,8 @@
-import { computed } from 'vue'
+import { computed, type Ref } from 'vue'
 import { CHART_COLORS, createBaseChartOptions } from '../../shared/utils/chartTheme'
+import type { CampaignRow } from './useDashboard'
 
-export function useCampaignBarChart(rowsRef) {
+export function useCampaignBarChart(rowsRef: Ref<CampaignRow[]>) {
   const sorted = computed(() => [...rowsRef.value].sort((a, b) => b.conversions - a.conversions))
 
   const chartData = computed(() => ({

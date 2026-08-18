@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { formatDateTime, formatMicrosAsUSD } from '../../shared/utils/format'
 import RunStatusPill from './RunStatusPill.vue'
@@ -21,7 +21,7 @@ const { health, loading, error, switchStatus } = useSystemHealth()
       {{ t('common.couldNotReachBackend', { error }) }}
     </div>
 
-    <template v-else>
+    <template v-else-if="health">
       <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="rounded-lg border border-border bg-surface p-5">
           <div class="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">

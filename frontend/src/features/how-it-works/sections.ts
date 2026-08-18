@@ -1,4 +1,9 @@
-export const SECTIONS = [
+export interface Section {
+  id: string
+  labelKey: string
+}
+
+export const SECTIONS: Section[] = [
   { id: 'overview', labelKey: 'howItWorks.nav.overview' },
   { id: 'pit-crew', labelKey: 'howItWorks.nav.pitCrew' },
   { id: 'pipeline', labelKey: 'howItWorks.nav.pipeline' },

@@ -1,14 +1,13 @@
-<script setup>
+<script setup lang="ts">
 import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Bar } from 'vue-chartjs'
 import { useSegmentBreakdownChart } from './useSegmentBreakdownChart'
+import type { SegmentPerformanceRow } from '../../shared/api/types'
 
 const { t } = useI18n()
 
-const props = defineProps({
-  rows: { type: Array, required: true }, // {segment_type, segment_value, conversions, ...}
-})
+const props = defineProps<{ rows: SegmentPerformanceRow[] }>()
 
 const { types, activeType, rowsForType, chartData, chartOptions } = useSegmentBreakdownChart(toRef(props, 'rows'))
 </script>

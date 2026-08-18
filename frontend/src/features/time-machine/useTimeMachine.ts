@@ -1,17 +1,23 @@
-import { ref, inject, onMounted } from 'vue'
+import { ref, inject, onMounted, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
 import { STATES } from './states'
+import type { ForcedState } from '../../shared/api/types'
+
+interface OverrideRow {
+  date: string
+  forced_state: ForcedState
+}
 
 export function useTimeMachine() {
-  const dataSource = inject('dataSource')
+  const dataSource = inject<Ref<string>>('dataSource')
 
-  const overrides = ref([])
+  const overrides = ref<OverrideRow[]>([])
   const loading = ref(true)
-  const error = ref(null)
+  const error = ref<string | null>(null)
   const saving = ref(false)
 
   const newDate = ref('')
-  const newState = ref(STATES[0])
+  const newState = ref<ForcedState>(STATES[0])
 
   async function load() {
     loading.value = true
@@ -22,7 +28,7 @@ export function useTimeMachine() {
         .map(([date, forced_state]) => ({ date, forced_state }))
         .sort((a, b) => a.date.localeCompare(b.date))
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }
@@ -37,18 +43,18 @@ export function useTimeMachine() {
       newDate.value = ''
       await load()
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       saving.value = false
     }
   }
 
-  async function clearOverride(date) {
+  async function clearOverride(date: string) {
     try {
       await api.clearTimeMachineOverride(date)
       await load()
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     }
   }
 

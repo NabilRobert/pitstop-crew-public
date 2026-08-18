@@ -1,13 +1,12 @@
-<script setup>
+<script setup lang="ts">
 import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Line } from 'vue-chartjs'
 import { METRICS } from './metrics'
 import { useTrendChart } from './useTrendChart'
+import type { PerformanceRow } from '../../shared/api/types'
 
-const props = defineProps({
-  series: { type: Array, required: true }, // rows from /performance: {date, campaign, impressions, clicks, cost_micros, conversions}
-})
+const props = defineProps<{ series: PerformanceRow[] }>()
 
 const { t } = useI18n()
 

@@ -1,11 +1,12 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import { CHART_COLORS, createBaseChartOptions } from '../../shared/utils/chartTheme'
+import type { SegmentPerformanceRow } from '../../shared/api/types'
 
-export function useSegmentBreakdownChart(rowsRef) {
+export function useSegmentBreakdownChart(rowsRef: Ref<SegmentPerformanceRow[]>) {
   const types = computed(() => [...new Set(rowsRef.value.map((r) => r.segment_type))].sort())
-  const activeType = ref(types.value[0] ?? null)
+  const activeType = ref<string | null>(types.value[0] ?? null)
   watch(types, (t) => {
-    if (!t.includes(activeType.value)) activeType.value = t[0] ?? null
+    if (!activeType.value || !t.includes(activeType.value)) activeType.value = t[0] ?? null
   })
 
   const rowsForType = computed(() =>

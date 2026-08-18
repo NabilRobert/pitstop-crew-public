@@ -1,18 +1,19 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, type Ref } from 'vue'
 import { api } from '../api/api'
+import type { AskHistoryEntry } from '../api/types'
 
-export function useAskPanel(outputIdRef) {
-  const history = ref([])
+export function useAskPanel(outputIdRef: Ref<number>) {
+  const history = ref<AskHistoryEntry[]>([])
   const question = ref('')
   const loadingHistory = ref(true)
   const asking = ref(false)
-  const error = ref(null)
+  const error = ref<string | null>(null)
 
   onMounted(async () => {
     try {
       history.value = await api.askHistory(outputIdRef.value)
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loadingHistory.value = false
     }
@@ -28,7 +29,7 @@ export function useAskPanel(outputIdRef) {
       history.value = result.history
       question.value = ''
     } catch (e) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       asking.value = false
     }

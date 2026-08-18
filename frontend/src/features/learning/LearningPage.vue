@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { Line } from 'vue-chartjs'
 import { formatDate } from '../../shared/utils/format'

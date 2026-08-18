@@ -7,9 +7,10 @@
 // precaution.
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import type { CriticIssue } from '../api/types'
 
-export function renderMarkdown(text) {
-  return DOMPurify.sanitize(marked.parse(text || ''))
+export function renderMarkdown(text: string | null | undefined): string {
+  return DOMPurify.sanitize(marked.parse(text || '', { async: false }))
 }
 
 /** Renders content as markdown, then wraps each issue's verbatim quote in
@@ -21,7 +22,7 @@ export function renderMarkdown(text) {
  * If a quote isn't found verbatim, that one issue is silently skipped —
  * this is a nice-to-have visualization layer, not something that should
  * break report rendering if the LLM didn't quote exactly. */
-export function renderReportContent(content, issues = []) {
+export function renderReportContent(content: string, issues: CriticIssue[] = []): string {
   const html = renderMarkdown(content)
   if (!issues || !issues.length) return html
 
@@ -33,16 +34,17 @@ export function renderReportContent(content, issues = []) {
   return container.innerHTML
 }
 
-function highlightFirstMatch(root, quote, reason) {
+function highlightFirstMatch(root: HTMLElement, quote: string, reason: string): void {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-  let node
+  let node: Node | null
   while ((node = walker.nextNode())) {
-    const idx = node.textContent.indexOf(quote)
+    const text = node.textContent ?? ''
+    const idx = text.indexOf(quote)
     if (idx === -1) continue
 
-    const before = node.textContent.slice(0, idx)
-    const match = node.textContent.slice(idx, idx + quote.length)
-    const after = node.textContent.slice(idx + quote.length)
+    const before = text.slice(0, idx)
+    const match = text.slice(idx, idx + quote.length)
+    const after = text.slice(idx + quote.length)
 
     const mark = document.createElement('mark')
     mark.className = 'critic-highlight'
@@ -50,6 +52,7 @@ function highlightFirstMatch(root, quote, reason) {
     mark.textContent = match
 
     const parent = node.parentNode
+    if (!parent) return
     parent.insertBefore(document.createTextNode(before), node)
     parent.insertBefore(mark, node)
     parent.insertBefore(document.createTextNode(after), node)

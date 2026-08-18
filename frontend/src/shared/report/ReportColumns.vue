@@ -1,13 +1,12 @@
-<script setup>
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import ReportSection from './ReportSection.vue'
 import { REPORT_SECTIONS } from './reportSections'
+import type { Report } from '../api/types'
 
-defineProps({
-  report: { type: Object, required: true }, // { analysis, recommendation, summary }
-})
+defineProps<{ report: Report }>()
 
-defineEmits(['ask', 'why-trail'])
+defineEmits<{ ask: [id: number]; 'why-trail': [id: number] }>()
 
 const { t } = useI18n()
 </script>
@@ -25,8 +24,8 @@ const { t } = useI18n()
         :output="report[section.key]"
         :askable="section.askable"
         :has-why-trail="section.hasWhyTrail"
-        @ask="$emit('ask', report[section.key].id)"
-        @why-trail="$emit('why-trail', report[section.key].id)"
+        @ask="$emit('ask', report[section.key]!.id)"
+        @why-trail="$emit('why-trail', report[section.key]!.id)"
       />
     </div>
   </div>
