@@ -17,6 +17,7 @@ const navLinks = [
   { to: '/learning', labelKey: 'nav.learning' },
   { to: '/settings', labelKey: 'nav.settings' },
   { to: '/how-it-works', labelKey: 'nav.howItWorks' },
+  { to: '/api-reference', labelKey: 'nav.apiReference' },
 ]
 
 // Manual prefix match instead of router-link's active-class: "/" as a

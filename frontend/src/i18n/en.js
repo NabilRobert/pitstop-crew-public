@@ -15,6 +15,7 @@ export default {
     learning: 'Learning',
     settings: 'Settings',
     howItWorks: 'How It Works',
+    apiReference: 'API Reference',
     timeMachine: 'Time Machine',
   },
   topBar: {
@@ -248,6 +249,11 @@ export default {
     weeklySuggestionsTitle: 'Weekly suggestion history',
     noSuggestions: 'No suggestions yet — these are drafted weekly from recurring patterns Ciri found, when there are any.',
     weekOf: 'Week of {date}',
+  },
+  apiReference: {
+    title: 'API Reference',
+    subtitle:
+      "The shape of the backend REST API — endpoints, request/response formats, and curl examples — for anyone building or connecting a separate frontend to it.",
   },
   howItWorks: {
     title: 'How this all works',

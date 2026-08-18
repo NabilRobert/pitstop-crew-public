@@ -15,6 +15,7 @@ export default {
     learning: 'Pembelajaran',
     settings: 'Pengaturan',
     howItWorks: 'Cara Kerja',
+    apiReference: 'Referensi API',
     timeMachine: 'Mesin Waktu',
   },
   topBar: {
@@ -248,6 +249,11 @@ export default {
     weeklySuggestionsTitle: 'Riwayat saran mingguan',
     noSuggestions: 'Belum ada saran — saran disusun tiap minggu dari pola berulang yang ditemukan Ciri, kalau memang ada.',
     weekOf: 'Minggu {date}',
+  },
+  apiReference: {
+    title: 'Referensi API',
+    subtitle:
+      'Bentuk REST API backend — endpoint, format request/response, dan contoh curl — untuk siapa pun yang membangun atau menghubungkan frontend terpisah ke API ini.',
   },
   howItWorks: {
     title: 'Cara kerja semuanya',
