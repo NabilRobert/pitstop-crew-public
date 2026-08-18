@@ -1,29 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api } from '../api/api'
 import { formatDate } from '../utils/format'
 import { renderMarkdown } from '../utils/markdown'
 import StatusPill from '../components/StatusPill.vue'
+import { useWhyTrailPanel } from './useWhyTrailPanel'
 
 const props = defineProps({
   outputId: { type: Number, required: true },
 })
 
 const { t } = useI18n()
-const loading = ref(true)
-const error = ref(null)
-const trail = ref([])
-
-onMounted(async () => {
-  try {
-    trail.value = await api.whyTrail(props.outputId)
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
-})
+const { loading, error, trail } = useWhyTrailPanel(toRef(props, 'outputId'))
 </script>
 
 <template>

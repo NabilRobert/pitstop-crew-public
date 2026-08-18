@@ -1,9 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api } from '../api/api'
 import { formatDate } from '../utils/format'
 import { renderMarkdown } from '../utils/markdown'
+import { useAskPanel } from './useAskPanel'
 
 const { t } = useI18n()
 
@@ -11,37 +11,7 @@ const props = defineProps({
   outputId: { type: Number, required: true },
 })
 
-const history = ref([])
-const question = ref('')
-const loadingHistory = ref(true)
-const asking = ref(false)
-const error = ref(null)
-
-onMounted(async () => {
-  try {
-    history.value = await api.askHistory(props.outputId)
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    loadingHistory.value = false
-  }
-})
-
-async function submit() {
-  const q = question.value.trim()
-  if (!q || asking.value) return
-  asking.value = true
-  error.value = null
-  try {
-    const result = await api.ask(props.outputId, q)
-    history.value = result.history
-    question.value = ''
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    asking.value = false
-  }
-}
+const { history, question, loadingHistory, asking, error, submit } = useAskPanel(toRef(props, 'outputId'))
 </script>
 
 <template>

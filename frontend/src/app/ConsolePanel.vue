@@ -1,36 +1,13 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BASE_URL } from '../shared/api/api'
 import { consoleOpen as open } from '../shared/composables/consoleState'
+import { useConsolePanel, formatTime, LEVEL_COLOR } from './useConsolePanel'
 
 const { t } = useI18n()
 
-const events = ref([])
 const logEl = ref(null)
-
-const LEVEL_COLOR = { info: 'text-ink-soft', warn: 'text-flag-caution', error: 'text-flag-critical' }
-
-function formatTime(iso) {
-  return new Date(iso).toLocaleTimeString('en-GB', { hour12: false })
-}
-
-let source = null
-
-onMounted(() => {
-  // Connect once, regardless of open/closed, so events aren't missed
-  // while the panel is collapsed — only the rendered list is gated on `open`.
-  source = new EventSource(`${BASE_URL}/console/stream`)
-  source.onmessage = (e) => {
-    events.value.push(JSON.parse(e.data))
-    if (events.value.length > 200) events.value.shift()
-    nextTick(() => {
-      if (logEl.value) logEl.value.scrollTop = logEl.value.scrollHeight
-    })
-  }
-})
-
-onUnmounted(() => source?.close())
+const { events } = useConsolePanel(logEl)
 </script>
 
 <template>

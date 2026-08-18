@@ -1,47 +1,26 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDate } from '../../shared/utils/format'
-import { api } from '../../shared/api/api'
 import ReportColumns from '../../shared/report/ReportColumns.vue'
 import ReportTabs from '../../shared/report/ReportTabs.vue'
 import ReportDrawer from '../../shared/report/ReportDrawer.vue'
 import AskPanel from '../../shared/report/AskPanel.vue'
 import WhyTrailPanel from '../../shared/report/WhyTrailPanel.vue'
 import { useReportDrawer } from '../../shared/report/useReportDrawer'
+import { useReportDetail } from './useReportDetail'
 
 const props = defineProps({
   period: { type: String, required: true },
   id: { type: [String, Number], required: true },
 })
 
-const report = ref({ analysis: null, recommendation: null, summary: null })
-const loading = ref(true)
-const error = ref(null)
-
-const VIEW_MODE_KEY = 'pitstop-report-view-mode'
-const viewMode = ref(localStorage.getItem(VIEW_MODE_KEY) || 'columns')
-watch(viewMode, (mode) => localStorage.setItem(VIEW_MODE_KEY, mode))
-
 const { t } = useI18n()
+
+const { report, loading, error, viewMode } = useReportDetail(toRef(props, 'id'))
 
 const { activeDrawer, openDrawer, closeDrawer } = useReportDrawer()
 const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.title') : t('reportSection.whyThis'))
-
-async function load() {
-  loading.value = true
-  error.value = null
-  try {
-    report.value = await api.reportById(props.id)
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
-}
-
-watch(() => props.id, load)
-onMounted(load)
 </script>
 
 <template>
