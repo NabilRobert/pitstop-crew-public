@@ -1,95 +1,11 @@
-<script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { api, BASE_URL } from '../../shared/api/api'
 import { formatDate } from '../../shared/utils/format'
-import { consoleOpen } from '../../shared/composables/consoleState'
 import StatusPill from '../../shared/components/StatusPill.vue'
+import { useReportsList, STRIP_COLOR } from './useReportsList'
 
 const { t } = useI18n()
-const period = ref('daily')
-const reports = ref([])
-const loading = ref(true)
-const error = ref(null)
-const generating = ref(false)
-const generateError = ref(null)
-
-// Oldest -> newest, left -> right, so the strip reads like a timeline.
-const stripReports = computed(() => [...reports.value].reverse())
-
-const STRIP_COLOR = { approved: 'var(--color-flag-good)', flagged: 'var(--color-flag-caution)' }
-
-async function load() {
-  loading.value = true
-  error.value = null
-  try {
-    reports.value = await api.reportsList(period.value)
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
-}
-
-// Watches the same live console stream ConsolePanel renders, filtering
-// for this run's actual completion/failure event, instead of polling on
-// a fixed timeout — a real run (multiple agents, each possibly revised
-// twice by the critic) can run well past any timeout short enough to
-// still feel responsive if it succeeds quickly. A generous fallback
-// timer still exists in case the SSE connection itself drops silently.
-let generateSource = null
-let fallbackTimer = null
-
-function stopWatchingRun() {
-  generateSource?.close()
-  generateSource = null
-  clearTimeout(fallbackTimer)
-  fallbackTimer = null
-}
-
-onUnmounted(stopWatchingRun)
-
-async function generateNow() {
-  generateError.value = null
-  const triggeredAt = new Date().toISOString()
-  const triggeredPeriod = period.value
-  try {
-    await api.triggerRun(triggeredPeriod)
-  } catch (e) {
-    generateError.value = e.message
-    return
-  }
-  generating.value = true
-  consoleOpen.value = true
-  stopWatchingRun()
-
-  const label = triggeredPeriod === 'weekly' ? 'Weekly' : 'Daily'
-  generateSource = new EventSource(`${BASE_URL}/console/stream`)
-  generateSource.onmessage = (e) => {
-    const event = JSON.parse(e.data)
-    if (event.timestamp <= triggeredAt) return // replayed backlog, not this run
-    const isDone = event.message.startsWith(`${label} pipeline run complete`)
-    const isFailed = event.level === 'error' && event.message.startsWith('Pipeline run failed')
-    if (!isDone && !isFailed) return
-    if (isFailed) generateError.value = event.message
-    stopWatchingRun()
-    generating.value = false
-    load()
-  }
-
-  // Safety net only — the event above is the primary signal.
-  fallbackTimer = setTimeout(
-    () => {
-      stopWatchingRun()
-      generating.value = false
-      load()
-    },
-    15 * 60 * 1000
-  )
-}
-
-watch(period, load)
-onMounted(load)
+const { period, reports, loading, error, generating, generateError, stripReports, generateNow } = useReportsList()
 </script>
 
 <template>

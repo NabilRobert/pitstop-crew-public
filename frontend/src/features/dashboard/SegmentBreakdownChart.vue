@@ -1,38 +1,15 @@
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Bar } from 'vue-chartjs'
-import { CHART_COLORS, createBaseChartOptions } from '../../shared/utils/chartTheme'
+import { useSegmentBreakdownChart } from './useSegmentBreakdownChart'
+import type { SegmentPerformanceRow } from '../../shared/api/types'
 
 const { t } = useI18n()
 
-const props = defineProps({
-  rows: { type: Array, required: true }, // {segment_type, segment_value, conversions, ...}
-})
+const props = defineProps<{ rows: SegmentPerformanceRow[] }>()
 
-const types = computed(() => [...new Set(props.rows.map((r) => r.segment_type))].sort())
-const activeType = ref(types.value[0] ?? null)
-watch(types, (t) => {
-  if (!t.includes(activeType.value)) activeType.value = t[0] ?? null
-})
-
-const rowsForType = computed(() =>
-  props.rows.filter((r) => r.segment_type === activeType.value).sort((a, b) => b.conversions - a.conversions)
-)
-
-const chartData = computed(() => ({
-  labels: rowsForType.value.map((r) => r.segment_value),
-  datasets: [
-    {
-      data: rowsForType.value.map((r) => r.conversions),
-      backgroundColor: CHART_COLORS.value.verde,
-      borderRadius: 3,
-    },
-  ],
-}))
-
-const chartOptions = createBaseChartOptions()
-chartOptions.indexAxis = 'y'
+const { types, activeType, rowsForType, chartData, chartOptions } = useSegmentBreakdownChart(toRef(props, 'rows'))
 </script>
 
 <template>

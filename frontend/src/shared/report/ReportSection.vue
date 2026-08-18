@@ -1,17 +1,21 @@
-<script setup>
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import StatusPill from '../components/StatusPill.vue'
 import GradeBadge from './GradeBadge.vue'
 import { renderReportContent } from '../utils/markdown'
+import type { AiOutputWithCritique } from '../api/types'
 
-defineProps({
-  title: { type: String, required: true },
-  output: { type: Object, default: null }, // AiOutput | null
-  askable: { type: Boolean, default: false },
-  hasWhyTrail: { type: Boolean, default: false },
-})
+withDefaults(
+  defineProps<{
+    title: string
+    output?: AiOutputWithCritique | null
+    askable?: boolean
+    hasWhyTrail?: boolean
+  }>(),
+  { output: null, askable: false, hasWhyTrail: false }
+)
 
-defineEmits(['ask', 'why-trail'])
+defineEmits<{ ask: []; 'why-trail': [] }>()
 
 const { t } = useI18n()
 </script>
@@ -33,7 +37,7 @@ const { t } = useI18n()
     <template v-else>
       <div
         class="agent-prose flex-1 overflow-y-auto px-5 py-5"
-        v-html="renderReportContent(output.content, output.critique?.issues)"
+        v-html="renderReportContent(output.content, output.critique?.issues ?? [])"
       />
       <div v-if="askable || hasWhyTrail" class="flex gap-4 border-t border-border px-5 py-3">
         <button

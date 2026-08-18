@@ -1,5 +1,7 @@
 import { ref, watch } from 'vue'
 
+export type ThemeName = 'ferrari' | 'blueprint'
+
 // Shared singleton, same localStorage-backed pattern as consoleState.js's
 // consoleOpen and i18n/index.js's locale. 'ferrari' is the original brand
 // palette; 'blueprint' is the black/white/blue/gray alternative proposed
@@ -10,7 +12,7 @@ import { ref, watch } from 'vue'
 // yellow/red in both themes rather than losing that at-a-glance signal.
 const THEME_KEY = 'pitstop-theme'
 const stored = localStorage.getItem(THEME_KEY)
-export const theme = ref(stored === 'blueprint' ? 'blueprint' : 'ferrari')
+export const theme = ref<ThemeName>(stored === 'blueprint' ? 'blueprint' : 'ferrari')
 
 watch(
   theme,
@@ -21,6 +23,6 @@ watch(
   { immediate: true }
 )
 
-export function setTheme(value) {
+export function setTheme(value: ThemeName) {
   theme.value = value
 }

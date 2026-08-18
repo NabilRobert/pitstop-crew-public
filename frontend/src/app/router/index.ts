@@ -7,6 +7,7 @@ import TimeMachinePage from '../../features/time-machine/TimeMachinePage.vue'
 import SettingsPage from '../../features/settings/SettingsPage.vue'
 import LearningPage from '../../features/learning/LearningPage.vue'
 import HowItWorksPage from '../../features/how-it-works/HowItWorksPage.vue'
+import ApiReferencePage from '../../features/api-reference/ApiReferencePage.vue'
 
 const routes = [
   { path: '/', name: 'dashboard', component: DashboardPage },
@@ -17,6 +18,7 @@ const routes = [
   { path: '/settings', name: 'settings', component: SettingsPage },
   { path: '/learning', name: 'learning', component: LearningPage },
   { path: '/how-it-works', name: 'how-it-works', component: HowItWorksPage },
+  { path: '/api-reference', name: 'api-reference', component: ApiReferencePage },
 ]
 
 export default createRouter({
