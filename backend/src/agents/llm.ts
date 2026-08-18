@@ -25,14 +25,6 @@ export function getClient(): OpenAI {
 // (see agent files), not a single global number, since a JSON critic
 // response with a rationale + several issues needs more room than a
 // short analysis paragraph.
-// Reasoning models (see MODEL_MINI's comment) can exhaust max_completion_tokens
-// entirely on hidden reasoning before writing any visible text, returning an
-// empty completion with no error — observed live, not a theoretical edge case.
-// One retry is usually enough since it isn't deterministic; if it's still
-// empty after that, the caller gets '' back and has to decide what to do,
-// same as before this existed.
-const EMPTY_COMPLETION_RETRIES = 1
-
 export async function complete(
   model: string,
   systemPrompt: string,
@@ -41,16 +33,15 @@ export async function complete(
   overrideClient?: OpenAI
 ): Promise<string> {
   const c = overrideClient ?? getClient()
-  const messages = [
-    { role: 'system' as const, content: systemPrompt },
-    { role: 'user' as const, content: userPrompt },
-  ]
-  for (let attempt = 0; attempt <= EMPTY_COMPLETION_RETRIES; attempt++) {
-    const response = await c.chat.completions.create({ model, max_completion_tokens: maxTokens, messages })
-    const content = response.choices[0].message.content ?? ''
-    if (content.trim() || attempt === EMPTY_COMPLETION_RETRIES) return content
-  }
-  return ''
+  const response = await c.chat.completions.create({
+    model,
+    max_completion_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+  })
+  return response.choices[0].message.content ?? ''
 }
 
 export async function completeJson<T = any>(

@@ -68,13 +68,7 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
     pipelineRunId,
   })
 
-  // <= MAX_REVISIONS, not <, so the final revision generated on the last
-  // pass through this loop still gets its own critique before we give up —
-  // otherwise it goes out flagged with no critique of its own, and the
-  // frontend falls back to displaying a stale critique of an earlier,
-  // different draft next to it (misleading when the two have diverged,
-  // e.g. the final revision came back empty but the stale grade didn't).
-  for (let attempt = 0; attempt <= MAX_REVISIONS; attempt++) {
+  for (let i = 0; i < MAX_REVISIONS; i++) {
     emitEvent(`Ciri reviewing ${agentType}…`)
     const verdict = await critiqueFn(agentType, content, supportingData, historicalContext, language)
     await insertOutput({
@@ -96,9 +90,7 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
       return currentId
     }
 
-    if (attempt === MAX_REVISIONS) break // out of revisions — the critique above is final
-
-    emitEvent(`Ciri: ${agentType} flagged (grade ${verdict.grade}) — revising (pass ${attempt + 1}/${MAX_REVISIONS})`, 'warn')
+    emitEvent(`Ciri: ${agentType} flagged (grade ${verdict.grade}) — revising (pass ${i + 1}/${MAX_REVISIONS})`, 'warn')
     content = await generate(verdict.feedback)
     currentId = await insertOutput({
       agentType,
