@@ -1,10 +1,9 @@
-<script setup>
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { formatMicrosAsIDR, formatNumber, formatPercent } from '../../shared/utils/format'
+import type { CampaignRow } from './useDashboard'
 
-defineProps({
-  rows: { type: Array, required: true },
-})
+defineProps<{ rows: CampaignRow[] }>()
 
 const { t } = useI18n()
 </script>

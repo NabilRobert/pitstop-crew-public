@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -11,7 +11,7 @@ const emit = defineEmits(['close'])
 
 const { t } = useI18n()
 
-function onKeydown(e) {
+function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.open) emit('close')
 }
 

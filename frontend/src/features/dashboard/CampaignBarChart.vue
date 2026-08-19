@@ -1,34 +1,15 @@
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Bar } from 'vue-chartjs'
-import { CHART_COLORS, createBaseChartOptions } from '../../shared/utils/chartTheme'
+import { useCampaignBarChart } from './useCampaignBarChart'
+import type { CampaignRow } from './useDashboard'
 
 const { t } = useI18n()
 
-const props = defineProps({
-  rows: { type: Array, required: true }, // {campaign, conversions, ...}
-})
+const props = defineProps<{ rows: CampaignRow[] }>()
 
-const sorted = computed(() => [...props.rows].sort((a, b) => b.conversions - a.conversions))
-
-const chartData = computed(() => ({
-  labels: sorted.value.map((r) => r.campaign),
-  datasets: [
-    {
-      data: sorted.value.map((r) => r.conversions),
-      backgroundColor: CHART_COLORS.value.giallo,
-      borderRadius: 3,
-    },
-  ],
-}))
-
-const chartOptions = (() => {
-  const opts = createBaseChartOptions()
-  opts.indexAxis = 'y'
-  opts.scales.y.beginAtZero = undefined
-  return opts
-})()
+const { sorted, chartData, chartOptions } = useCampaignBarChart(toRef(props, 'rows'))
 </script>
 
 <template>

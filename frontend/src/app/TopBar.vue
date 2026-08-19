@@ -1,41 +1,11 @@
-<script setup>
-import { computed, inject } from 'vue'
-import { useRoute } from 'vue-router'
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { setLocale, getLocale } from '../i18n/index.js'
 import { theme, setTheme } from '../shared/composables/theme.js'
-import { api } from '../shared/api/api'
+import { navLinks } from './navLinks.js'
+import { useTopBar } from './useTopBar.js'
 
-const dataSource = inject('dataSource')
-const route = useRoute()
 const { t } = useI18n()
-
-const navLinks = [
-  { to: '/', labelKey: 'nav.dashboard' },
-  { to: '/reports', labelKey: 'nav.reports' },
-  { to: '/system-health', labelKey: 'nav.systemHealth' },
-  { to: '/learning', labelKey: 'nav.learning' },
-  { to: '/settings', labelKey: 'nav.settings' },
-  { to: '/how-it-works', labelKey: 'nav.howItWorks' },
-]
-
-// Manual prefix match instead of router-link's active-class: "/" as a
-// link path would otherwise match every route as a prefix.
-function isActive(linkPath) {
-  return linkPath === '/' ? route.path === '/' : route.path.startsWith(linkPath)
-}
-
-const currentLocale = computed(() => getLocale())
-
-function switchLocale(locale) {
-  if (locale === currentLocale.value) return
-  setLocale(locale)
-  // Fire-and-forget: keep scheduled/manual report generation in sync with the
-  // UI language, but don't block the (already-instant) UI switch on the network.
-  api.updateSettings({ report_language: locale }).catch((e) => {
-    console.error('Failed to sync report_language setting:', e)
-  })
-}
+const { dataSource, isActive, currentLocale, switchLocale } = useTopBar()
 </script>
 
 <template>

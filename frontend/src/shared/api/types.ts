@@ -1,0 +1,153 @@
+// Shapes returned by the backend REST API. Mirrors backend/src/reporting/outputs.ts's
+// AiOutput interface and the response shapes documented in the API Reference page —
+// kept here rather than shared with the backend since frontend/ and backend/ are two
+// fully separate deployable units talking only over HTTP.
+
+export interface Campaign {
+  id: number
+  name: string
+}
+
+export interface PerformanceRow {
+  date: string
+  campaign: string
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+}
+
+export interface SegmentPerformanceRow {
+  date: string
+  segment_type: string
+  segment_value: string
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+}
+
+export interface CriticIssue {
+  quote: string
+  reason: string
+}
+
+export interface AiOutput {
+  id: number
+  agent_type: 'analysis' | 'recommendation' | 'summary' | 'critic'
+  campaign_id: number | null
+  segment_id: number | null
+  critiques_id: number | null
+  revises_id: number | null
+  report_date: string | null
+  period: 'daily' | 'weekly' | null
+  content: string
+  status: 'draft' | 'revised' | 'approved' | 'flagged'
+  outcome: 'correct' | 'incorrect' | 'inconclusive' | null
+  outcome_checked_at: string | null
+  grade: 'A' | 'B' | 'C' | 'D' | 'F' | null
+  grade_rationale: string | null
+  issues: CriticIssue[] | null
+  pipeline_run_id: number | null
+  created_at: string
+}
+
+/** An AiOutput with its most recent critique attached — what /reports/:id
+ * and /reports/latest actually return for each of analysis/recommendation/summary. */
+export interface AiOutputWithCritique extends AiOutput {
+  critique: {
+    grade: AiOutput['grade']
+    grade_rationale: string | null
+    issues: CriticIssue[] | null
+    content: string
+  } | null
+}
+
+export interface Report {
+  analysis: AiOutputWithCritique | null
+  recommendation: AiOutputWithCritique | null
+  summary: AiOutputWithCritique | null
+}
+
+export interface ReportListEntry {
+  id: number
+  report_date: string
+  status: AiOutput['status']
+  created_at: string
+  preview: string
+}
+
+export interface WhyTrailEntry extends AiOutput {
+  critique?: AiOutput
+}
+
+export interface AskHistoryEntry {
+  id: number
+  question: string
+  answer: string
+  created_at: string
+}
+
+export interface AskResponse {
+  history: AskHistoryEntry[]
+}
+
+export interface PipelineRun {
+  id: number
+  run_type: 'daily' | 'weekly' | 'weekly_feedback'
+  started_at: string
+  finished_at: string | null
+  status: 'running' | 'success' | 'failure' | 'partial'
+  cost_usd_micros: number | null
+  error_message: string | null
+}
+
+export interface SystemHealth {
+  last_successful_daily_run: PipelineRun | null
+  recent_runs: PipelineRun[]
+}
+
+export interface Settings {
+  daily_run_time: string
+  weekly_run_time: string
+  grade_forces_revision: string
+  report_recipient_email: string
+  report_language: string
+}
+
+export interface TriggerRunResponse {
+  started: true
+  period: string
+  target_date: string
+  runId: number
+}
+
+export interface FlagRateWeek {
+  week: string
+  flagged: number
+  total: number
+}
+
+export interface LearningSuggestion {
+  id: number
+  week_of: string
+  content: string
+}
+
+export type ForcedState = 'good' | 'bad' | 'standstill' | 'volatile'
+
+export interface TimeMachineOverrideMap {
+  [date: string]: ForcedState
+}
+
+export interface ConsoleEvent {
+  seq?: number
+  timestamp: string
+  level: 'info' | 'warn' | 'error'
+  message: string
+  runId?: number
+}
+
+export interface AppConfig {
+  data_source: 'demo' | 'live'
+}

@@ -1,19 +1,23 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ReportSection from './ReportSection.vue'
-import { REPORT_SECTIONS } from './reportSections'
+import { REPORT_SECTIONS, type ReportSectionDef } from './reportSections'
+import type { Report } from '../api/types'
 
-const props = defineProps({
-  report: { type: Object, required: true }, // { analysis, recommendation, summary }
-  defaultTab: { type: String, default: 'analysis' },
-})
+const props = withDefaults(
+  defineProps<{
+    report: Report
+    defaultTab?: ReportSectionDef['key']
+  }>(),
+  { defaultTab: 'analysis' }
+)
 
-defineEmits(['ask', 'why-trail'])
+defineEmits<{ ask: [id: number]; 'why-trail': [id: number] }>()
 
 const { t } = useI18n()
-const activeKey = ref(props.defaultTab)
-const active = () => REPORT_SECTIONS.find((s) => s.key === activeKey.value)
+const activeKey = ref<ReportSectionDef['key']>(props.defaultTab)
+const active = (): ReportSectionDef => REPORT_SECTIONS.find((s) => s.key === activeKey.value) ?? REPORT_SECTIONS[0]
 </script>
 
 <template>
@@ -36,8 +40,8 @@ const active = () => REPORT_SECTIONS.find((s) => s.key === activeKey.value)
       :output="report[activeKey]"
       :askable="active().askable"
       :has-why-trail="active().hasWhyTrail"
-      @ask="$emit('ask', report[activeKey].id)"
-      @why-trail="$emit('why-trail', report[activeKey].id)"
+      @ask="$emit('ask', report[activeKey]!.id)"
+      @why-trail="$emit('why-trail', report[activeKey]!.id)"
     />
   </div>
 </template>

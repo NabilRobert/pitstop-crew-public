@@ -2,7 +2,7 @@
 // color strings, not CSS custom properties, so the brand-accent entries
 // here mirror style.css's --color-rosso/-giallo/-verde by hand, for BOTH
 // themes — keep the two in sync if either palette changes.
-import { computed } from 'vue'
+import { computed, type ComputedRef } from 'vue'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,12 +14,21 @@ import {
   Tooltip,
   Legend,
   Filler,
+  type ChartOptions,
 } from 'chart.js'
-import { theme } from '../composables/theme.js'
+import { theme, type ThemeName } from '../composables/theme.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
 
-const PALETTES = {
+interface Palette {
+  rosso: string
+  giallo: string
+  verde: string
+  inkFaint: string
+  gridColor: string
+}
+
+const PALETTES: Record<ThemeName, Palette> = {
   ferrari: {
     rosso: '#e42528',
     giallo: '#f8e823',
@@ -42,7 +51,7 @@ const PALETTES = {
 /** Reactive — components that read CHART_COLORS.value inside a computed
  * (chartData) automatically re-theme when the user switches themes,
  * without needing a page reload. */
-export const CHART_COLORS = computed(() => ({
+export const CHART_COLORS: ComputedRef<Palette & { bianco: string }> = computed(() => ({
   ...PALETTES[theme.value],
   bianco: '#ffffff',
 }))
@@ -54,6 +63,44 @@ const TOOLTIP_BG = '#201f24'
 const TOOLTIP_BODY = '#a3a0a8'
 const TOOLTIP_BORDER = '#2c2a30'
 
+// A hand-picked subset of Chart.js's options that this app's chart
+// components actually use — not Chart.js's real (deeply generic, per-chart-
+// type) ChartOptions type. Each chart component further mutates its own
+// copy after creation (adding indexAxis, tooltip.callbacks, ticks.callback,
+// etc.), which is why every field below is optional.
+export interface BaseChartOptions {
+  responsive: boolean
+  maintainAspectRatio: boolean
+  indexAxis?: 'x' | 'y'
+  plugins: {
+    legend: { display: boolean }
+    tooltip: {
+      backgroundColor: string
+      titleColor: string
+      bodyColor: string
+      borderColor: string
+      borderWidth: number
+      padding: number
+      callbacks?: { label: (context: { parsed: { y: number } }) => string }
+    }
+  }
+  scales: {
+    x: {
+      grid: { color: () => string }
+      ticks: { color: () => string; font: { family: string; size: number } }
+    }
+    y: {
+      grid: { color: () => string }
+      ticks: {
+        color: () => string
+        font: { family: string; size: number }
+        callback?: (value: number) => string
+      }
+      beginAtZero?: boolean
+    }
+  }
+}
+
 /** A function, not a shared object — Chart.js mutates the options object
  * it's handed internally (attaches resolved/scriptable state onto
  * `plugins`/`scales` sub-objects), so multiple chart instances spreading
@@ -62,9 +109,15 @@ const TOOLTIP_BORDER = '#2c2a30'
  * (observed live: switching TrendChart's metric tab made a phantom
  * "undefined" legend leak in, because it shared its legend object with
  * every other chart on the page). Call this fresh in every component —
- * each call returns its own independently-owned nested-object tree. */
-export function createBaseChartOptions() {
-  return {
+ * each call returns its own independently-owned nested-object tree.
+ *
+ * Typed as ChartOptions<any> rather than a specific chart type — this one
+ * function backs Line and Bar charts alike (see BaseChartOptions above for
+ * the actual shape), and Chart.js's real per-type option types are deeply
+ * generic enough that modeling them exactly here isn't worth it for what's
+ * ultimately presentation config, not business logic. */
+export function createBaseChartOptions(): ChartOptions<any> {
+  const options: BaseChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -95,4 +148,5 @@ export function createBaseChartOptions() {
       },
     },
   }
+  return options as ChartOptions<any>
 }
