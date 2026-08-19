@@ -13,6 +13,7 @@ const {
   gradeForcesRevision,
   reportRecipientEmail,
   reportLanguage,
+  autoReportsEnabled,
   save,
 } = useSettings()
 </script>
@@ -28,7 +29,15 @@ const {
 
     <template v-else>
       <div class="rounded-lg border border-border bg-surface p-5">
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <label class="flex items-start gap-3">
+          <input v-model="autoReportsEnabled" type="checkbox" class="mt-0.5 h-4 w-4 accent-rosso" />
+          <span class="text-sm text-ink-soft">
+            <span class="font-medium text-ink">{{ t('settings.autoReportsTitle') }}</span><br />
+            {{ t('settings.autoReportsDesc') }}
+          </span>
+        </label>
+
+        <div class="mt-5 grid grid-cols-1 gap-5 border-t border-border pt-5 sm:grid-cols-2">
           <div>
             <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint">
               {{ t('settings.dailyRunTime') }}

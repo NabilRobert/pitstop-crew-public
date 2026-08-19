@@ -170,6 +170,9 @@ export default {
     title: 'Settings',
     description:
       'Controls when the daily and weekly pipeline (Anna → Rico → Sammy) fires. Times are WIB (Indonesia Western Time, UTC+7) — not UTC, not your browser\'s timezone, and not whatever timezone the server itself happens to be set to.',
+    autoReportsTitle: 'Automatically generate and send reports',
+    autoReportsDesc:
+      "When off, the scheduled daily/weekly runs below are skipped entirely — no report is generated or emailed on a timer. \"Generate report now\" still works regardless of this setting.",
     dailyRunTime: 'Daily run time',
     weeklyRunTime: 'Weekly run time',
     mondaysSuffix: '(Mondays)',

@@ -113,6 +113,7 @@ export interface Settings {
   grade_forces_revision: string
   report_recipient_email: string
   report_language: string
+  auto_reports_enabled: string
 }
 
 export interface TriggerRunResponse {

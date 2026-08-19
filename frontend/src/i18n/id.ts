@@ -170,6 +170,9 @@ export default {
     title: 'Pengaturan',
     description:
       'Mengatur kapan pipeline harian dan mingguan (Anna → Rico → Sammy) berjalan. Waktu menggunakan WIB (UTC+7) — bukan UTC, bukan zona waktu browser Anda, dan bukan zona waktu server itu sendiri.',
+    autoReportsTitle: 'Buat dan kirim laporan otomatis',
+    autoReportsDesc:
+      'Jika dimatikan, jadwal run harian/mingguan di bawah ini dilewati sepenuhnya — tidak ada laporan yang dibuat atau dikirim secara otomatis. "Generate report now" tetap berfungsi terlepas dari pengaturan ini.',
     dailyRunTime: 'Waktu run harian',
     weeklyRunTime: 'Waktu run mingguan',
     mondaysSuffix: '(Hari Senin)',

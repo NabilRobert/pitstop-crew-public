@@ -12,6 +12,7 @@ export function useSettings() {
   const gradeForcesRevision = ref(false)
   const reportRecipientEmail = ref('')
   const reportLanguage = ref('en')
+  const autoReportsEnabled = ref(true)
 
   onMounted(async () => {
     try {
@@ -21,6 +22,7 @@ export function useSettings() {
       gradeForcesRevision.value = settings.grade_forces_revision === 'true'
       reportRecipientEmail.value = settings.report_recipient_email
       reportLanguage.value = settings.report_language
+      autoReportsEnabled.value = settings.auto_reports_enabled === 'true'
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -39,12 +41,14 @@ export function useSettings() {
         grade_forces_revision: String(gradeForcesRevision.value),
         report_recipient_email: reportRecipientEmail.value.trim(),
         report_language: reportLanguage.value,
+        auto_reports_enabled: String(autoReportsEnabled.value),
       })
       dailyRunTime.value = settings.daily_run_time
       weeklyRunTime.value = settings.weekly_run_time
       gradeForcesRevision.value = settings.grade_forces_revision === 'true'
       reportRecipientEmail.value = settings.report_recipient_email
       reportLanguage.value = settings.report_language
+      autoReportsEnabled.value = settings.auto_reports_enabled === 'true'
       saved.value = true
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -63,6 +67,7 @@ export function useSettings() {
     gradeForcesRevision,
     reportRecipientEmail,
     reportLanguage,
+    autoReportsEnabled,
     save,
   }
 }
