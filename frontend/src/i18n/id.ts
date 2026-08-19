@@ -156,6 +156,8 @@ export default {
     generating: 'Sedang membuat…',
     loading: 'Memuat laporan…',
     noReports: 'Belum ada laporan {period} — pipeline belum berjalan untuk periode ini.',
+    autoReports: 'Otomatis',
+    autoReportsTooltip: 'Aktifkan/matikan pembuatan laporan terjadwal otomatis. "Generate report now" tetap berfungsi apa pun pengaturan ini.',
   },
   reportDetail: {
     back: '← Kembali ke laporan',

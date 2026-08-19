@@ -16,8 +16,33 @@ export function useReportsList() {
   const generating = ref(false)
   const generateError = ref<string | null>(null)
 
+  const autoReportsEnabled = ref(true)
+  const autoReportsSaving = ref(false)
+
   // Oldest -> newest, left -> right, so the strip reads like a timeline.
   const stripReports = computed(() => [...reports.value].reverse())
+
+  async function loadAutoReportsSetting() {
+    try {
+      const settings = await api.settings()
+      autoReportsEnabled.value = settings.auto_reports_enabled === 'true'
+    } catch {
+      // Non-critical — the toggle just stays at its default until a retry.
+    }
+  }
+
+  async function toggleAutoReports() {
+    const next = !autoReportsEnabled.value
+    autoReportsSaving.value = true
+    try {
+      const settings = await api.updateSettings({ auto_reports_enabled: String(next) })
+      autoReportsEnabled.value = settings.auto_reports_enabled === 'true'
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      autoReportsSaving.value = false
+    }
+  }
 
   async function load() {
     loading.value = true
@@ -90,6 +115,7 @@ export function useReportsList() {
 
   watch(period, load)
   onMounted(load)
+  onMounted(loadAutoReportsSetting)
 
   return {
     period,
@@ -100,5 +126,8 @@ export function useReportsList() {
     generateError,
     stripReports,
     generateNow,
+    autoReportsEnabled,
+    autoReportsSaving,
+    toggleAutoReports,
   }
 }

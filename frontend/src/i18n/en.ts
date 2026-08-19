@@ -156,6 +156,8 @@ export default {
     generating: 'Generating…',
     loading: 'Loading reports…',
     noReports: "No {period} reports yet — the pipeline hasn't run for this period.",
+    autoReports: 'Auto',
+    autoReportsTooltip: 'Toggle automatic scheduled report generation. "Generate report now" always works regardless.',
   },
   reportDetail: {
     back: '← Back to reports',

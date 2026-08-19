@@ -5,7 +5,19 @@ import StatusPill from '../../shared/components/StatusPill.vue'
 import { useReportsList, STRIP_COLOR } from './useReportsList'
 
 const { t } = useI18n()
-const { period, reports, loading, error, generating, generateError, stripReports, generateNow } = useReportsList()
+const {
+  period,
+  reports,
+  loading,
+  error,
+  generating,
+  generateError,
+  stripReports,
+  generateNow,
+  autoReportsEnabled,
+  autoReportsSaving,
+  toggleAutoReports,
+} = useReportsList()
 </script>
 
 <template>
@@ -14,6 +26,28 @@ const { period, reports, loading, error, generating, generateError, stripReports
       <h1 class="font-display text-2xl font-bold text-ink">{{ t('reportsList.title') }}</h1>
 
       <div class="flex items-center gap-3">
+        <button
+          type="button"
+          role="switch"
+          :aria-checked="autoReportsEnabled"
+          :disabled="autoReportsSaving"
+          class="flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+          :title="t('reportsList.autoReportsTooltip')"
+          @click="toggleAutoReports"
+        >
+          <span class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft">
+            {{ t('reportsList.autoReports') }}
+          </span>
+          <span
+            class="relative h-4 w-7 rounded-full transition-colors"
+            :class="autoReportsEnabled ? 'bg-flag-good' : 'bg-border-strong'"
+          >
+            <span
+              class="absolute top-0.5 h-3 w-3 rounded-full bg-bianco transition-transform"
+              :class="autoReportsEnabled ? 'translate-x-3.5' : 'translate-x-0.5'"
+            />
+          </span>
+        </button>
         <div class="flex rounded-md border border-border bg-surface p-1">
           <button
             type="button"
