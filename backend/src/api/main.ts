@@ -1,8 +1,10 @@
-// REST API — what the Vue frontend calls. Per PROJECT.md's Deployment
-// decision: no auth on this boundary (single-user), CORS locked to
-// FRONTEND_ORIGIN. Error responses use {detail: "..."} to match the
-// FastAPI version's shape, so the frontend's error handling (which reads
-// body.detail) didn't need to change for this port.
+// REST API — what the Vue frontend calls. Gated by a single-account login
+// (see platform/auth.ts) — /health, /config, and /auth/* are the only
+// public routes; everything else requires a valid session token via
+// authMiddleware. CORS locked to FRONTEND_ORIGIN. Error responses use
+// {detail: "..."} to match the FastAPI version's shape, so the frontend's
+// error handling (which reads body.detail) didn't need to change for this
+// port.
 //
 // Routes live in routes/, one file per resource area — this file is just
 // setup, mounting, and the two trivial routes not worth their own file.
@@ -11,6 +13,8 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import cors from 'cors'
 
 import { DATA_SOURCE, FRONTEND_ORIGIN } from '../platform/config.js'
+import { authMiddleware } from './authMiddleware.js'
+import { router as authRoutes } from './routes/auth.js'
 import { router as settingsRoutes } from './routes/settings.js'
 import { router as learningRoutes } from './routes/learning.js'
 import { router as campaignsRoutes } from './routes/campaigns.js'
@@ -21,7 +25,13 @@ import { router as pipelineRoutes } from './routes/pipeline.js'
 
 const app = express()
 app.use(express.json())
-app.use(cors({ origin: FRONTEND_ORIGIN, methods: ['GET', 'POST', 'PUT', 'DELETE'] }))
+app.use(
+  cors({
+    origin: FRONTEND_ORIGIN,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
@@ -31,6 +41,9 @@ app.get('/health', (_req, res) => {
 app.get('/config', (_req, res) => {
   res.json({ data_source: DATA_SOURCE })
 })
+
+app.use(authRoutes)
+app.use(authMiddleware)
 
 app.use(settingsRoutes)
 app.use(learningRoutes)

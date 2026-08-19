@@ -20,12 +20,16 @@ import type {
 
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+const TOKEN_KEY = 'pitstop-auth-token'
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+  const token = localStorage.getItem(TOKEN_KEY)
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options.headers as Record<string, string>) }
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
   if (!res.ok) {
+    if (res.status === 401) localStorage.removeItem(TOKEN_KEY)
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail || `Request failed: ${res.status}`)
   }
@@ -33,6 +37,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  login: (username: string, password: string) =>
+    request<{ token: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  logout: () => request<{ ok: true }>('/auth/logout', { method: 'POST' }),
+  verifyAuth: () => request<{ ok: true }>('/auth/verify'),
   config: () => request<AppConfig>('/config'),
   systemHealth: () => request<SystemHealth>('/system-health'),
   campaigns: () => request<Campaign[]>('/campaigns'),

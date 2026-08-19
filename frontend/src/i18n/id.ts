@@ -29,10 +29,19 @@ export default {
     themeFerrariShort: 'FER',
     themeBlueprint: 'Blueprint — palet alternatif hitam/putih/biru/abu-abu',
     themeBlueprintShort: 'BP',
+    logout: 'Keluar',
   },
   consolePanel: {
     title: 'Konsol',
     noActivity: 'Belum ada aktivitas.',
+  },
+  login: {
+    title: 'Masuk',
+    description: 'Masukkan kredensial Anda untuk mengakses dasbor.',
+    username: 'Nama pengguna',
+    password: 'Kata sandi',
+    submit: 'Masuk',
+    submitting: 'Sedang masuk…',
   },
   gradeBadge: {
     label: 'Nilai {grade}',

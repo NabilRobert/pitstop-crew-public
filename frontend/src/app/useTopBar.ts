@@ -2,6 +2,7 @@ import { computed, inject, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { setLocale, getLocale, type Locale } from '../i18n/index.js'
 import { api } from '../shared/api/api'
+import { logout } from '../shared/composables/auth'
 
 export function useTopBar() {
   const dataSource = inject<Ref<string>>('dataSource')
@@ -25,5 +26,5 @@ export function useTopBar() {
     })
   }
 
-  return { dataSource, isActive, currentLocale, switchLocale }
+  return { dataSource, isActive, currentLocale, switchLocale, logout }
 }

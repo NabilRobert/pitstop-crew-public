@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue'
 import { BASE_URL } from '../shared/api/api'
+import { token } from '../shared/composables/auth'
 import type { ConsoleEvent } from '../shared/api/types'
 
 export const LEVEL_COLOR: Record<string, string> = {
@@ -20,7 +21,7 @@ export function useConsolePanel(logElRef: Ref<HTMLElement | null>) {
   onMounted(() => {
     // Connect once, regardless of open/closed, so events aren't missed
     // while the panel is collapsed — only the rendered list is gated on `open`.
-    source = new EventSource(`${BASE_URL}/console/stream`)
+    source = new EventSource(`${BASE_URL}/console/stream?token=${token.value}`)
     source.onmessage = (e) => {
       events.value.push(JSON.parse(e.data))
       if (events.value.length > 200) events.value.shift()

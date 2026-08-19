@@ -5,7 +5,7 @@ import { navLinks } from './navLinks.js'
 import { useTopBar } from './useTopBar.js'
 
 const { t } = useI18n()
-const { dataSource, isActive, currentLocale, switchLocale } = useTopBar()
+const { dataSource, isActive, currentLocale, switchLocale, logout } = useTopBar()
 </script>
 
 <template>
@@ -103,6 +103,13 @@ const { dataSource, isActive, currentLocale, switchLocale } = useTopBar()
           <span class="h-1.5 w-1.5 rounded-full bg-flag-good" />
           {{ t('topBar.liveData') }}
         </span>
+        <button
+          type="button"
+          class="rounded-full border border-border px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft transition-colors hover:text-ink"
+          @click="logout"
+        >
+          {{ t('topBar.logout') }}
+        </button>
       </div>
     </div>
   </header>

@@ -29,10 +29,19 @@ export default {
     themeFerrariShort: 'FER',
     themeBlueprint: 'Blueprint — an alternative black/white/blue/gray palette',
     themeBlueprintShort: 'BP',
+    logout: 'Log out',
   },
   consolePanel: {
     title: 'Console',
     noActivity: 'No activity yet.',
+  },
+  login: {
+    title: 'Sign in',
+    description: 'Enter your credentials to access the dashboard.',
+    username: 'Username',
+    password: 'Password',
+    submit: 'Sign in',
+    submitting: 'Signing in…',
   },
   gradeBadge: {
     label: 'Grade {grade}',
