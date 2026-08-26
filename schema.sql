@@ -103,13 +103,13 @@ CREATE TABLE IF NOT EXISTS weekly_feedback_suggestions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- On-demand Q&A against Rico or Sammy, tied to the report being asked
--- about. Backs the Ask feature (agents/recommendation.md, agents/summary.md)
--- and the Time Machine + Ask Standout Feature.
+-- On-demand Q&A against Anna, Rico, or Sammy, tied to the report being asked
+-- about. Backs the Ask feature (agents/analysis.md, agents/recommendation.md,
+-- agents/summary.md) and the Time Machine + Ask Standout Feature.
 CREATE TABLE IF NOT EXISTS ask_log (
     id          SERIAL PRIMARY KEY,
     output_id   INTEGER NOT NULL REFERENCES ai_outputs(id),
-    agent_type  TEXT NOT NULL CHECK (agent_type IN ('recommendation', 'summary')),
+    agent_type  TEXT NOT NULL CHECK (agent_type IN ('analysis', 'recommendation', 'summary')),
     question    TEXT NOT NULL,
     answer      TEXT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
