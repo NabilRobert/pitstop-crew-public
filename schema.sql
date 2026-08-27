@@ -105,7 +105,10 @@ CREATE TABLE IF NOT EXISTS weekly_feedback_suggestions (
 
 -- On-demand Q&A against Anna, Rico, or Sammy, tied to the report being asked
 -- about. Backs the Ask feature (agents/analysis.md, agents/recommendation.md,
--- agents/summary.md) and the Time Machine + Ask Standout Feature.
+-- agents/summary.md) and the Time Machine + Ask Standout Feature. Organized
+-- into conversation threads (ask_conversations, below) rather than one flat
+-- list per output — a thread's prior Q&A gets folded back into the prompt
+-- so a follow-up actually has an antecedent.
 CREATE TABLE IF NOT EXISTS ask_log (
     id          SERIAL PRIMARY KEY,
     output_id   INTEGER NOT NULL REFERENCES ai_outputs(id),
@@ -114,6 +117,60 @@ CREATE TABLE IF NOT EXISTS ask_log (
     answer      TEXT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Conversation threads for the Ask feature — a report can have several,
+-- picked/started from the Ask panel; ask_log.conversation_id (below) ties
+-- each Q&A row to the thread it belongs to, which is what lets a
+-- follow-up question ("how does that compare to Brand?") be answered with
+-- the rest of its own thread folded back into the prompt. title is NULL
+-- until the thread's first question lands (see ask() in reporting/ask.ts),
+-- which becomes the title verbatim.
+CREATE TABLE IF NOT EXISTS ask_conversations (
+    id          SERIAL PRIMARY KEY,
+    output_id   INTEGER NOT NULL REFERENCES ai_outputs(id),
+    title       TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ask_conversations_output ON ask_conversations(output_id);
+
+-- output_id is kept on ask_log as-is (harmless redundancy with the join
+-- through conversation_id) rather than removed, since nothing forces a
+-- migration to touch it.
+ALTER TABLE ask_log ADD COLUMN IF NOT EXISTS conversation_id INTEGER REFERENCES ask_conversations(id);
+
+-- One-time backfill for ask_log rows that predate the conversation concept
+-- (conversation_id IS NULL) — groups each output_id's pre-existing rows
+-- into one "legacy" thread per output, rather than orphaning that history.
+-- Idempotent: after the first run, no ask_log row is left with
+-- conversation_id IS NULL, so both statements become no-ops on any later
+-- run of this file.
+WITH legacy AS (
+    INSERT INTO ask_conversations (output_id, title, created_at, updated_at)
+    SELECT output_id, 'Earlier questions', MIN(created_at), MAX(created_at)
+    FROM ask_log
+    WHERE conversation_id IS NULL
+    GROUP BY output_id
+    RETURNING id, output_id
+)
+UPDATE ask_log al
+SET conversation_id = legacy.id
+FROM legacy
+WHERE al.output_id = legacy.output_id
+  AND al.conversation_id IS NULL;
+
+-- General "Ask Aska" Q&A (docs/VOICE_ASSISTANT.md), not scoped to one
+-- report output the way ask_log is — separate table rather than a
+-- nullable ask_log.output_id, since a nullable FK there would need its
+-- own discriminator to tell "general question" apart from "an ask_log
+-- row that just hasn't been linked yet."
+CREATE TABLE IF NOT EXISTS assistant_ask_log (
+    id         SERIAL PRIMARY KEY,
+    question   TEXT NOT NULL,
+    answer     TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_assistant_ask_log_created ON assistant_ask_log(created_at);
 
 -- Time Machine pins for demo mode: forcing a specific state for a future
 -- date. Generation stays a pure function of (date, seed, forced_state),
@@ -162,6 +219,7 @@ INSERT INTO app_settings (key, value) VALUES ('daily_run_time', '06:00') ON CONF
 INSERT INTO app_settings (key, value) VALUES ('weekly_run_time', '06:00') ON CONFLICT (key) DO NOTHING;
 INSERT INTO app_settings (key, value) VALUES ('grade_forces_revision', 'false') ON CONFLICT (key) DO NOTHING;
 INSERT INTO app_settings (key, value) VALUES ('report_language', 'en') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('auto_reports_enabled', 'true') ON CONFLICT (key) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_campaign_performance_date ON campaign_performance(date);
 CREATE INDEX IF NOT EXISTS idx_segment_performance_date ON segment_performance(date);
