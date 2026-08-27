@@ -83,16 +83,26 @@ export function useWaveform(containerRef: Ref<HTMLElement | null>) {
   // transition (e.g. 'speaking' -> 'idle') off a real event instead of
   // a guessed timeout. Also resolves early if stopPlayback() is called,
   // so an interrupted answer transitions the same way a finished one does.
+  //
+  // instance.play() returns a Promise that can reject (e.g. the browser's
+  // autoplay policy blocking playback that isn't tied closely enough to a
+  // user gesture) — previously that rejection was unhandled and 'finish'
+  // never fired, so this hung forever with the UI stuck showing "speaking"
+  // and no audio. Now a rejected play() rejects this promise too, so the
+  // caller's try/catch surfaces a real error instead of hanging.
   async function playToEnd(blob: Blob): Promise<void> {
     const instance = ensureInstance()
     await instance.loadBlob(blob)
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       resolvePlayback = resolve
       instance.once('finish', () => {
         resolvePlayback = null
         resolve()
       })
-      instance.play()
+      instance.play().catch((err) => {
+        resolvePlayback = null
+        reject(err instanceof Error ? err : new Error(String(err)))
+      })
     })
   }
 
