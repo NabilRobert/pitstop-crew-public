@@ -71,6 +71,19 @@ export function useWaveform(containerRef: Ref<HTMLElement | null>) {
     await instance.loadBlob(blob)
   }
 
+  // Loads and plays a completed audio blob (the TTS answer), resolving
+  // once playback finishes — lets the caller drive an orb state
+  // transition (e.g. 'speaking' -> 'idle') off a real event instead of
+  // a guessed timeout.
+  async function playToEnd(blob: Blob): Promise<void> {
+    const instance = ensureInstance()
+    await instance.loadBlob(blob)
+    return new Promise((resolve) => {
+      instance.once('finish', () => resolve())
+      instance.play()
+    })
+  }
+
   function destroy() {
     recordPlugin?.destroy()
     wavesurfer?.destroy()
@@ -80,5 +93,5 @@ export function useWaveform(containerRef: Ref<HTMLElement | null>) {
 
   onUnmounted(destroy)
 
-  return { startRecording, stopRecording, loadPlayback, destroy }
+  return { startRecording, stopRecording, loadPlayback, playToEnd, destroy }
 }
