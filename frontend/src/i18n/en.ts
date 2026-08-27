@@ -118,6 +118,12 @@ export default {
     placeholder: 'e.g. why is the SUV segment outperforming?',
     asking: 'Asking…',
     submit: 'Ask',
+    generating: 'Generating answer…',
+    speaking: 'Speaking…',
+    stopSpeaking: 'Stop',
+    startRecording: 'Start voice input',
+    stopRecording: 'Stop recording',
+    transcribing: 'Transcribing…',
   },
   whyTrailPanel: {
     loading: 'Loading trail…',

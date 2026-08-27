@@ -118,6 +118,12 @@ export default {
     placeholder: 'mis. kenapa segmen SUV tampil lebih baik?',
     asking: 'Mengirim…',
     submit: 'Tanya',
+    generating: 'Membuat jawaban…',
+    speaking: 'Berbicara…',
+    stopSpeaking: 'Berhenti',
+    startRecording: 'Mulai input suara',
+    stopRecording: 'Berhenti merekam',
+    transcribing: 'Mentranskripsi…',
   },
   whyTrailPanel: {
     loading: 'Memuat riwayat revisi…',

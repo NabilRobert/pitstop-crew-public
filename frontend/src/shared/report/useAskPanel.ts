@@ -1,6 +1,7 @@
 import { ref, onMounted, type Ref } from 'vue'
 import { api } from '../api/api'
-import type { AskHistoryEntry } from '../api/types'
+import { useVoice } from '../composables/useVoice'
+import type { AskHistoryEntry, VoiceAgentType } from '../api/types'
 
 export function useAskPanel(outputIdRef: Ref<number>) {
   const history = ref<AskHistoryEntry[]>([])
@@ -8,10 +9,18 @@ export function useAskPanel(outputIdRef: Ref<number>) {
   const loadingHistory = ref(true)
   const asking = ref(false)
   const error = ref<string | null>(null)
+  const agentType = ref<VoiceAgentType | null>(null)
+
+  const voice = useVoice()
 
   onMounted(async () => {
     try {
-      history.value = await api.askHistory(outputIdRef.value)
+      const [historyResult, output] = await Promise.all([
+        api.askHistory(outputIdRef.value),
+        api.output(outputIdRef.value),
+      ])
+      history.value = historyResult
+      agentType.value = output.agent_type as VoiceAgentType
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -28,6 +37,8 @@ export function useAskPanel(outputIdRef: Ref<number>) {
       const result = await api.ask(outputIdRef.value, q)
       history.value = result.history
       question.value = ''
+      const latest = history.value[history.value.length - 1]
+      if (latest && agentType.value) voice.speak(latest.answer, agentType.value)
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -35,5 +46,28 @@ export function useAskPanel(outputIdRef: Ref<number>) {
     }
   }
 
-  return { history, question, loadingHistory, asking, error, submit }
+  async function toggleRecording() {
+    if (voice.recording.value) {
+      const text = await voice.stopRecording()
+      if (text) question.value = text
+    } else {
+      voice.stopSpeaking()
+      await voice.startRecording()
+    }
+  }
+
+  return {
+    history,
+    question,
+    loadingHistory,
+    asking,
+    error: error,
+    voiceError: voice.error,
+    recording: voice.recording,
+    transcribing: voice.transcribing,
+    speaking: voice.speaking,
+    submit,
+    toggleRecording,
+    stopSpeaking: voice.stopSpeaking,
+  }
 }
