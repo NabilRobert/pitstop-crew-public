@@ -20,6 +20,7 @@ import type {
   AssistantAskResponse,
   AssistantAskEntry,
 } from './types'
+import type { Locale } from '../../i18n/index.js'
 
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -84,8 +85,8 @@ export const api = {
   output: (id: number) => request<AiOutput>(`/outputs/${id}`),
   whyTrail: (id: number) => request<WhyTrailEntry[]>(`/outputs/${id}/why-trail`),
   askHistory: (outputId: number) => request<AskHistoryEntry[]>(`/outputs/${outputId}/ask-history`),
-  ask: (outputId: number, question: string) =>
-    request<AskResponse>('/ask', { method: 'POST', body: JSON.stringify({ output_id: outputId, question }) }),
+  ask: (outputId: number, question: string, language?: Locale) =>
+    request<AskResponse>('/ask', { method: 'POST', body: JSON.stringify({ output_id: outputId, question, language }) }),
   timeMachineOverrides: () => request<TimeMachineOverrideMap>('/time-machine/overrides'),
   setTimeMachineOverride: (date: string, forcedState: ForcedState) =>
     request<void>('/time-machine/override', {
@@ -106,6 +107,6 @@ export const api = {
     return res.json()
   },
   assistantAskHistory: () => request<AssistantAskEntry[]>('/assistant/ask-history'),
-  assistantAsk: (question: string) =>
-    request<AssistantAskResponse>('/assistant/ask', { method: 'POST', body: JSON.stringify({ question }) }),
+  assistantAsk: (question: string, language?: Locale) =>
+    request<AssistantAskResponse>('/assistant/ask', { method: 'POST', body: JSON.stringify({ question, language }) }),
 }

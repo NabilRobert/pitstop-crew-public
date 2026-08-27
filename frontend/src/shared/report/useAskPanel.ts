@@ -1,6 +1,7 @@
 import { ref, onMounted, type Ref } from 'vue'
 import { api } from '../api/api'
 import { useVoice } from '../composables/useVoice'
+import { getLocale } from '../../i18n/index.js'
 import type { AskHistoryEntry, VoiceAgentType } from '../api/types'
 
 export function useAskPanel(outputIdRef: Ref<number>) {
@@ -34,7 +35,7 @@ export function useAskPanel(outputIdRef: Ref<number>) {
     asking.value = true
     error.value = null
     try {
-      const result = await api.ask(outputIdRef.value, q)
+      const result = await api.ask(outputIdRef.value, q, getLocale())
       history.value = result.history
       question.value = ''
       const latest = history.value[history.value.length - 1]

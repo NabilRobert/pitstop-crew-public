@@ -1,6 +1,7 @@
 import { ref, onMounted, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
 import { useWaveform } from '../../shared/composables/useWaveform'
+import { getLocale } from '../../i18n/index.js'
 import type { AssistantAskEntry } from '../../shared/api/types'
 
 export type AskaState = 'idle' | 'listening' | 'thinking' | 'speaking'
@@ -28,7 +29,7 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     state.value = 'thinking'
     error.value = null
     try {
-      const result = await api.assistantAsk(q)
+      const result = await api.assistantAsk(q, getLocale())
       history.value = result.history
       question.value = ''
       const latest = history.value[history.value.length - 1]
