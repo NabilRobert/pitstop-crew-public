@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDate } from '../../shared/utils/format'
 import { renderMarkdown } from '../../shared/utils/markdown'
@@ -24,7 +24,33 @@ const {
   stop,
   selectConversation,
   startNewConversation,
+  renameConversation,
 } = useAska(waveformContainer)
+
+// Inline title editing — only one row editable at a time.
+const editingId = ref<number | null>(null)
+const editingTitle = ref('')
+const editInputRefs = ref<Record<number, HTMLInputElement | null>>({})
+
+async function startEditing(conversationId: number, currentTitle: string | null) {
+  editingId.value = conversationId
+  editingTitle.value = currentTitle ?? ''
+  await nextTick()
+  editInputRefs.value[conversationId]?.focus()
+  editInputRefs.value[conversationId]?.select()
+}
+
+async function commitEditing() {
+  if (editingId.value === null) return
+  const id = editingId.value
+  const title = editingTitle.value
+  editingId.value = null
+  await renameConversation(id, title)
+}
+
+function cancelEditing() {
+  editingId.value = null
+}
 
 const stateLabelKey = {
   idle: 'aska.stateIdle',
@@ -73,16 +99,35 @@ const stateLabelKey = {
       </div>
 
       <nav v-else class="flex-1 space-y-0.5 overflow-y-auto">
-        <button
-          v-for="c in visibleConversations"
-          :key="c.id"
-          type="button"
-          class="block w-full truncate rounded-md px-2 py-2 text-left text-sm transition-colors"
-          :class="c.id === activeConversationId ? 'bg-surface-raised text-ink' : 'text-ink-soft hover:bg-surface-raised hover:text-ink'"
-          @click="selectConversation(c.id)"
-        >
-          {{ c.title || t('aska.untitledConversation') }}
-        </button>
+        <div v-for="c in visibleConversations" :key="c.id" class="group/item relative">
+          <input
+            v-if="editingId === c.id"
+            :ref="(el) => { editInputRefs[c.id] = el as HTMLInputElement | null }"
+            v-model="editingTitle"
+            type="text"
+            class="block w-full rounded-md border border-rosso bg-surface-raised px-2 py-2 text-sm text-ink focus:outline-none"
+            @keydown.enter="commitEditing"
+            @keydown.escape="cancelEditing"
+            @blur="commitEditing"
+          />
+          <button
+            v-else
+            type="button"
+            class="flex w-full items-center justify-between gap-1 rounded-md px-2 py-2 text-left text-sm transition-colors"
+            :class="c.id === activeConversationId ? 'bg-surface-raised text-ink' : 'text-ink-soft hover:bg-surface-raised hover:text-ink'"
+            @click="selectConversation(c.id)"
+          >
+            <span class="truncate">{{ c.title || t('aska.untitledConversation') }}</span>
+            <span
+              role="button"
+              :aria-label="t('aska.renameConversation')"
+              class="shrink-0 rounded p-1 text-ink-faint opacity-0 hover:text-ink group-hover/item:opacity-100"
+              @click.stop="startEditing(c.id, c.title)"
+            >
+              ✎
+            </span>
+          </button>
+        </div>
       </nav>
     </aside>
 

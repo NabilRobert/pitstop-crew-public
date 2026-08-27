@@ -296,6 +296,7 @@ export default {
     sortOldest: 'Oldest',
     sortTitle: 'Title (A–Z)',
     noConversationsMatch: 'No chats match your search.',
+    renameConversation: 'Rename chat',
   },
   howItWorks: {
     title: 'How this all works',

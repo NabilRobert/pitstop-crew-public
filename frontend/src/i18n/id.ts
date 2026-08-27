@@ -296,6 +296,7 @@ export default {
     sortOldest: 'Terlama',
     sortTitle: 'Judul (A–Z)',
     noConversationsMatch: 'Tidak ada obrolan yang cocok dengan pencarian Anda.',
+    renameConversation: 'Ganti nama obrolan',
   },
   howItWorks: {
     title: 'Cara kerja semuanya',

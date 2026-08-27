@@ -74,6 +74,18 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     }
   }
 
+  async function renameConversation(conversationId: number, title: string) {
+    const trimmed = title.trim()
+    if (!trimmed) return
+    error.value = null
+    try {
+      const updated = await api.renameAssistantConversation(conversationId, trimmed)
+      conversations.value = conversations.value.map((c) => (c.id === conversationId ? updated : c))
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   async function startNewConversation() {
     if (state.value !== 'idle') return
     error.value = null
@@ -172,5 +184,6 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     stop,
     selectConversation,
     startNewConversation,
+    renameConversation,
   }
 }

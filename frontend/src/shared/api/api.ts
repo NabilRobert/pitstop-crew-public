@@ -125,4 +125,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ conversation_id: conversationId, question, language }),
     }),
+  renameAssistantConversation: (conversationId: number, title: string) =>
+    request<AssistantConversation>(`/assistant/conversations/${conversationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    }),
 }
