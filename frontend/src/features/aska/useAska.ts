@@ -99,22 +99,36 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     }
   }
 
-  async function askAndSpeak(q: string) {
+  // startedAt lets toggleRecording() pass through the mic click's original
+  // timestamp, so the logged elapsed times cover the whole pipeline
+  // (recording stop -> STT -> ask -> TTS -> play), not just the part
+  // askAndSpeak itself is responsible for — that full-chain timing is
+  // what's needed to diagnose autoplay-policy rejections, which are
+  // sensitive to how long it's been since the last real user gesture.
+  async function askAndSpeak(q: string, startedAt = performance.now()) {
     if (activeConversationId.value === null) return
     state.value = 'thinking'
     error.value = null
+    const elapsed = () => `${Math.round(performance.now() - startedAt)}ms`
     try {
+      console.log(`[Aska] asking… (t=${elapsed()})`)
       const result = await api.assistantAsk(activeConversationId.value, q, getLocale())
+      console.log(`[Aska] got answer (t=${elapsed()})`)
       messages.value = result.messages
       question.value = ''
       conversations.value = await api.assistantConversations()
       const latest = messages.value[messages.value.length - 1]
       if (latest) {
         state.value = 'speaking'
+        console.log(`[Aska] requesting TTS (t=${elapsed()})`)
         const audioBlob = await api.tts(latest.answer, 'assistant')
+        console.log(`[Aska] got TTS audio: ${audioBlob.size} bytes, type=${audioBlob.type} (t=${elapsed()})`)
+        console.log(`[Aska] calling play() (t=${elapsed()})`)
         await waveform.playToEnd(audioBlob)
+        console.log(`[Aska] playback finished (t=${elapsed()})`)
       }
     } catch (e) {
+      console.error(`[Aska] failed at t=${elapsed()}:`, e)
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
       state.value = 'idle'
@@ -123,16 +137,23 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
 
   async function toggleRecording() {
     if (state.value === 'listening') {
+      const startedAt = performance.now()
+      const elapsed = () => `${Math.round(performance.now() - startedAt)}ms`
       state.value = 'thinking'
       try {
+        console.log('[Aska] stopping recording…')
         const blob = await waveform.stopRecording()
+        console.log(`[Aska] recording stopped: ${blob.size} bytes (t=${elapsed()})`)
         const { text } = await api.stt(blob, getLocale())
+        console.log(`[Aska] STT result: "${text}" (t=${elapsed()})`)
         if (text.trim()) {
-          await askAndSpeak(text.trim())
+          await askAndSpeak(text.trim(), startedAt)
         } else {
+          console.warn(`[Aska] STT returned empty text, not asking (t=${elapsed()})`)
           state.value = 'idle'
         }
       } catch (e) {
+        console.error(`[Aska] mic pipeline failed at t=${elapsed()}:`, e)
         error.value = e instanceof Error ? e.message : String(e)
         state.value = 'idle'
       }
