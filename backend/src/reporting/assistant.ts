@@ -22,7 +22,7 @@ const PERFORMANCE_WINDOW_DAYS = 30
 // prompt as history — same rationale and value as ask.ts's HISTORY_LIMIT.
 const HISTORY_LIMIT = 10
 
-interface AssistantConversation {
+export interface AssistantConversation {
   id: number
   title: string | null
   created_at: string
@@ -45,6 +45,21 @@ export async function getConversationMessages(conversationId: number) {
     'SELECT id, question, answer, created_at FROM assistant_ask_log WHERE conversation_id = $1 ORDER BY created_at',
     [conversationId]
   )
+}
+
+/** Returns null if the conversation doesn't exist (the route maps that to
+ * 404), rather than throwing like askAssistant() does for the same
+ * situation — that one folds into a generic 400 catch-all, but a rename's
+ * "no such thread" is unambiguously a 404 case. Bumps updated_at on
+ * rename, same as asking a question in the thread does — a "touch," so a
+ * just-renamed thread surfaces at the top under the sidebar's default
+ * most-recent sort. */
+export async function renameConversation(conversationId: number, title: string): Promise<AssistantConversation | null> {
+  const rows = await query<AssistantConversation>(
+    'UPDATE assistant_conversations SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, title, created_at, updated_at',
+    [title, conversationId]
+  )
+  return rows[0] ?? null
 }
 
 async function buildAssistantContext(): Promise<string> {

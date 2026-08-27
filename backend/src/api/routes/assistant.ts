@@ -37,6 +37,26 @@ router.get(
   })
 )
 
+/** Renames a conversation thread — backs the sidebar's inline title edit. */
+router.patch(
+  '/assistant/conversations/:id',
+  asyncHandler(async (req, res) => {
+    const conversationId = Number(req.params.id)
+    const { title } = req.body ?? {}
+    const trimmedTitle = typeof title === 'string' ? title.trim() : ''
+    if (!trimmedTitle) {
+      res.status(400).json({ detail: 'title is required' })
+      return
+    }
+    const conversation = await assistantModule.renameConversation(conversationId, trimmedTitle)
+    if (conversation === null) {
+      res.status(404).json({ detail: `No assistant_conversations row with id=${conversationId}` })
+      return
+    }
+    res.json(conversation)
+  })
+)
+
 router.post(
   '/assistant/ask',
   asyncHandler(async (req, res) => {
