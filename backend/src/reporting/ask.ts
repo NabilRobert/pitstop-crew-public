@@ -1,6 +1,8 @@
-// Ask feature (decided) — on-demand Q&A against Rico or Sammy for a given
-// report. See agents/recommendation.md and agents/summary.md.
+// Ask feature (decided) — on-demand Q&A against Anna, Rico, or Sammy for a
+// given report. See agents/analysis.md, agents/recommendation.md, and
+// agents/summary.md.
 
+import * as anna from '../agents/anna.js'
 import * as rico from '../agents/rico.js'
 import * as sammy from '../agents/sammy.js'
 import { getOutput } from './outputs.js'
@@ -9,6 +11,7 @@ import { getSettings } from '../platform/settings.js'
 import { query } from '../data/db.js'
 
 const ASKABLE_AGENTS: Record<string, { answerQuestion: (ctx: string, q: string, language?: string) => Promise<string> }> = {
+  analysis: anna,
   recommendation: rico,
   summary: sammy,
 }
@@ -19,7 +22,7 @@ export async function ask(outputId: number, question: string): Promise<number> {
   const agentType = output.agent_type
   const agentModule = ASKABLE_AGENTS[agentType]
   if (!agentModule) {
-    throw new Error(`Only recommendation/summary outputs are askable, got '${agentType}'`)
+    throw new Error(`Only analysis/recommendation/summary outputs are askable, got '${agentType}'`)
   }
 
   // db.ts returns DATE columns as raw 'YYYY-MM-DD' strings — see db.ts.

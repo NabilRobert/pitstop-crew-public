@@ -1,10 +1,10 @@
 // REST API — what the Vue frontend calls. Gated by a single-account login
 // (see platform/auth.ts) — /health, /config, and /auth/* are the only
 // public routes; everything else requires a valid session token via
-// authMiddleware. CORS locked to FRONTEND_ORIGIN. Error responses use
-// {detail: "..."} to match the FastAPI version's shape, so the frontend's
-// error handling (which reads body.detail) didn't need to change for this
-// port.
+// authMiddleware. CORS locked to FRONTEND_ORIGINS (one or more, from
+// FRONTEND_ORIGIN). Error responses use {detail: "..."} to match the
+// FastAPI version's shape, so the frontend's error handling (which reads
+// body.detail) didn't need to change for this port.
 //
 // Routes live in routes/, one file per resource area — this file is just
 // setup, mounting, and the two trivial routes not worth their own file.
@@ -12,7 +12,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 
-import { DATA_SOURCE, FRONTEND_ORIGIN } from '../platform/config.js'
+import { DATA_SOURCE, FRONTEND_ORIGINS } from '../platform/config.js'
 import { authMiddleware } from './authMiddleware.js'
 import { router as authRoutes } from './routes/auth.js'
 import { router as settingsRoutes } from './routes/settings.js'
@@ -27,7 +27,7 @@ const app = express()
 app.use(express.json())
 app.use(
   cors({
-    origin: FRONTEND_ORIGIN,
+    origin: FRONTEND_ORIGINS,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })

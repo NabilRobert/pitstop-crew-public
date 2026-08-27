@@ -57,8 +57,12 @@ export const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
 
 export const DATA_SOURCE = process.env.DATA_SOURCE || 'demo' // "demo" or "live"
 
-// Frontend origin, for CORS. Vite's default dev port is 5173.
-export const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173'
+// Frontend origin(s), for CORS. Comma-separated if more than one (e.g. the
+// deployed frontend + localhost for local dev). Vite's default dev port is 5173.
+export const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
 
 // API auth — one pre-set account (see platform/auth.ts). Plaintext like
 // every other secret above; the trust boundary is .env, not this value.

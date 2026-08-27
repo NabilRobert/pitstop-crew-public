@@ -1,6 +1,6 @@
 // Anna — Analysis agent. See agents/analysis.md.
 
-import { MODEL_MINI, complete } from './llm.js'
+import { MODEL_MINI, MODEL_FULL, complete } from './llm.js'
 import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, languageInstruction } from './prompts.js'
 
 // gpt-5-mini is a reasoning model, and confirmed live to be far heavier
@@ -12,6 +12,14 @@ import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, languageInstruction } from './
 // this. 8000 leaves real margin above the observed need, since reasoning
 // token usage isn't fixed run-to-run for the same prompt.
 const MAX_TOKENS = 8000
+
+// Ask answers use MODEL_FULL, not MODEL_MINI, despite analyze() above using
+// MODEL_MINI for cost reasons. At the budget Rico/Sammy's ask feature uses
+// (2500 tokens), gpt-5-mini's hidden reasoning overhead — the same overhead
+// that forced MAX_TOKENS to 8000 above — reproduces the same truncation
+// (finish_reason:"length", zero visible output) seen with analyze(). gpt-5.4
+// doesn't have that failure mode, so it's the safer choice for this budget.
+const ASK_MAX_TOKENS = 2500
 
 const SYSTEM_PROMPT = `You are Anna, the Analysis agent for a Google Ads performance dashboard.
 
@@ -34,4 +42,10 @@ export async function analyze(
   }
   userPrompt += languageInstruction(language)
   return complete(MODEL_MINI, SYSTEM_PROMPT, userPrompt, MAX_TOKENS)
+}
+
+/** Ask feature (decided) — see agents/analysis.md. */
+export async function answerQuestion(reportContext: string, question: string, language = 'en'): Promise<string> {
+  const userPrompt = `Report context:\n${reportContext}\n\nUser question: ${question}${languageInstruction(language)}`
+  return complete(MODEL_FULL, SYSTEM_PROMPT, userPrompt, ASK_MAX_TOKENS)
 }
