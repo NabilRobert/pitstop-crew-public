@@ -109,9 +109,16 @@ export interface AssistantAskEntry {
   created_at: string
 }
 
+export interface AssistantConversation {
+  id: number
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface AssistantAskResponse {
   ask_id: number
-  history: AssistantAskEntry[]
+  messages: AssistantAskEntry[]
 }
 
 export interface PipelineRun {

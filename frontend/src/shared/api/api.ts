@@ -20,6 +20,7 @@ import type {
   VoiceAgentType,
   AssistantAskResponse,
   AssistantAskEntry,
+  AssistantConversation,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -115,7 +116,13 @@ export const api = {
     }
     return res.json()
   },
-  assistantAskHistory: () => request<AssistantAskEntry[]>('/assistant/ask-history'),
-  assistantAsk: (question: string, language?: Locale) =>
-    request<AssistantAskResponse>('/assistant/ask', { method: 'POST', body: JSON.stringify({ question, language }) }),
+  assistantConversations: () => request<AssistantConversation[]>('/assistant/conversations'),
+  startAssistantConversation: () => request<{ id: number }>('/assistant/conversations', { method: 'POST' }),
+  assistantConversationMessages: (conversationId: number) =>
+    request<AssistantAskEntry[]>(`/assistant/conversations/${conversationId}/messages`),
+  assistantAsk: (conversationId: number, question: string, language?: Locale) =>
+    request<AssistantAskResponse>('/assistant/ask', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conversationId, question, language }),
+    }),
 }
