@@ -30,7 +30,7 @@ app.use(express.json())
 app.use(
   cors({
     origin: FRONTEND_ORIGINS,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 )
