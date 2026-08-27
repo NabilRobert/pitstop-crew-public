@@ -13,6 +13,7 @@ import type {
   AiOutput,
   WhyTrailEntry,
   AskHistoryEntry,
+  AskConversation,
   AskResponse,
   TimeMachineOverrideMap,
   ForcedState,
@@ -84,9 +85,16 @@ export const api = {
   reportById: (id: number | string) => request<Report>(`/reports/${id}`),
   output: (id: number) => request<AiOutput>(`/outputs/${id}`),
   whyTrail: (id: number) => request<WhyTrailEntry[]>(`/outputs/${id}/why-trail`),
-  askHistory: (outputId: number) => request<AskHistoryEntry[]>(`/outputs/${outputId}/ask-history`),
-  ask: (outputId: number, question: string, language?: Locale) =>
-    request<AskResponse>('/ask', { method: 'POST', body: JSON.stringify({ output_id: outputId, question, language }) }),
+  askConversations: (outputId: number) => request<AskConversation[]>(`/outputs/${outputId}/ask-conversations`),
+  startAskConversation: (outputId: number) =>
+    request<{ id: number }>(`/outputs/${outputId}/ask-conversations`, { method: 'POST' }),
+  askConversationMessages: (conversationId: number) =>
+    request<AskHistoryEntry[]>(`/ask-conversations/${conversationId}/messages`),
+  ask: (outputId: number, conversationId: number, question: string, language?: Locale) =>
+    request<AskResponse>('/ask', {
+      method: 'POST',
+      body: JSON.stringify({ output_id: outputId, conversation_id: conversationId, question, language }),
+    }),
   timeMachineOverrides: () => request<TimeMachineOverrideMap>('/time-machine/overrides'),
   setTimeMachineOverride: (date: string, forcedState: ForcedState) =>
     request<void>('/time-machine/override', {
@@ -95,9 +103,10 @@ export const api = {
     }),
   clearTimeMachineOverride: (date: string) => request<void>(`/time-machine/override/${date}`, { method: 'DELETE' }),
   tts: (text: string, agentType: VoiceAgentType) => requestAudio('/tts', { text, agentType }),
-  stt: async (audio: Blob, filename = 'recording.webm'): Promise<{ text: string }> => {
+  stt: async (audio: Blob, language?: Locale, filename = 'recording.webm'): Promise<{ text: string }> => {
     const form = new FormData()
     form.append('audio', audio, filename)
+    if (language) form.append('language', language)
     const res = await fetch(`${BASE_URL}/stt`, { method: 'POST', headers: authHeaders(), body: form })
     if (!res.ok) {
       if (res.status === 401) localStorage.removeItem(TOKEN_KEY)

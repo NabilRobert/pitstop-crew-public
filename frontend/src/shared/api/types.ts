@@ -88,8 +88,16 @@ export interface AskHistoryEntry {
   created_at: string
 }
 
+export interface AskConversation {
+  id: number
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface AskResponse {
-  history: AskHistoryEntry[]
+  ask_id: number
+  messages: AskHistoryEntry[]
 }
 
 export type VoiceAgentType = 'analysis' | 'recommendation' | 'summary' | 'assistant'

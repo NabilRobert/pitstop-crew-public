@@ -125,6 +125,8 @@ export default {
     startRecording: 'Mulai input suara',
     stopRecording: 'Berhenti merekam',
     transcribing: 'Mentranskripsi…',
+    newConversation: 'Baru',
+    untitledConversation: 'Percakapan baru',
   },
   whyTrailPanel: {
     loading: 'Memuat riwayat revisi…',

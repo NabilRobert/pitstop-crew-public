@@ -125,6 +125,8 @@ export default {
     startRecording: 'Start voice input',
     stopRecording: 'Stop recording',
     transcribing: 'Transcribing…',
+    newConversation: 'New',
+    untitledConversation: 'New conversation',
   },
   whyTrailPanel: {
     loading: 'Loading trail…',

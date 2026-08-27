@@ -50,7 +50,7 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
       state.value = 'thinking'
       try {
         const blob = await waveform.stopRecording()
-        const { text } = await api.stt(blob)
+        const { text } = await api.stt(blob, getLocale())
         if (text.trim()) {
           await askAndSpeak(text.trim())
         } else {

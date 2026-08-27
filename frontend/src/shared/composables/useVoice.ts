@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { api } from '../api/api'
 import { createLevelMeter } from './useAudioLevel'
 import type { VoiceAgentType } from '../api/types'
+import type { Locale } from '../../i18n/index.js'
 
 // Shared mic-in/speak-out layer for both the per-report Ask panel and the
 // Ask Aska page — one MediaRecorder-based STT path, one Audio-element TTS
@@ -55,7 +56,7 @@ export function useVoice() {
     }
   }
 
-  function stopRecording(): Promise<string | null> {
+  function stopRecording(language?: Locale): Promise<string | null> {
     return new Promise((resolve) => {
       micMeter.stop()
       if (!mediaRecorder || !recording.value) {
@@ -70,7 +71,7 @@ export function useVoice() {
         transcribing.value = true
         error.value = null
         try {
-          const { text } = await api.stt(blob)
+          const { text } = await api.stt(blob, language)
           resolve(text)
         } catch (e) {
           error.value = e instanceof Error ? e.message : String(e)
