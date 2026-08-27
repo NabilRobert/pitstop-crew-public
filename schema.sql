@@ -172,6 +172,39 @@ CREATE TABLE IF NOT EXISTS assistant_ask_log (
 );
 CREATE INDEX IF NOT EXISTS idx_assistant_ask_log_created ON assistant_ask_log(created_at);
 
+-- Conversation threads for Ask Aska — mirrors ask_conversations above, but
+-- with no output_id to scope by, since Aska isn't tied to a single report:
+-- just one flat list of threads instead of one list per output.
+CREATE TABLE IF NOT EXISTS assistant_conversations (
+    id          SERIAL PRIMARY KEY,
+    title       TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE assistant_ask_log ADD COLUMN IF NOT EXISTS conversation_id INTEGER REFERENCES assistant_conversations(id);
+
+-- One-time backfill, mirroring ask_log's — but no GROUP BY output_id
+-- needed, since there's only ever one flat list here: it collapses into a
+-- single legacy thread. The HAVING COUNT(*) > 0 guard is load-bearing for
+-- idempotency, unlike ask_log's version: a bare aggregate with no GROUP BY
+-- always produces exactly one output row (MIN/MAX as NULL) even when zero
+-- input rows match the WHERE clause, unlike a grouped aggregate, which
+-- correctly produces zero rows for zero groups. Without this guard, every
+-- re-run of this file after the first would insert a fresh spurious
+-- "Earlier questions" thread with NULL timestamps.
+WITH legacy AS (
+    INSERT INTO assistant_conversations (title, created_at, updated_at)
+    SELECT 'Earlier questions', MIN(created_at), MAX(created_at)
+    FROM assistant_ask_log
+    WHERE conversation_id IS NULL
+    HAVING COUNT(*) > 0
+    RETURNING id
+)
+UPDATE assistant_ask_log
+SET conversation_id = (SELECT id FROM legacy)
+WHERE conversation_id IS NULL;
+
 -- Time Machine pins for demo mode: forcing a specific state for a future
 -- date. Generation stays a pure function of (date, seed, forced_state),
 -- so this table is the only place state gets overridden from the default
