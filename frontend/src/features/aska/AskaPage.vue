@@ -47,7 +47,7 @@ const stateLabelKey = {
 
     <div
       ref="waveformContainer"
-      class="mt-6 h-16 w-full max-w-md"
+      class="mt-6 h-20 w-full max-w-md"
       :class="state === 'listening' || state === 'speaking' ? 'opacity-100' : 'opacity-0'"
     />
 

@@ -10,9 +10,13 @@ import { theme } from './theme'
 function readThemeColors() {
   const styles = getComputedStyle(document.documentElement)
   return {
-    waveColor: styles.getPropertyValue('--color-border-strong').trim() || '#3c393f',
+    // Giallo for the not-yet-played bars (not a muted gray) and rosso for
+    // played/recorded — both brand-accent colors, matching the orb's own
+    // warm palette, so the waveform reads as vibrant rather than a plain
+    // gray audio meter.
+    waveColor: styles.getPropertyValue('--color-giallo').trim() || '#f8e823',
     progressColor: styles.getPropertyValue('--color-rosso').trim() || '#e42528',
-    cursorColor: styles.getPropertyValue('--color-giallo').trim() || '#f8e823',
+    cursorColor: styles.getPropertyValue('--color-bianco').trim() || '#ffffff',
   }
 }
 
@@ -31,11 +35,12 @@ export function useWaveform(containerRef: Ref<HTMLElement | null>) {
     const colors = readThemeColors()
     wavesurfer = WaveSurfer.create({
       container: containerRef.value,
-      height: 64,
-      barWidth: 3,
-      barGap: 2,
-      barRadius: 2,
+      height: 80,
+      barWidth: 4,
+      barGap: 3,
+      barRadius: 3,
       cursorWidth: 0,
+      barHeight: 1.4,
       ...colors,
     })
     recordPlugin = wavesurfer.registerPlugin(
