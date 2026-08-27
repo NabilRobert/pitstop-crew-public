@@ -17,6 +17,7 @@ export default {
     howItWorks: 'Cara Kerja',
     apiReference: 'Referensi API',
     timeMachine: 'Mesin Waktu',
+    aska: 'Tanya Aska',
   },
   topBar: {
     tagline: 'Dasbor Performa Google Ads Bertenaga AI',
@@ -274,6 +275,19 @@ export default {
     title: 'Referensi API',
     subtitle:
       'Bentuk REST API backend — endpoint, format request/response, dan contoh curl — untuk siapa pun yang membangun atau menghubungkan frontend terpisah ke API ini.',
+  },
+  aska: {
+    title: 'Tanya Aska',
+    subtitle: 'Tanyakan apa saja soal akun Anda — performa kampanye, status sistem, laporan sebelumnya.',
+    placeholder: 'Ketik pertanyaan, atau ketuk bola untuk bicara…',
+    send: 'Tanya',
+    historyTitle: 'Percakapan sebelumnya',
+    noHistory: 'Belum ada yang ditanyakan — ketuk bola atau ketik pertanyaan di bawah.',
+    stateIdle: 'Ketuk untuk bicara',
+    stateListening: 'Mendengarkan… ketuk untuk berhenti',
+    stateThinking: 'Berpikir…',
+    stateSpeaking: 'Berbicara…',
+    stop: 'Berhenti',
   },
   howItWorks: {
     title: 'Cara kerja semuanya',

@@ -77,5 +77,19 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     await askAndSpeak(q)
   }
 
-  return { history, loadingHistory, question, state, error, toggleRecording, submitTyped }
+  // Explicit "Stop" control (separate from tapping the orb, which the UI
+  // disables while thinking/speaking): interrupts whichever of
+  // listening/speaking is active. Listening -> finish the recording and
+  // submit it, same as tapping the orb again. Speaking -> cut the answer
+  // off early; playToEnd()'s promise resolving unblocks askAndSpeak's
+  // finally block, which returns state to idle.
+  function stop() {
+    if (state.value === 'listening') {
+      toggleRecording()
+    } else if (state.value === 'speaking') {
+      waveform.stopPlayback()
+    }
+  }
+
+  return { history, loadingHistory, question, state, error, toggleRecording, submitTyped, stop }
 }

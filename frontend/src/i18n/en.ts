@@ -17,6 +17,7 @@ export default {
     howItWorks: 'How It Works',
     apiReference: 'API Reference',
     timeMachine: 'Time Machine',
+    aska: 'Ask Aska',
   },
   topBar: {
     tagline: 'Google Ads AI Performance Dashboard',
@@ -274,6 +275,19 @@ export default {
     title: 'API Reference',
     subtitle:
       "The shape of the backend REST API — endpoints, request/response formats, and curl examples — for anyone building or connecting a separate frontend to it.",
+  },
+  aska: {
+    title: 'Ask Aska',
+    subtitle: 'Ask anything about your account — campaign performance, system status, past reports.',
+    placeholder: 'Type a question, or tap the orb to speak…',
+    send: 'Ask',
+    historyTitle: 'Past conversations',
+    noHistory: "Nothing asked yet — tap the orb or type a question below.",
+    stateIdle: 'Tap to speak',
+    stateListening: 'Listening… tap to stop',
+    stateThinking: 'Thinking…',
+    stateSpeaking: 'Speaking…',
+    stop: 'Stop',
   },
   howItWorks: {
     title: 'How this all works',

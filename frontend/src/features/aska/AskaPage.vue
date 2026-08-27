@@ -1,0 +1,92 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { formatDate } from '../../shared/utils/format'
+import { renderMarkdown } from '../../shared/utils/markdown'
+import VoiceOrb from '../../shared/components/VoiceOrb.vue'
+import { useAska } from './useAska'
+
+const { t } = useI18n()
+
+const waveformContainer = ref<HTMLElement | null>(null)
+const { history, loadingHistory, question, state, error, toggleRecording, submitTyped, stop } = useAska(waveformContainer)
+
+const stateLabelKey = {
+  idle: 'aska.stateIdle',
+  listening: 'aska.stateListening',
+  thinking: 'aska.stateThinking',
+  speaking: 'aska.stateSpeaking',
+} as const
+</script>
+
+<template>
+  <main class="mx-auto flex max-w-2xl flex-col items-center px-6 py-10">
+    <h1 class="mb-1 font-display text-2xl font-bold text-ink">{{ t('aska.title') }}</h1>
+    <p class="mb-8 text-center text-sm text-ink-faint">{{ t('aska.subtitle') }}</p>
+
+    <button
+      type="button"
+      class="group flex flex-col items-center gap-4 disabled:cursor-not-allowed"
+      :disabled="state === 'thinking' || state === 'speaking'"
+      @click="toggleRecording"
+    >
+      <VoiceOrb :state="state" />
+      <span class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">
+        {{ t(stateLabelKey[state]) }}
+      </span>
+    </button>
+
+    <button
+      v-if="state === 'listening' || state === 'speaking'"
+      type="button"
+      class="mt-4 rounded-full bg-rosso px-5 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco hover:bg-rosso-dark"
+      @click="stop"
+    >
+      {{ t('aska.stop') }}
+    </button>
+
+    <div
+      ref="waveformContainer"
+      class="mt-6 h-16 w-full max-w-md"
+      :class="state === 'listening' || state === 'speaking' ? 'opacity-100' : 'opacity-0'"
+    />
+
+    <form class="mt-6 flex w-full max-w-md gap-2" @submit.prevent="submitTyped">
+      <input
+        v-model="question"
+        type="text"
+        :placeholder="t('aska.placeholder')"
+        class="flex-1 rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+        :disabled="state !== 'idle'"
+      />
+      <button
+        type="submit"
+        class="shrink-0 rounded-md bg-rosso px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco disabled:cursor-not-allowed disabled:opacity-50"
+        :disabled="state !== 'idle' || !question.trim()"
+      >
+        {{ t('aska.send') }}
+      </button>
+    </form>
+
+    <div v-if="error" class="mt-4 w-full max-w-md rounded-lg border border-flag-critical/40 bg-flag-critical-soft px-4 py-3 text-sm text-flag-critical">
+      {{ error }}
+    </div>
+
+    <div class="mt-10 w-full max-w-md">
+      <div class="mb-3 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">{{ t('aska.historyTitle') }}</div>
+
+      <div v-if="loadingHistory" class="text-sm text-ink-faint">{{ t('common.loading') }}</div>
+      <div v-else-if="!history.length" class="text-sm text-ink-faint">{{ t('aska.noHistory') }}</div>
+
+      <div v-else class="space-y-4">
+        <div v-for="entry in [...history].reverse()" :key="entry.id" class="space-y-1.5 rounded-lg border border-border bg-surface p-4">
+          <div class="flex items-baseline gap-2">
+            <span class="font-medium text-ink">{{ entry.question }}</span>
+            <span class="font-mono text-[10px] text-ink-faint">{{ formatDate(entry.created_at) }}</span>
+          </div>
+          <div class="agent-prose text-sm" v-html="renderMarkdown(entry.answer)" />
+        </div>
+      </div>
+    </div>
+  </main>
+</template>
