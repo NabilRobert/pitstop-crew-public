@@ -10,7 +10,9 @@ const { t } = useI18n()
 
 const waveformContainer = ref<HTMLElement | null>(null)
 const {
-  conversations,
+  visibleConversations,
+  conversationSearch,
+  conversationSort,
   activeConversationId,
   messages,
   loadingConversations,
@@ -46,11 +48,33 @@ const stateLabelKey = {
         + {{ t('aska.newConversation') }}
       </button>
 
+      <input
+        v-if="!loadingConversations"
+        v-model="conversationSearch"
+        type="text"
+        :placeholder="t('aska.searchConversations')"
+        class="mb-2 w-full rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+      />
+
+      <select
+        v-if="!loadingConversations"
+        v-model="conversationSort"
+        class="mb-3 w-full rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs text-ink"
+      >
+        <option value="recent">{{ t('aska.sortRecent') }}</option>
+        <option value="oldest">{{ t('aska.sortOldest') }}</option>
+        <option value="title">{{ t('aska.sortTitle') }}</option>
+      </select>
+
       <div v-if="loadingConversations" class="px-2 text-xs text-ink-faint">{{ t('common.loading') }}</div>
+
+      <div v-else-if="!visibleConversations.length" class="px-2 text-xs text-ink-faint">
+        {{ t('aska.noConversationsMatch') }}
+      </div>
 
       <nav v-else class="flex-1 space-y-0.5 overflow-y-auto">
         <button
-          v-for="c in conversations"
+          v-for="c in visibleConversations"
           :key="c.id"
           type="button"
           class="block w-full truncate rounded-md px-2 py-2 text-left text-sm transition-colors"

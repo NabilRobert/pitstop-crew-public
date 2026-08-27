@@ -291,6 +291,11 @@ export default {
     stop: 'Berhenti',
     newConversation: 'Obrolan baru',
     untitledConversation: 'Obrolan baru',
+    searchConversations: 'Cari obrolan…',
+    sortRecent: 'Terbaru',
+    sortOldest: 'Terlama',
+    sortTitle: 'Judul (A–Z)',
+    noConversationsMatch: 'Tidak ada obrolan yang cocok dengan pencarian Anda.',
   },
   howItWorks: {
     title: 'Cara kerja semuanya',

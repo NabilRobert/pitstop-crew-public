@@ -291,6 +291,11 @@ export default {
     stop: 'Stop',
     newConversation: 'New chat',
     untitledConversation: 'New chat',
+    searchConversations: 'Search chats…',
+    sortRecent: 'Most recent',
+    sortOldest: 'Oldest',
+    sortTitle: 'Title (A–Z)',
+    noConversationsMatch: 'No chats match your search.',
   },
   howItWorks: {
     title: 'How this all works',

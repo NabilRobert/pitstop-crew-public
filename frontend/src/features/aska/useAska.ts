@@ -1,10 +1,11 @@
-import { ref, onMounted, type Ref } from 'vue'
+import { ref, computed, onMounted, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
 import { useWaveform } from '../../shared/composables/useWaveform'
 import { getLocale } from '../../i18n/index.js'
 import type { AssistantAskEntry, AssistantConversation } from '../../shared/api/types'
 
 export type AskaState = 'idle' | 'listening' | 'thinking' | 'speaking'
+export type ConversationSort = 'recent' | 'oldest' | 'title'
 
 export function useAska(waveformContainer: Ref<HTMLElement | null>) {
   const conversations = ref<AssistantConversation[]>([])
@@ -14,6 +15,28 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
   const question = ref('')
   const state = ref<AskaState>('idle')
   const error = ref<string | null>(null)
+
+  const conversationSearch = ref('')
+  const conversationSort = ref<ConversationSort>('recent')
+
+  // Search matches the conversation title (untitled threads only show up
+  // when the search box is empty — there's nothing meaningful to match
+  // against otherwise). Sort is purely a display concern; the backend
+  // always returns most-recently-active-first, so 'recent' is a no-op
+  // pass-through and the others just reorder the already-fetched list.
+  const visibleConversations = computed(() => {
+    const q = conversationSearch.value.trim().toLowerCase()
+    const filtered = q ? conversations.value.filter((c) => (c.title ?? '').toLowerCase().includes(q)) : conversations.value
+
+    const sorted = [...filtered]
+    if (conversationSort.value === 'oldest') {
+      sorted.sort((a, b) => a.updated_at.localeCompare(b.updated_at))
+    } else if (conversationSort.value === 'title') {
+      sorted.sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''))
+    }
+    // 'recent' — already the fetch order, nothing to do.
+    return sorted
+  })
 
   const waveform = useWaveform(waveformContainer)
 
@@ -135,6 +158,9 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
 
   return {
     conversations,
+    visibleConversations,
+    conversationSearch,
+    conversationSort,
     activeConversationId,
     messages,
     loadingConversations,
