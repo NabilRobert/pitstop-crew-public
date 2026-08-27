@@ -22,6 +22,8 @@ import { router as reportsRoutes } from './routes/reports.js'
 import { router as outputsRoutes } from './routes/outputs.js'
 import { router as timeMachineRoutes } from './routes/timeMachine.js'
 import { router as pipelineRoutes } from './routes/pipeline.js'
+import { router as voiceRoutes } from './routes/voice.js'
+import { router as assistantRoutes } from './routes/assistant.js'
 
 const app = express()
 app.use(express.json())
@@ -52,6 +54,8 @@ app.use(reportsRoutes)
 app.use(outputsRoutes)
 app.use(timeMachineRoutes)
 app.use(pipelineRoutes)
+app.use(voiceRoutes)
+app.use(assistantRoutes)
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

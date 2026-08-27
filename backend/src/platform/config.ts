@@ -68,3 +68,6 @@ export const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || 'http://localhos
 // every other secret above; the trust boundary is .env, not this value.
 export const AUTH_USERNAME = process.env.AUTH_USERNAME
 export const AUTH_PASSWORD = process.env.AUTH_PASSWORD
+
+// ElevenLabs — TTS/STT for the voice assistant (see platform/elevenlabs.ts).
+export const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY

@@ -1,7 +1,7 @@
 // Sammy — Summary agent. See agents/summary.md.
 
 import { MODEL_FULL, complete } from './llm.js'
-import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, languageInstruction } from './prompts.js'
+import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, VOICE_ANSWER_GUARDRAIL, languageInstruction } from './prompts.js'
 
 // See anna.ts's MAX_TOKENS comment — reasoning models spend an
 // unpredictable share of the budget on hidden reasoning before any
@@ -37,6 +37,6 @@ export async function summarize(
 
 /** Ask feature (decided) — see agents/summary.md. */
 export async function answerQuestion(reportContext: string, question: string, language = 'en'): Promise<string> {
-  const userPrompt = `Report context:\n${reportContext}\n\nUser question: ${question}${languageInstruction(language)}`
+  const userPrompt = `Report context:\n${reportContext}\n\nUser question: ${question}\n\n${VOICE_ANSWER_GUARDRAIL}${languageInstruction(language)}`
   return complete(MODEL_FULL, SYSTEM_PROMPT, userPrompt, ASK_MAX_TOKENS)
 }
