@@ -92,6 +92,20 @@ export interface AskResponse {
   history: AskHistoryEntry[]
 }
 
+export type VoiceAgentType = 'analysis' | 'recommendation' | 'summary' | 'assistant'
+
+export interface AssistantAskEntry {
+  id: number
+  question: string
+  answer: string
+  created_at: string
+}
+
+export interface AssistantAskResponse {
+  ask_id: number
+  history: AssistantAskEntry[]
+}
+
 export interface PipelineRun {
   id: number
   run_type: 'daily' | 'weekly' | 'weekly_feedback'
