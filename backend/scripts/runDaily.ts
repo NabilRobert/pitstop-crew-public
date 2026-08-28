@@ -23,9 +23,11 @@ import {
 import { runWeeklyFeedback } from '../src/pipeline/weeklyFeedback.js'
 import { deliverReport as deliver } from '../src/platform/emailDelivery.js'
 import { getSettings } from '../src/platform/settings.js'
-import { getLastSuccessfulRun, type RunType } from '../src/pipeline/pipelineRuns.js'
+import { getLastSuccessfulRun, reconcileOrphanedRuns, type RunType } from '../src/pipeline/pipelineRuns.js'
 import { getAlertState, setAlertState } from '../src/platform/alertState.js'
 import { wibDate, wibTime, isWibMonday } from '../src/platform/timezone.js'
+import { DATA_SOURCE } from '../src/platform/config.js'
+import { ensureFutureOverrides } from '../src/data/demo/timeMachine.js'
 
 // Matches the frontend's STALE_HOURS exactly (useSystemHealth.ts) so the
 // email alert and the visible System Health "stale" status trip at the
@@ -62,6 +64,21 @@ async function alreadyRanToday(runType: RunType, todayWib: string): Promise<bool
 }
 
 async function main() {
+  // This cron script and the long-lived API server are separate processes —
+  // an orphan left by either one (a crash mid-run) needs cleaning up by
+  // whichever process boots next, not just by the API server on its own
+  // (rare) restart. See src/api/main.ts for the same call.
+  const reconciled = await reconcileOrphanedRuns()
+  if (reconciled > 0) console.log(`Reconciled ${reconciled} orphaned pipeline run(s) before this run`)
+
+  // Independent of the auto-reports toggle below — this just keeps the
+  // Time Machine's override buffer topped up, unrelated to report
+  // generation, so it runs on every tick regardless of that setting.
+  if (DATA_SOURCE === 'demo') {
+    const added = await ensureFutureOverrides(wibDate())
+    if (added > 0) console.log(`Time Machine: auto-extended overrides ${added} day(s) into the future`)
+  }
+
   const settings = await getSettings()
 
   if (settings.auto_reports_enabled === 'false') {
