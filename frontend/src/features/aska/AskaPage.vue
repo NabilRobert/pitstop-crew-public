@@ -160,11 +160,11 @@ const stateLabelKey = {
 
       <div
         ref="waveformContainer"
-        class="mt-6 h-20 w-full max-w-md"
+        class="mt-6 h-20 w-full"
         :class="state === 'listening' || state === 'speaking' ? 'opacity-100' : 'opacity-0'"
       />
 
-      <form class="mt-6 flex w-full max-w-md gap-2" @submit.prevent="submitTyped">
+      <form class="mt-6 flex w-full gap-2" @submit.prevent="submitTyped">
         <input
           v-model="question"
           type="text"
@@ -181,11 +181,11 @@ const stateLabelKey = {
         </button>
       </form>
 
-      <div v-if="error" class="mt-4 w-full max-w-md rounded-lg border border-flag-critical/40 bg-flag-critical-soft px-4 py-3 text-sm text-flag-critical">
+      <div v-if="error" class="mt-4 w-full rounded-lg border border-flag-critical/40 bg-flag-critical-soft px-4 py-3 text-sm text-flag-critical">
         {{ error }}
       </div>
 
-      <div class="mt-10 w-full max-w-md">
+      <div class="mt-10 w-full">
         <div v-if="!loadingConversations && !messages.length" class="text-sm text-ink-faint">{{ t('aska.noHistory') }}</div>
 
         <div v-else class="space-y-4">
