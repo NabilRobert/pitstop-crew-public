@@ -4,6 +4,7 @@
 
 import { Router } from 'express'
 import multer from 'multer'
+import { Readable } from 'node:stream'
 import { textToSpeech, speechToText } from '../../platform/elevenlabs.js'
 import { VOICE_IDS } from '../../platform/voices.js'
 import { isValidLanguage } from '../../platform/settings.js'
@@ -26,9 +27,16 @@ router.post(
       res.status(400).json({ detail: `agentType must be one of ${Object.keys(VOICE_IDS).join(', ')}, got '${agentType}'` })
       return
     }
-    const audio = await textToSpeech(text, voiceId)
+    const elevenLabsResponse = await textToSpeech(text, voiceId)
     res.set('Content-Type', 'audio/mpeg')
-    res.send(audio)
+    if (!elevenLabsResponse.body) {
+      res.end()
+      return
+    }
+    // Bridges fetch's web ReadableStream into a Node stream so bytes flow
+    // straight through to the client as ElevenLabs produces them, instead
+    // of waiting for the whole response to buffer first.
+    Readable.fromWeb(elevenLabsResponse.body as import('node:stream/web').ReadableStream).pipe(res)
   })
 )
 
