@@ -13,19 +13,32 @@ import type {
   AiOutput,
   WhyTrailEntry,
   AskHistoryEntry,
+  AskConversation,
   AskResponse,
   TimeMachineOverrideMap,
   ForcedState,
+  VoiceAgentType,
+  AssistantAskResponse,
+  AssistantAskEntry,
+  AssistantConversation,
 } from './types'
+import type { Locale } from '../../i18n/index.js'
 
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const TOKEN_KEY = 'pitstop-auth-token'
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(TOKEN_KEY)
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options.headers as Record<string, string>) }
-  if (token) headers.Authorization = `Bearer ${token}`
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...authHeaders(),
+    ...(options.headers as Record<string, string>),
+  }
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
   if (!res.ok) {
@@ -34,6 +47,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(body.detail || `Request failed: ${res.status}`)
   }
   return res.json()
+}
+
+// TTS returns raw audio bytes, not JSON — bypasses request()'s res.json().
+async function requestAudio(path: string, body: unknown): Promise<Blob> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    if (res.status === 401) localStorage.removeItem(TOKEN_KEY)
+    const detail = await res.json().catch(() => ({}))
+    throw new Error(detail.detail || `Request failed: ${res.status}`)
+  }
+  return res.blob()
 }
 
 export const api = {
@@ -58,9 +86,16 @@ export const api = {
   reportById: (id: number | string) => request<Report>(`/reports/${id}`),
   output: (id: number) => request<AiOutput>(`/outputs/${id}`),
   whyTrail: (id: number) => request<WhyTrailEntry[]>(`/outputs/${id}/why-trail`),
-  askHistory: (outputId: number) => request<AskHistoryEntry[]>(`/outputs/${outputId}/ask-history`),
-  ask: (outputId: number, question: string) =>
-    request<AskResponse>('/ask', { method: 'POST', body: JSON.stringify({ output_id: outputId, question }) }),
+  askConversations: (outputId: number) => request<AskConversation[]>(`/outputs/${outputId}/ask-conversations`),
+  startAskConversation: (outputId: number) =>
+    request<{ id: number }>(`/outputs/${outputId}/ask-conversations`, { method: 'POST' }),
+  askConversationMessages: (conversationId: number) =>
+    request<AskHistoryEntry[]>(`/ask-conversations/${conversationId}/messages`),
+  ask: (outputId: number, conversationId: number, question: string, language?: Locale) =>
+    request<AskResponse>('/ask', {
+      method: 'POST',
+      body: JSON.stringify({ output_id: outputId, conversation_id: conversationId, question, language }),
+    }),
   timeMachineOverrides: () => request<TimeMachineOverrideMap>('/time-machine/overrides'),
   setTimeMachineOverride: (date: string, forcedState: ForcedState) =>
     request<void>('/time-machine/override', {
@@ -68,4 +103,31 @@ export const api = {
       body: JSON.stringify({ date, forced_state: forcedState }),
     }),
   clearTimeMachineOverride: (date: string) => request<void>(`/time-machine/override/${date}`, { method: 'DELETE' }),
+  tts: (text: string, agentType: VoiceAgentType) => requestAudio('/tts', { text, agentType }),
+  stt: async (audio: Blob, language?: Locale, filename = 'recording.webm'): Promise<{ text: string }> => {
+    const form = new FormData()
+    form.append('audio', audio, filename)
+    if (language) form.append('language', language)
+    const res = await fetch(`${BASE_URL}/stt`, { method: 'POST', headers: authHeaders(), body: form })
+    if (!res.ok) {
+      if (res.status === 401) localStorage.removeItem(TOKEN_KEY)
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.detail || `Request failed: ${res.status}`)
+    }
+    return res.json()
+  },
+  assistantConversations: () => request<AssistantConversation[]>('/assistant/conversations'),
+  startAssistantConversation: () => request<{ id: number }>('/assistant/conversations', { method: 'POST' }),
+  assistantConversationMessages: (conversationId: number) =>
+    request<AssistantAskEntry[]>(`/assistant/conversations/${conversationId}/messages`),
+  assistantAsk: (conversationId: number, question: string, language?: Locale) =>
+    request<AssistantAskResponse>('/assistant/ask', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conversationId, question, language }),
+    }),
+  renameAssistantConversation: (conversationId: number, title: string) =>
+    request<AssistantConversation>(`/assistant/conversations/${conversationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    }),
 }

@@ -88,8 +88,37 @@ export interface AskHistoryEntry {
   created_at: string
 }
 
+export interface AskConversation {
+  id: number
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface AskResponse {
-  history: AskHistoryEntry[]
+  ask_id: number
+  messages: AskHistoryEntry[]
+}
+
+export type VoiceAgentType = 'analysis' | 'recommendation' | 'summary' | 'assistant'
+
+export interface AssistantAskEntry {
+  id: number
+  question: string
+  answer: string
+  created_at: string
+}
+
+export interface AssistantConversation {
+  id: number
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AssistantAskResponse {
+  ask_id: number
+  messages: AssistantAskEntry[]
 }
 
 export interface PipelineRun {

@@ -1,7 +1,7 @@
 // Anna — Analysis agent. See agents/analysis.md.
 
 import { MODEL_MINI, MODEL_FULL, complete } from './llm.js'
-import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, languageInstruction } from './prompts.js'
+import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, VOICE_ANSWER_GUARDRAIL, languageInstruction } from './prompts.js'
 
 // gpt-5-mini is a reasoning model, and confirmed live to be far heavier
 // on hidden reasoning_tokens than gpt-5.4 (the other agents' model) —
@@ -46,6 +46,6 @@ export async function analyze(
 
 /** Ask feature (decided) — see agents/analysis.md. */
 export async function answerQuestion(reportContext: string, question: string, language = 'en'): Promise<string> {
-  const userPrompt = `Report context:\n${reportContext}\n\nUser question: ${question}${languageInstruction(language)}`
+  const userPrompt = `Report context:\n${reportContext}\n\nUser question: ${question}\n\n${VOICE_ANSWER_GUARDRAIL}${languageInstruction(language)}`
   return complete(MODEL_FULL, SYSTEM_PROMPT, userPrompt, ASK_MAX_TOKENS)
 }

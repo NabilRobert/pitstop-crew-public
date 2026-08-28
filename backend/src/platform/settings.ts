@@ -1,6 +1,6 @@
 // App-wide key/value settings — pipeline run times, the critic's
 // grade-forces-revision gate, the report email recipient, and the report
-// generation language. See schema.sql's app_settings table, PROJECT.md's
+// generation language. See schema.sql's app_settings table, docs/PROJECT.md's
 // Automation section, criticLoop.ts, emailDelivery.ts, and orchestrator.ts.
 
 import { query } from '../data/db.js'
@@ -23,7 +23,10 @@ function isValidEmail(value: string): boolean {
   return value === '' || EMAIL_RE.test(value)
 }
 
-function isValidLanguage(value: string): boolean {
+// Exported: also used to validate the ad-hoc `language` param on the live
+// Ask/Aska endpoints (reporting/ask.ts, reporting/assistant.ts), which is
+// separate from the report_language setting this file otherwise governs.
+export function isValidLanguage(value: string): boolean {
   return value === 'en' || value === 'id'
 }
 
@@ -37,6 +40,7 @@ const DEFAULTS = {
   grade_forces_revision: 'false',
   report_recipient_email: REPORT_RECIPIENT_EMAIL ?? '',
   report_language: 'en',
+  auto_reports_enabled: 'true',
 } as const
 
 export type SettingKey = keyof typeof DEFAULTS
@@ -47,6 +51,7 @@ const VALIDATORS: Record<SettingKey, (value: string) => boolean> = {
   grade_forces_revision: isValidBoolean,
   report_recipient_email: isValidEmail,
   report_language: isValidLanguage,
+  auto_reports_enabled: isValidBoolean,
 }
 
 export const SETTING_KEYS = Object.keys(DEFAULTS) as SettingKey[]
@@ -68,6 +73,7 @@ export async function getSettings(): Promise<Record<SettingKey, string>> {
     grade_forces_revision: map.grade_forces_revision ?? DEFAULTS.grade_forces_revision,
     report_recipient_email: map.report_recipient_email ?? DEFAULTS.report_recipient_email,
     report_language: map.report_language ?? DEFAULTS.report_language,
+    auto_reports_enabled: map.auto_reports_enabled ?? DEFAULTS.auto_reports_enabled,
   }
 }
 

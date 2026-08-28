@@ -29,6 +29,12 @@ async function alreadyRanToday(runType: RunType, todayWib: string): Promise<bool
 
 async function main() {
   const settings = await getSettings()
+
+  if (settings.auto_reports_enabled === 'false') {
+    console.log('Automatic reports are disabled — skipping')
+    return
+  }
+
   const now = wibTime()
   const today = wibDate()
   const isMonday = isWibMonday()

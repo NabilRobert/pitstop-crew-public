@@ -8,6 +8,7 @@ import SettingsPage from '../../features/settings/SettingsPage.vue'
 import LearningPage from '../../features/learning/LearningPage.vue'
 import HowItWorksPage from '../../features/how-it-works/HowItWorksPage.vue'
 import ApiReferencePage from '../../features/api-reference/ApiReferencePage.vue'
+import AskaPage from '../../features/aska/AskaPage.vue'
 
 const routes = [
   { path: '/', name: 'dashboard', component: DashboardPage },
@@ -19,6 +20,7 @@ const routes = [
   { path: '/learning', name: 'learning', component: LearningPage },
   { path: '/how-it-works', name: 'how-it-works', component: HowItWorksPage },
   { path: '/api-reference', name: 'api-reference', component: ApiReferencePage },
+  { path: '/aska', name: 'aska', component: AskaPage },
 ]
 
 export default createRouter({
