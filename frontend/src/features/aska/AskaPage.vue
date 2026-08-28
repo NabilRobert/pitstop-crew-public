@@ -15,6 +15,7 @@ const {
   conversationSort,
   activeConversationId,
   messages,
+  displayMessages,
   loadingConversations,
   question,
   state,
@@ -70,8 +71,11 @@ const stateLabelKey = {
     <div class="aska-glow" :class="{ 'is-active': state !== 'idle' }" />
 
     <!-- Sidebar — conversation list, Claude/ChatGPT-style, not stacked
-         inline below the orb the way the first version had it. -->
-    <aside class="flex w-64 shrink-0 flex-col border-r border-border bg-surface px-3 py-4">
+         inline below the orb the way the first version had it. Sticky +
+         full viewport height so it (and the compose controls in <main>)
+         stay put while a long message history scrolls, instead of the
+         whole page scrolling as one column. -->
+    <aside class="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-border bg-surface px-3 py-4">
       <button
         type="button"
         class="mb-3 flex items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft hover:border-rosso hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
@@ -139,7 +143,10 @@ const stateLabelKey = {
     </aside>
 
     <!-- Main panel — orb, waveform, input, and the active conversation's
-         messages, oldest first (a real thread, not a reversed flat log). -->
+         messages. The messages panel below is height-capped with its own
+         scroll (see displayMessages, newest-first) so the latest answer is
+         always the first thing visible there — no more hunting for it at
+         the bottom of a growing, page-scrolled thread. -->
     <main class="flex flex-1 flex-col items-center px-6 py-10">
       <h1 class="mb-1 font-display text-2xl font-bold text-ink">{{ t('aska.title') }}</h1>
       <p class="mb-8 text-center text-sm text-ink-faint">{{ t('aska.subtitle') }}</p>
@@ -195,9 +202,9 @@ const stateLabelKey = {
       <div class="mt-10 w-full">
         <div v-if="!loadingConversations && !messages.length" class="text-sm text-ink-faint">{{ t('aska.noHistory') }}</div>
 
-        <div v-else class="space-y-4">
+        <div v-else class="max-h-[55vh] space-y-4 overflow-y-auto pr-1">
           <div
-            v-for="entry in messages"
+            v-for="entry in displayMessages"
             :key="entry.id"
             class="space-y-1.5 rounded-lg border p-4 transition-colors"
             :class="entry.id === voiceFallbackMessageId ? 'border-rosso bg-surface-raised' : 'border-border bg-surface'"

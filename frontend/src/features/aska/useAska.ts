@@ -44,6 +44,12 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     return sorted
   })
 
+  // messages itself stays oldest-first (askAndSpeak relies on that order to
+  // find the latest entry, and it also matches the transcript order used
+  // for the LLM prompt) — this is a display-only reversal so the newest
+  // answer shows at the top without scrolling.
+  const displayMessages = computed(() => [...messages.value].reverse())
+
   const waveform = useWaveform(waveformContainer)
 
   async function loadMessages(conversationId: number) {
@@ -211,6 +217,7 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     conversationSort,
     activeConversationId,
     messages,
+    displayMessages,
     loadingConversations,
     question,
     state,
