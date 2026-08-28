@@ -57,6 +57,21 @@ router.patch(
   })
 )
 
+/** Deletes a conversation thread and its messages — backs the sidebar's
+ * delete action. */
+router.delete(
+  '/assistant/conversations/:id',
+  asyncHandler(async (req, res) => {
+    const conversationId = Number(req.params.id)
+    const deleted = await assistantModule.deleteConversation(conversationId)
+    if (!deleted) {
+      res.status(404).json({ detail: `No assistant_conversations row with id=${conversationId}` })
+      return
+    }
+    res.status(204).end()
+  })
+)
+
 router.post(
   '/assistant/ask',
   asyncHandler(async (req, res) => {
