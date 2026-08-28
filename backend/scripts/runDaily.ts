@@ -14,12 +14,46 @@
 // the server actually lives.
 
 import { runDaily, runWeekly, type RunResult } from '../src/pipeline/orchestrator.js'
-import { formatReportEmail, formatFailureAlert, formatWeeklyFeedbackEmail } from '../src/reporting/reports.js'
+import {
+  formatReportEmail,
+  formatFailureAlert,
+  formatWeeklyFeedbackEmail,
+  formatDeadMansSwitchAlert,
+} from '../src/reporting/reports.js'
 import { runWeeklyFeedback } from '../src/pipeline/weeklyFeedback.js'
 import { deliverReport as deliver } from '../src/platform/emailDelivery.js'
 import { getSettings } from '../src/platform/settings.js'
 import { getLastSuccessfulRun, type RunType } from '../src/pipeline/pipelineRuns.js'
+import { getAlertState, setAlertState } from '../src/platform/alertState.js'
 import { wibDate, wibTime, isWibMonday } from '../src/platform/timezone.js'
+
+// Matches the frontend's STALE_HOURS exactly (useSystemHealth.ts) so the
+// email alert and the visible System Health "stale" status trip at the
+// same point. Reused for the backup dead-man's-switch too — backups run
+// once daily, so the same ~30h buffer comfortably covers one missed day
+// without being so tight it false-positives on ordinary timing jitter.
+const STALE_HOURS = 30
+
+/** Fires exactly one email per outage: trips once when a pipeline goes
+ * stale, stays silent on every subsequent tick while still stale (so a
+ * 15-minute cron doesn't spam), and re-arms once a successful run lands.
+ * See platform/alertState.ts for the dedupe flag this reads/writes. */
+async function checkDeadMansSwitch(runType: RunType, alertKey: string): Promise<void> {
+  const last = await getLastSuccessfulRun(runType)
+  const hoursSince = last?.finished_at ? (Date.now() - new Date(last.finished_at).getTime()) / 3_600_000 : Infinity
+
+  if (hoursSince > STALE_HOURS) {
+    const alreadyAlerted = await getAlertState(alertKey)
+    if (alreadyAlerted !== 'true') {
+      const { subject, body } = formatDeadMansSwitchAlert(runType, STALE_HOURS, last?.finished_at ?? null)
+      await deliver(runType, subject, body)
+      await setAlertState(alertKey, 'true')
+    }
+    // still stale, already alerted this outage — stay silent, don't spam
+  } else {
+    await setAlertState(alertKey, 'false') // re-arm for the next outage
+  }
+}
 
 async function alreadyRanToday(runType: RunType, todayWib: string): Promise<boolean> {
   const last = await getLastSuccessfulRun(runType)
@@ -34,6 +68,12 @@ async function main() {
     console.log('Automatic reports are disabled — skipping')
     return
   }
+
+  // Deliberately after the auto_reports_enabled early-return above — a
+  // deliberately-paused pipeline is expected staleness, not an outage to
+  // alert on.
+  await checkDeadMansSwitch('daily', 'dead_man_switch_alert_sent')
+  await checkDeadMansSwitch('backup', 'backup_stale_alert_sent')
 
   const now = wibTime()
   const today = wibDate()

@@ -3,7 +3,7 @@
 
 import { query, queryOne } from '../data/db.js'
 
-export const VALID_RUN_TYPES = ['daily', 'weekly', 'weekly_feedback'] as const
+export const VALID_RUN_TYPES = ['daily', 'weekly', 'weekly_feedback', 'backup'] as const
 export type RunType = (typeof VALID_RUN_TYPES)[number]
 
 export async function startRun(runType: RunType): Promise<number> {

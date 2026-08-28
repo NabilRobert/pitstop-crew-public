@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS demo_state_overrides (
 -- checks (MAX(finished_at) WHERE status='success'), and cost guardrails.
 CREATE TABLE IF NOT EXISTS pipeline_runs (
     id             SERIAL PRIMARY KEY,
-    run_type       TEXT NOT NULL CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback')),
+    run_type       TEXT NOT NULL CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback', 'backup')),
     started_at     TIMESTAMPTZ NOT NULL,
     finished_at    TIMESTAMPTZ,
     status         TEXT NOT NULL DEFAULT 'success' CHECK (status IN ('success', 'failure', 'partial')),
@@ -228,6 +228,16 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     error_message  TEXT,                  -- NULL unless status != 'success'
     created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Widen run_type to include 'backup' — scripts/backupDb.ts is now tracked
+-- in this table too (trackRun('backup', ...)), not just daily/weekly/
+-- weekly_feedback, so a silent backup failure isn't invisible the way it
+-- was before. A no-op against a fresh DB (the CREATE TABLE above already
+-- includes 'backup'); this only matters for an existing DB whose
+-- constraint predates this change.
+ALTER TABLE pipeline_runs DROP CONSTRAINT IF EXISTS pipeline_runs_run_type_check;
+ALTER TABLE pipeline_runs ADD CONSTRAINT pipeline_runs_run_type_check
+    CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback', 'backup'));
 
 -- Which pipeline_runs row produced a given ai_outputs row — lets a report
 -- be looked up by the exact generation it came from instead of just
