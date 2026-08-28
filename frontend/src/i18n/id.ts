@@ -297,6 +297,7 @@ export default {
     sortTitle: 'Judul (A–Z)',
     noConversationsMatch: 'Tidak ada obrolan yang cocok dengan pencarian Anda.',
     renameConversation: 'Ganti nama obrolan',
+    voiceUnavailable: 'Aska menjawab, tapi suaranya hilang — ini jawabannya:',
   },
   howItWorks: {
     title: 'Cara kerja semuanya',

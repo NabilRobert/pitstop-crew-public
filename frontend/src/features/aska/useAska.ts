@@ -19,6 +19,12 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
   const conversationSearch = ref('')
   const conversationSort = ref<ConversationSort>('recent')
 
+  // Set when voice playback fails (e.g. ElevenLabs quota) on an answer
+  // that otherwise landed fine — the question was still answered
+  // correctly, so that shouldn't read as an error. Draws attention to the
+  // text answer instead of playing nothing.
+  const voiceFallbackMessageId = ref<number | null>(null)
+
   // Search matches the conversation title (untitled threads only show up
   // when the search box is empty — there's nothing meaningful to match
   // against otherwise). Sort is purely a display concern; the backend
@@ -109,6 +115,7 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     if (activeConversationId.value === null) return
     state.value = 'thinking'
     error.value = null
+    voiceFallbackMessageId.value = null
     const elapsed = () => `${Math.round(performance.now() - startedAt)}ms`
     try {
       console.log(`[Aska] asking… (t=${elapsed()})`)
@@ -119,13 +126,21 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
       conversations.value = await api.assistantConversations()
       const latest = messages.value[messages.value.length - 1]
       if (latest) {
-        state.value = 'speaking'
-        console.log(`[Aska] requesting TTS (t=${elapsed()})`)
-        const audioBlob = await api.tts(latest.answer, 'assistant')
-        console.log(`[Aska] got TTS audio: ${audioBlob.size} bytes, type=${audioBlob.type} (t=${elapsed()})`)
-        console.log(`[Aska] calling play() (t=${elapsed()})`)
-        await waveform.playToEnd(audioBlob)
-        console.log(`[Aska] playback finished (t=${elapsed()})`)
+        try {
+          console.log(`[Aska] requesting TTS (t=${elapsed()})`)
+          const audioBlob = await api.tts(latest.answer, 'assistant')
+          console.log(`[Aska] got TTS audio: ${audioBlob.size} bytes, type=${audioBlob.type} (t=${elapsed()})`)
+          state.value = 'speaking'
+          console.log(`[Aska] calling play() (t=${elapsed()})`)
+          await waveform.playToEnd(audioBlob)
+          console.log(`[Aska] playback finished (t=${elapsed()})`)
+        } catch (voiceErr) {
+          // The question was answered fine — only voice failed (e.g.
+          // ElevenLabs quota exhausted). Not a real error: skip audio and
+          // just draw attention to the text answer instead.
+          console.error(`[Aska] voice failed at t=${elapsed()}, falling back to text-only:`, voiceErr)
+          voiceFallbackMessageId.value = latest.id
+        }
       }
     } catch (e) {
       console.error(`[Aska] failed at t=${elapsed()}:`, e)
@@ -200,6 +215,7 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     question,
     state,
     error,
+    voiceFallbackMessageId,
     toggleRecording,
     submitTyped,
     stop,

@@ -19,6 +19,7 @@ const {
   question,
   state,
   error,
+  voiceFallbackMessageId,
   toggleRecording,
   submitTyped,
   stop,
@@ -62,6 +63,12 @@ const stateLabelKey = {
 
 <template>
   <div class="flex">
+    <!-- Ambient background glow while Aska is listening/thinking/speaking —
+         built off --color-rosso via color-mix() rather than fixed hex, so
+         it re-themes for free: warm red/yellow in Ferrari, blue in the
+         Blueprint light theme, matching each theme's own accent. -->
+    <div class="aska-glow" :class="{ 'is-active': state !== 'idle' }" />
+
     <!-- Sidebar — conversation list, Claude/ChatGPT-style, not stacked
          inline below the orb the way the first version had it. -->
     <aside class="flex w-64 shrink-0 flex-col border-r border-border bg-surface px-3 py-4">
@@ -189,11 +196,19 @@ const stateLabelKey = {
         <div v-if="!loadingConversations && !messages.length" class="text-sm text-ink-faint">{{ t('aska.noHistory') }}</div>
 
         <div v-else class="space-y-4">
-          <div v-for="entry in messages" :key="entry.id" class="space-y-1.5 rounded-lg border border-border bg-surface p-4">
+          <div
+            v-for="entry in messages"
+            :key="entry.id"
+            class="space-y-1.5 rounded-lg border p-4 transition-colors"
+            :class="entry.id === voiceFallbackMessageId ? 'border-rosso bg-surface-raised' : 'border-border bg-surface'"
+          >
             <div class="flex items-baseline gap-2">
               <span class="font-medium text-ink">{{ entry.question }}</span>
               <span class="font-mono text-[10px] text-ink-faint">{{ formatDate(entry.created_at) }}</span>
             </div>
+            <p v-if="entry.id === voiceFallbackMessageId" class="text-xs italic text-rosso">
+              {{ t('aska.voiceUnavailable') }}
+            </p>
             <div class="agent-prose text-sm" v-html="renderMarkdown(entry.answer)" />
           </div>
         </div>
@@ -201,3 +216,34 @@ const stateLabelKey = {
     </main>
   </div>
 </template>
+
+<style scoped>
+.aska-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 900px 700px at 60% 25%,
+    color-mix(in srgb, var(--color-rosso) 22%, transparent) 0%,
+    transparent 70%
+  );
+  transition: opacity 0.6s ease;
+}
+
+.aska-glow.is-active {
+  opacity: 1;
+  animation: aska-glow-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes aska-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+</style>

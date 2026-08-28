@@ -297,6 +297,7 @@ export default {
     sortTitle: 'Title (A–Z)',
     noConversationsMatch: 'No chats match your search.',
     renameConversation: 'Rename chat',
+    voiceUnavailable: "Aska responded, but she lost her voice — here's what she said:",
   },
   howItWorks: {
     title: 'How this all works',
