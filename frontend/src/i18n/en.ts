@@ -297,6 +297,8 @@ export default {
     sortTitle: 'Title (A–Z)',
     noConversationsMatch: 'No chats match your search.',
     renameConversation: 'Rename chat',
+    deleteConversation: 'Delete chat',
+    confirmDelete: 'Delete "{title}"? This can\'t be undone.',
     voiceUnavailable: "Aska responded, but she lost her voice — here's what she said:",
   },
   howItWorks: {

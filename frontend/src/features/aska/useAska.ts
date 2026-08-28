@@ -98,6 +98,32 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     }
   }
 
+  async function deleteConversation(conversationId: number) {
+    if (state.value !== 'idle') return
+    error.value = null
+    try {
+      await api.deleteAssistantConversation(conversationId)
+      conversations.value = conversations.value.filter((c) => c.id !== conversationId)
+
+      if (conversationId !== activeConversationId.value) return
+
+      // The active thread just got deleted — fall back to the next one in
+      // the list, or spin up a fresh empty conversation if none are left,
+      // same as onMounted's own "no conversations yet" path.
+      if (conversations.value.length > 0) {
+        activeConversationId.value = conversations.value[0].id
+        await loadMessages(conversations.value[0].id)
+      } else {
+        const { id } = await api.startAssistantConversation()
+        conversations.value = [{ id, title: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]
+        activeConversationId.value = id
+        messages.value = []
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   async function startNewConversation() {
     if (state.value !== 'idle') return
     error.value = null
@@ -229,5 +255,6 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     selectConversation,
     startNewConversation,
     renameConversation,
+    deleteConversation,
   }
 }

@@ -27,7 +27,15 @@ const {
   selectConversation,
   startNewConversation,
   renameConversation,
+  deleteConversation,
 } = useAska(waveformContainer)
+
+function confirmDelete(conversationId: number, title: string | null) {
+  const label = title || t('aska.untitledConversation')
+  if (window.confirm(t('aska.confirmDelete', { title: label }))) {
+    deleteConversation(conversationId)
+  }
+}
 
 // Inline title editing — only one row editable at a time.
 const editingId = ref<number | null>(null)
@@ -129,13 +137,23 @@ const stateLabelKey = {
             @click="selectConversation(c.id)"
           >
             <span class="truncate">{{ c.title || t('aska.untitledConversation') }}</span>
-            <span
-              role="button"
-              :aria-label="t('aska.renameConversation')"
-              class="shrink-0 rounded p-1 text-ink-faint opacity-0 hover:text-ink group-hover/item:opacity-100"
-              @click.stop="startEditing(c.id, c.title)"
-            >
-              ✎
+            <span class="flex shrink-0 items-center gap-0.5 opacity-0 group-hover/item:opacity-100">
+              <span
+                role="button"
+                :aria-label="t('aska.renameConversation')"
+                class="rounded p-1 text-ink-faint hover:text-ink"
+                @click.stop="startEditing(c.id, c.title)"
+              >
+                ✎
+              </span>
+              <span
+                role="button"
+                :aria-label="t('aska.deleteConversation')"
+                class="rounded p-1 text-ink-faint hover:text-rosso"
+                @click.stop="confirmDelete(c.id, c.title)"
+              >
+                🗑
+              </span>
             </span>
           </button>
         </div>
