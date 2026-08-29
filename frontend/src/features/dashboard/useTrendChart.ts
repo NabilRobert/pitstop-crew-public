@@ -32,12 +32,8 @@ export function useTrendChart(seriesRef: Ref<PerformanceRow[]>) {
     datasets: [
       {
         data: byDate.value.map(([, totals]) => totals[metric.value]),
-        borderColor: CHART_COLORS.value.rosso,
-        backgroundColor: `${CHART_COLORS.value.rosso}33`,
-        pointBackgroundColor: CHART_COLORS.value.rosso,
-        pointRadius: 3,
-        tension: 0.3,
-        fill: true,
+        backgroundColor: CHART_COLORS.value.rosso,
+        borderRadius: 3,
       },
     ],
   }))

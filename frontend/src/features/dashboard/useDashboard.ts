@@ -1,4 +1,4 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../../shared/api/api'
 import { formatDate } from '../../shared/utils/format'
@@ -16,11 +16,23 @@ export interface CampaignRow extends Totals {
   ctr: number
 }
 
+// labelKey is the short button label ("7D"); subtitleKey is the fuller
+// phrase used in the page subtitle ("Last 7 days") — "Last 1825 days"
+// reads oddly for the 5-year option, so that one gets its own phrasing
+// ("Last 5 years") rather than deriving it from the raw day count.
+export const PERIOD_OPTIONS = [
+  { days: 7, labelKey: 'dashboard.period7d', subtitleKey: 'dashboard.period7dSubtitle' },
+  { days: 30, labelKey: 'dashboard.period30d', subtitleKey: 'dashboard.period30dSubtitle' },
+  { days: 90, labelKey: 'dashboard.period90d', subtitleKey: 'dashboard.period90dSubtitle' },
+  { days: 1825, labelKey: 'dashboard.period5y', subtitleKey: 'dashboard.period5ySubtitle' },
+] as const
+
 export function useDashboard() {
   const { t } = useI18n()
 
   const loading = ref(true)
   const error = ref<string | null>(null)
+  const days = ref(30)
   const performance = ref<PerformanceRow[]>([])
   const segmentPerformance = ref<SegmentPerformanceRow[]>([])
   const dailyReport = ref<Report>({ analysis: null, recommendation: null, summary: null })
@@ -69,16 +81,24 @@ export function useDashboard() {
     return id ? `/reports/daily/${id}` : null
   })
 
+  // dailyReport/systemHealth aren't period-scoped (a report, a health
+  // snapshot) — only performance/segmentPerformance need refetching when
+  // the selected period changes.
+  async function loadPerformance() {
+    const [perf, segPerf] = await Promise.all([api.performance(days.value), api.segmentPerformance(days.value)])
+    performance.value = perf
+    segmentPerformance.value = segPerf
+  }
+
+  watch(days, () => {
+    loadPerformance().catch((e) => {
+      error.value = e instanceof Error ? e.message : String(e)
+    })
+  })
+
   onMounted(async () => {
     try {
-      const [perf, segPerf, report, health] = await Promise.all([
-        api.performance(30),
-        api.segmentPerformance(30),
-        api.latestReport('daily'),
-        api.systemHealth(),
-      ])
-      performance.value = perf
-      segmentPerformance.value = segPerf
+      const [, report, health] = await Promise.all([loadPerformance(), api.latestReport('daily'), api.systemHealth()])
       dailyReport.value = report
       systemHealth.value = health
     } catch (e) {
@@ -91,6 +111,7 @@ export function useDashboard() {
   return {
     loading,
     error,
+    days,
     performance,
     segmentPerformance,
     dailyReport,

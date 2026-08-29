@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Line } from 'vue-chartjs'
+import { Bar } from 'vue-chartjs'
 import { METRICS } from './metrics'
 import { useTrendChart } from './useTrendChart'
 import type { PerformanceRow } from '../../shared/api/types'
@@ -31,7 +31,7 @@ const { metric, byDate, chartData, chartOptions } = useTrendChart(toRef(props, '
       </div>
     </div>
     <div class="h-64">
-      <Line v-if="byDate.length" :data="chartData" :options="chartOptions" />
+      <Bar v-if="byDate.length" :data="chartData" :options="chartOptions" />
       <div v-else class="flex h-full items-center justify-center text-ink-faint">{{ t('common.noDataYet') }}</div>
     </div>
   </div>

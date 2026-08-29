@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatMicrosAsIDR, formatNumber, formatPercent } from '../../shared/utils/format'
 import MetricCard from './MetricCard.vue'
@@ -13,12 +13,13 @@ import TrendChart from './TrendChart.vue'
 import CampaignBarChart from './CampaignBarChart.vue'
 import SegmentBreakdownChart from './SegmentBreakdownChart.vue'
 import { useReportDrawer } from '../../shared/report/useReportDrawer'
-import { useDashboard } from './useDashboard'
+import { useDashboard, PERIOD_OPTIONS } from './useDashboard'
 
 const { t } = useI18n()
 const {
   loading,
   error,
+  days,
   performance,
   segmentPerformance,
   dailyReport,
@@ -28,6 +29,10 @@ const {
   lastRunLabel,
   latestReportLink,
 } = useDashboard()
+
+const activePeriodSubtitleKey = computed(
+  () => PERIOD_OPTIONS.find((opt) => opt.days === days.value)?.subtitleKey ?? PERIOD_OPTIONS[1].subtitleKey
+)
 
 const showCampaignGlossary = ref(false)
 
@@ -50,7 +55,21 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
       <div class="mb-6 flex items-center justify-between">
         <div>
           <h1 class="font-display text-2xl font-bold text-ink">{{ t('dashboard.title') }}</h1>
-          <p class="mt-1 font-mono text-xs text-ink-faint">{{ t('dashboard.subtitle', { lastRun: lastRunLabel }) }}</p>
+          <p class="mt-1 font-mono text-xs text-ink-faint">
+            {{ t('dashboard.subtitle', { period: t(activePeriodSubtitleKey), lastRun: lastRunLabel }) }}
+          </p>
+        </div>
+        <div class="flex gap-1 rounded-lg border border-border bg-surface p-1">
+          <button
+            v-for="opt in PERIOD_OPTIONS"
+            :key="opt.days"
+            type="button"
+            class="rounded px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide transition-colors"
+            :class="days === opt.days ? 'bg-rosso text-bianco' : 'text-ink-faint hover:text-ink'"
+            @click="days = opt.days"
+          >
+            {{ t(opt.labelKey) }}
+          </button>
         </div>
       </div>
 
