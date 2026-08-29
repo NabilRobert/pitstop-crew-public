@@ -21,6 +21,8 @@ export interface CampaignRow extends Totals {
 // wording rather than deriving it from the raw day count, since "Last
 // 1825 days" reads oddly for the longer options.
 export const PERIOD_OPTIONS = [
+  { days: 7, labelKey: 'dashboard.period1w', subtitleKey: 'dashboard.period1wSubtitle' },
+  { days: 30, labelKey: 'dashboard.period1m', subtitleKey: 'dashboard.period1mSubtitle' },
   { days: 90, labelKey: 'dashboard.period3m', subtitleKey: 'dashboard.period3mSubtitle' },
   { days: 180, labelKey: 'dashboard.period6m', subtitleKey: 'dashboard.period6mSubtitle' },
   { days: 365, labelKey: 'dashboard.period1y', subtitleKey: 'dashboard.period1ySubtitle' },
@@ -28,12 +30,14 @@ export const PERIOD_OPTIONS = [
   { days: 1825, labelKey: 'dashboard.period5y', subtitleKey: 'dashboard.period5ySubtitle' },
 ] as const
 
+const DEFAULT_PERIOD_DAYS = 90 // 3 months
+
 export function useDashboard() {
   const { t } = useI18n()
 
   const loading = ref(true)
   const error = ref<string | null>(null)
-  const days = ref<number>(PERIOD_OPTIONS[0].days) // 3 months, the shortest/default option
+  const days = ref<number>(DEFAULT_PERIOD_DAYS)
   const performance = ref<PerformanceRow[]>([])
   const segmentPerformance = ref<SegmentPerformanceRow[]>([])
   const dailyReport = ref<Report>({ analysis: null, recommendation: null, summary: null })
