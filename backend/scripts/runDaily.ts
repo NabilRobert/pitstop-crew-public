@@ -23,7 +23,12 @@ import {
 import { runWeeklyFeedback } from '../src/pipeline/weeklyFeedback.js'
 import { deliverReport as deliver } from '../src/platform/emailDelivery.js'
 import { getSettings } from '../src/platform/settings.js'
-import { getLastSuccessfulRun, reconcileOrphanedRuns, type RunType } from '../src/pipeline/pipelineRuns.js'
+import {
+  getLastSuccessfulRun,
+  reconcileOrphanedRuns,
+  PipelineRunInProgressError,
+  type RunType,
+} from '../src/pipeline/pipelineRuns.js'
 import { getAlertState, setAlertState } from '../src/platform/alertState.js'
 import { wibDate, wibTime, isWibMonday } from '../src/platform/timezone.js'
 import { DATA_SOURCE } from '../src/platform/config.js'
@@ -108,10 +113,22 @@ async function main() {
       await deliver('daily', subject, body)
       console.log(`Daily run complete for ${today}`)
     } catch (err) {
-      const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
-      const { subject, body } = formatFailureAlert('daily', message)
-      await deliver('daily', subject, body)
-      throw err
+      // startRun() inside runDaily() (no existingRunId passed here — this
+      // is the cron path, unlike a manual trigger that resolves its own
+      // runId first and passes it through) can lose the
+      // idx_pipeline_runs_one_running race against a concurrent run.
+      // That's not a real failure — nothing broke, this tick just backs
+      // off — so it shouldn't fire a failure alert.
+      if (err instanceof PipelineRunInProgressError) {
+        console.log(
+          'Daily run skipped — another run was already in progress (likely a manual "Generate report now" trigger racing this cron tick)'
+        )
+      } else {
+        const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
+        const { subject, body } = formatFailureAlert('daily', message)
+        await deliver('daily', subject, body)
+        throw err
+      }
     }
   }
 
@@ -132,6 +149,12 @@ async function main() {
     await deliver('weekly', subject, body)
     console.log(`Weekly run complete for ${today}`)
   } catch (err) {
+    if (err instanceof PipelineRunInProgressError) {
+      console.log(
+        'Weekly run skipped — another run was already in progress (likely a manual "Generate report now" trigger racing this cron tick)'
+      )
+      return
+    }
     const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
     const { subject, body } = formatFailureAlert('weekly', message)
     await deliver('weekly', subject, body)
