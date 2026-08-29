@@ -13,6 +13,7 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import cors from 'cors'
 
 import { DATA_SOURCE, FRONTEND_ORIGINS } from '../platform/config.js'
+import { reconcileOrphanedRuns } from '../pipeline/pipelineRuns.js'
 import { authMiddleware } from './authMiddleware.js'
 import { router as authRoutes } from './routes/auth.js'
 import { router as settingsRoutes } from './routes/settings.js'
@@ -62,6 +63,15 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err)
   res.status(500).json({ detail: err instanceof Error ? err.message : String(err) })
 })
+
+// Fire-and-forget — not awaited, so a DB hiccup here doesn't block /health
+// from coming up. Cleans up any pipeline_runs row left status='running' by
+// a prior crash/restart (see reconcileOrphanedRuns' own docstring).
+reconcileOrphanedRuns()
+  .then((count) => {
+    if (count > 0) console.log(`Reconciled ${count} orphaned pipeline run(s) from a prior crash/restart`)
+  })
+  .catch((err) => console.error('Failed to reconcile orphaned pipeline runs at startup:', err))
 
 const port = Number(process.env.PORT) || 8000
 app.listen(port, () => {

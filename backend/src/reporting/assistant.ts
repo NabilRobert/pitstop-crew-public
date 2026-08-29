@@ -62,6 +62,20 @@ export async function renameConversation(conversationId: number, title: string):
   return rows[0] ?? null
 }
 
+/** Returns whether a conversation actually existed to delete (the route
+ * maps false to 404), same shape as renameConversation's null-on-missing.
+ * assistant_ask_log.conversation_id has no ON DELETE CASCADE, so its rows
+ * for this thread are deleted first — unconditionally, since a DELETE
+ * matching zero rows (an empty, never-asked thread) is a harmless no-op —
+ * before the conversation row itself. */
+export async function deleteConversation(conversationId: number): Promise<boolean> {
+  await query('DELETE FROM assistant_ask_log WHERE conversation_id = $1', [conversationId])
+  const rows = await query<{ id: number }>('DELETE FROM assistant_conversations WHERE id = $1 RETURNING id', [
+    conversationId,
+  ])
+  return rows.length > 0
+}
+
 async function buildAssistantContext(): Promise<string> {
   const performanceData = await buildPerformanceContext({ days: PERFORMANCE_WINDOW_DAYS })
 

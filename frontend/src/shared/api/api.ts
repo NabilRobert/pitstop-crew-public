@@ -46,6 +46,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail || `Request failed: ${res.status}`)
   }
+  if (res.status === 204) return undefined as T
   return res.json()
 }
 
@@ -125,6 +126,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ conversation_id: conversationId, question, language }),
     }),
+  deleteAssistantConversation: (conversationId: number) =>
+    request<void>(`/assistant/conversations/${conversationId}`, { method: 'DELETE' }),
   renameAssistantConversation: (conversationId: number, title: string) =>
     request<AssistantConversation>(`/assistant/conversations/${conversationId}`, {
       method: 'PATCH',

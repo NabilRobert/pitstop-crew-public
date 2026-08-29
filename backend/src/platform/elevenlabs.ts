@@ -23,7 +23,12 @@ function requireApiKey(): string {
   return ELEVENLABS_API_KEY
 }
 
-export async function textToSpeech(text: string, voiceId: string): Promise<Buffer> {
+// Returns the raw Response instead of a fully-buffered Buffer — routes/
+// voice.ts pipes response.body straight through to the client instead of
+// waiting for the whole thing first. Buffering here made the two legs
+// (ElevenLabs -> this backend, this backend -> frontend) strictly
+// sequential instead of overlapped; streaming collapses them into one.
+export async function textToSpeech(text: string, voiceId: string): Promise<Response> {
   const key = requireApiKey()
   const response = await fetch(`${BASE_URL}/text-to-speech/${voiceId}`, {
     method: 'POST',
@@ -33,7 +38,7 @@ export async function textToSpeech(text: string, voiceId: string): Promise<Buffe
   if (!response.ok) {
     throw new Error(`ElevenLabs TTS failed: ${response.status} ${await response.text()}`)
   }
-  return Buffer.from(await response.arrayBuffer())
+  return response
 }
 
 export async function speechToText(

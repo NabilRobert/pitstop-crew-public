@@ -19,6 +19,12 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
   const conversationSearch = ref('')
   const conversationSort = ref<ConversationSort>('recent')
 
+  // Set when voice playback fails (e.g. ElevenLabs quota) on an answer
+  // that otherwise landed fine — the question was still answered
+  // correctly, so that shouldn't read as an error. Draws attention to the
+  // text answer instead of playing nothing.
+  const voiceFallbackMessageId = ref<number | null>(null)
+
   // Search matches the conversation title (untitled threads only show up
   // when the search box is empty — there's nothing meaningful to match
   // against otherwise). Sort is purely a display concern; the backend
@@ -37,6 +43,12 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     // 'recent' — already the fetch order, nothing to do.
     return sorted
   })
+
+  // messages itself stays oldest-first (askAndSpeak relies on that order to
+  // find the latest entry, and it also matches the transcript order used
+  // for the LLM prompt) — this is a display-only reversal so the newest
+  // answer shows at the top without scrolling.
+  const displayMessages = computed(() => [...messages.value].reverse())
 
   const waveform = useWaveform(waveformContainer)
 
@@ -86,6 +98,32 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     }
   }
 
+  async function deleteConversation(conversationId: number) {
+    if (state.value !== 'idle') return
+    error.value = null
+    try {
+      await api.deleteAssistantConversation(conversationId)
+      conversations.value = conversations.value.filter((c) => c.id !== conversationId)
+
+      if (conversationId !== activeConversationId.value) return
+
+      // The active thread just got deleted — fall back to the next one in
+      // the list, or spin up a fresh empty conversation if none are left,
+      // same as onMounted's own "no conversations yet" path.
+      if (conversations.value.length > 0) {
+        activeConversationId.value = conversations.value[0].id
+        await loadMessages(conversations.value[0].id)
+      } else {
+        const { id } = await api.startAssistantConversation()
+        conversations.value = [{ id, title: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]
+        activeConversationId.value = id
+        messages.value = []
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   async function startNewConversation() {
     if (state.value !== 'idle') return
     error.value = null
@@ -109,6 +147,7 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     if (activeConversationId.value === null) return
     state.value = 'thinking'
     error.value = null
+    voiceFallbackMessageId.value = null
     const elapsed = () => `${Math.round(performance.now() - startedAt)}ms`
     try {
       console.log(`[Aska] asking… (t=${elapsed()})`)
@@ -119,13 +158,21 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
       conversations.value = await api.assistantConversations()
       const latest = messages.value[messages.value.length - 1]
       if (latest) {
-        state.value = 'speaking'
-        console.log(`[Aska] requesting TTS (t=${elapsed()})`)
-        const audioBlob = await api.tts(latest.answer, 'assistant')
-        console.log(`[Aska] got TTS audio: ${audioBlob.size} bytes, type=${audioBlob.type} (t=${elapsed()})`)
-        console.log(`[Aska] calling play() (t=${elapsed()})`)
-        await waveform.playToEnd(audioBlob)
-        console.log(`[Aska] playback finished (t=${elapsed()})`)
+        try {
+          console.log(`[Aska] requesting TTS (t=${elapsed()})`)
+          const audioBlob = await api.tts(latest.answer, 'assistant')
+          console.log(`[Aska] got TTS audio: ${audioBlob.size} bytes, type=${audioBlob.type} (t=${elapsed()})`)
+          state.value = 'speaking'
+          console.log(`[Aska] calling play() (t=${elapsed()})`)
+          await waveform.playToEnd(audioBlob)
+          console.log(`[Aska] playback finished (t=${elapsed()})`)
+        } catch (voiceErr) {
+          // The question was answered fine — only voice failed (e.g.
+          // ElevenLabs quota exhausted). Not a real error: skip audio and
+          // just draw attention to the text answer instead.
+          console.error(`[Aska] voice failed at t=${elapsed()}, falling back to text-only:`, voiceErr)
+          voiceFallbackMessageId.value = latest.id
+        }
       }
     } catch (e) {
       console.error(`[Aska] failed at t=${elapsed()}:`, e)
@@ -196,15 +243,18 @@ export function useAska(waveformContainer: Ref<HTMLElement | null>) {
     conversationSort,
     activeConversationId,
     messages,
+    displayMessages,
     loadingConversations,
     question,
     state,
     error,
+    voiceFallbackMessageId,
     toggleRecording,
     submitTyped,
     stop,
     selectConversation,
     startNewConversation,
     renameConversation,
+    deleteConversation,
   }
 }

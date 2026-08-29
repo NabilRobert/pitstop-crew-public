@@ -15,17 +15,27 @@ const {
   conversationSort,
   activeConversationId,
   messages,
+  displayMessages,
   loadingConversations,
   question,
   state,
   error,
+  voiceFallbackMessageId,
   toggleRecording,
   submitTyped,
   stop,
   selectConversation,
   startNewConversation,
   renameConversation,
+  deleteConversation,
 } = useAska(waveformContainer)
+
+function confirmDelete(conversationId: number, title: string | null) {
+  const label = title || t('aska.untitledConversation')
+  if (window.confirm(t('aska.confirmDelete', { title: label }))) {
+    deleteConversation(conversationId)
+  }
+}
 
 // Inline title editing — only one row editable at a time.
 const editingId = ref<number | null>(null)
@@ -62,9 +72,18 @@ const stateLabelKey = {
 
 <template>
   <div class="flex">
+    <!-- Ambient background glow while Aska is listening/thinking/speaking —
+         built off --color-rosso via color-mix() rather than fixed hex, so
+         it re-themes for free: warm red/yellow in Ferrari, blue in the
+         Blueprint light theme, matching each theme's own accent. -->
+    <div class="aska-glow" :class="{ 'is-active': state !== 'idle' }" />
+
     <!-- Sidebar — conversation list, Claude/ChatGPT-style, not stacked
-         inline below the orb the way the first version had it. -->
-    <aside class="flex w-64 shrink-0 flex-col border-r border-border bg-surface px-3 py-4">
+         inline below the orb the way the first version had it. Sticky +
+         full viewport height so it (and the compose controls in <main>)
+         stay put while a long message history scrolls, instead of the
+         whole page scrolling as one column. -->
+    <aside class="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-border bg-surface px-3 py-4">
       <button
         type="button"
         class="mb-3 flex items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft hover:border-rosso hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
@@ -118,13 +137,23 @@ const stateLabelKey = {
             @click="selectConversation(c.id)"
           >
             <span class="truncate">{{ c.title || t('aska.untitledConversation') }}</span>
-            <span
-              role="button"
-              :aria-label="t('aska.renameConversation')"
-              class="shrink-0 rounded p-1 text-ink-faint opacity-0 hover:text-ink group-hover/item:opacity-100"
-              @click.stop="startEditing(c.id, c.title)"
-            >
-              ✎
+            <span class="flex shrink-0 items-center gap-0.5 opacity-0 group-hover/item:opacity-100">
+              <span
+                role="button"
+                :aria-label="t('aska.renameConversation')"
+                class="rounded p-1 text-ink-faint hover:text-ink"
+                @click.stop="startEditing(c.id, c.title)"
+              >
+                ✎
+              </span>
+              <span
+                role="button"
+                :aria-label="t('aska.deleteConversation')"
+                class="rounded p-1 text-ink-faint hover:text-rosso"
+                @click.stop="confirmDelete(c.id, c.title)"
+              >
+                🗑
+              </span>
             </span>
           </button>
         </div>
@@ -132,7 +161,10 @@ const stateLabelKey = {
     </aside>
 
     <!-- Main panel — orb, waveform, input, and the active conversation's
-         messages, oldest first (a real thread, not a reversed flat log). -->
+         messages. The messages panel below is height-capped with its own
+         scroll (see displayMessages, newest-first) so the latest answer is
+         always the first thing visible there — no more hunting for it at
+         the bottom of a growing, page-scrolled thread. -->
     <main class="flex flex-1 flex-col items-center px-6 py-10">
       <h1 class="mb-1 font-display text-2xl font-bold text-ink">{{ t('aska.title') }}</h1>
       <p class="mb-8 text-center text-sm text-ink-faint">{{ t('aska.subtitle') }}</p>
@@ -160,11 +192,11 @@ const stateLabelKey = {
 
       <div
         ref="waveformContainer"
-        class="mt-6 h-20 w-full max-w-md"
+        class="mt-6 h-20 w-full"
         :class="state === 'listening' || state === 'speaking' ? 'opacity-100' : 'opacity-0'"
       />
 
-      <form class="mt-6 flex w-full max-w-md gap-2" @submit.prevent="submitTyped">
+      <form class="mt-6 flex w-full gap-2" @submit.prevent="submitTyped">
         <input
           v-model="question"
           type="text"
@@ -181,19 +213,27 @@ const stateLabelKey = {
         </button>
       </form>
 
-      <div v-if="error" class="mt-4 w-full max-w-md rounded-lg border border-flag-critical/40 bg-flag-critical-soft px-4 py-3 text-sm text-flag-critical">
+      <div v-if="error" class="mt-4 w-full rounded-lg border border-flag-critical/40 bg-flag-critical-soft px-4 py-3 text-sm text-flag-critical">
         {{ error }}
       </div>
 
-      <div class="mt-10 w-full max-w-md">
+      <div class="mt-10 w-full">
         <div v-if="!loadingConversations && !messages.length" class="text-sm text-ink-faint">{{ t('aska.noHistory') }}</div>
 
-        <div v-else class="space-y-4">
-          <div v-for="entry in messages" :key="entry.id" class="space-y-1.5 rounded-lg border border-border bg-surface p-4">
+        <div v-else class="max-h-[55vh] space-y-4 overflow-y-auto pr-1">
+          <div
+            v-for="entry in displayMessages"
+            :key="entry.id"
+            class="space-y-1.5 rounded-lg border p-4 transition-colors"
+            :class="entry.id === voiceFallbackMessageId ? 'border-rosso bg-surface-raised' : 'border-border bg-surface'"
+          >
             <div class="flex items-baseline gap-2">
               <span class="font-medium text-ink">{{ entry.question }}</span>
               <span class="font-mono text-[10px] text-ink-faint">{{ formatDate(entry.created_at) }}</span>
             </div>
+            <p v-if="entry.id === voiceFallbackMessageId" class="text-xs italic text-rosso">
+              {{ t('aska.voiceUnavailable') }}
+            </p>
             <div class="agent-prose text-sm" v-html="renderMarkdown(entry.answer)" />
           </div>
         </div>
@@ -201,3 +241,34 @@ const stateLabelKey = {
     </main>
   </div>
 </template>
+
+<style scoped>
+.aska-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 900px 700px at 60% 25%,
+    color-mix(in srgb, var(--color-rosso) 22%, transparent) 0%,
+    transparent 70%
+  );
+  transition: opacity 0.6s ease;
+}
+
+.aska-glow.is-active {
+  opacity: 1;
+  animation: aska-glow-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes aska-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+</style>
