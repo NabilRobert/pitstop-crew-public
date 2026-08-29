@@ -16,14 +16,15 @@ export interface CampaignRow extends Totals {
   ctr: number
 }
 
-// labelKey is the short button label ("7D"); subtitleKey is the fuller
-// phrase used in the page subtitle ("Last 7 days") — "Last 1825 days"
-// reads oddly for the 5-year option, so that one gets its own phrasing
-// ("Last 5 years") rather than deriving it from the raw day count.
+// labelKey is the short button label ("3M"); subtitleKey is the fuller
+// phrase used in the page subtitle ("Last 3 months") — each gets its own
+// wording rather than deriving it from the raw day count, since "Last
+// 1825 days" reads oddly for the longer options.
 export const PERIOD_OPTIONS = [
-  { days: 7, labelKey: 'dashboard.period7d', subtitleKey: 'dashboard.period7dSubtitle' },
-  { days: 30, labelKey: 'dashboard.period30d', subtitleKey: 'dashboard.period30dSubtitle' },
-  { days: 90, labelKey: 'dashboard.period90d', subtitleKey: 'dashboard.period90dSubtitle' },
+  { days: 90, labelKey: 'dashboard.period3m', subtitleKey: 'dashboard.period3mSubtitle' },
+  { days: 180, labelKey: 'dashboard.period6m', subtitleKey: 'dashboard.period6mSubtitle' },
+  { days: 365, labelKey: 'dashboard.period1y', subtitleKey: 'dashboard.period1ySubtitle' },
+  { days: 730, labelKey: 'dashboard.period2y', subtitleKey: 'dashboard.period2ySubtitle' },
   { days: 1825, labelKey: 'dashboard.period5y', subtitleKey: 'dashboard.period5ySubtitle' },
 ] as const
 
@@ -32,7 +33,7 @@ export function useDashboard() {
 
   const loading = ref(true)
   const error = ref<string | null>(null)
-  const days = ref(30)
+  const days = ref<number>(PERIOD_OPTIONS[0].days) // 3 months, the shortest/default option
   const performance = ref<PerformanceRow[]>([])
   const segmentPerformance = ref<SegmentPerformanceRow[]>([])
   const dailyReport = ref<Report>({ analysis: null, recommendation: null, summary: null })

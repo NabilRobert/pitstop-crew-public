@@ -31,7 +31,7 @@ const {
 } = useDashboard()
 
 const activePeriodSubtitleKey = computed(
-  () => PERIOD_OPTIONS.find((opt) => opt.days === days.value)?.subtitleKey ?? PERIOD_OPTIONS[1].subtitleKey
+  () => PERIOD_OPTIONS.find((opt) => opt.days === days.value)?.subtitleKey ?? PERIOD_OPTIONS[0].subtitleKey
 )
 
 const showCampaignGlossary = ref(false)
