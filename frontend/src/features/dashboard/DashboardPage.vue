@@ -23,6 +23,7 @@ const {
   performance,
   segmentPerformance,
   dailyReport,
+  campaigns,
   totals,
   ctr,
   campaignRows,
@@ -158,7 +159,7 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
               </div>
             </div>
 
-            <CampaignTable :rows="campaignRows" />
+            <CampaignTable :rows="campaignRows" :campaigns="campaigns" />
           </div>
         </div>
         <div class="lg:col-span-2">

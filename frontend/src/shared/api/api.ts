@@ -21,6 +21,8 @@ import type {
   AssistantAskResponse,
   AssistantAskEntry,
   AssistantConversation,
+  AdGroupPerformanceRow,
+  KeywordPerformanceRow,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -74,6 +76,10 @@ export const api = {
   systemHealth: () => request<SystemHealth>('/system-health'),
   campaigns: () => request<Campaign[]>('/campaigns'),
   performance: (days = 30) => request<PerformanceRow[]>(`/performance?days=${days}`),
+  adGroupPerformance: (days = 30, campaignId?: number) =>
+    request<AdGroupPerformanceRow[]>(`/ad-groups/performance?days=${days}${campaignId ? `&campaignId=${campaignId}` : ''}`),
+  keywordPerformance: (days = 30, adGroupId?: number) =>
+    request<KeywordPerformanceRow[]>(`/keywords/performance?days=${days}${adGroupId ? `&adGroupId=${adGroupId}` : ''}`),
   segmentPerformance: (days = 30) => request<SegmentPerformanceRow[]>(`/segments/performance?days=${days}`),
   settings: () => request<Settings>('/settings'),
   updateSettings: (payload: Partial<Settings>) =>

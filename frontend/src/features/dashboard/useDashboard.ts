@@ -2,7 +2,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../../shared/api/api'
 import { formatDate } from '../../shared/utils/format'
-import type { PerformanceRow, SegmentPerformanceRow, Report, SystemHealth } from '../../shared/api/types'
+import type { Campaign, PerformanceRow, SegmentPerformanceRow, Report, SystemHealth } from '../../shared/api/types'
 
 interface Totals {
   impressions: number
@@ -42,6 +42,11 @@ export function useDashboard() {
   const segmentPerformance = ref<SegmentPerformanceRow[]>([])
   const dailyReport = ref<Report>({ analysis: null, recommendation: null, summary: null })
   const systemHealth = ref<SystemHealth | null>(null)
+  // Not period-scoped (campaign identity doesn't change with the date
+  // range) — fetched once on mount, used to build campaign drill-down
+  // links (CampaignTable.vue) since PerformanceRow only carries the
+  // campaign's name, not its id.
+  const campaigns = ref<Campaign[]>([])
 
   const totals = computed<Totals>(() => {
     return performance.value.reduce(
@@ -103,9 +108,15 @@ export function useDashboard() {
 
   onMounted(async () => {
     try {
-      const [, report, health] = await Promise.all([loadPerformance(), api.latestReport('daily'), api.systemHealth()])
+      const [, report, health, campaignList] = await Promise.all([
+        loadPerformance(),
+        api.latestReport('daily'),
+        api.systemHealth(),
+        api.campaigns(),
+      ])
       dailyReport.value = report
       systemHealth.value = health
+      campaigns.value = campaignList
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -121,6 +132,7 @@ export function useDashboard() {
     segmentPerformance,
     dailyReport,
     systemHealth,
+    campaigns,
     totals,
     ctr,
     campaignRows,

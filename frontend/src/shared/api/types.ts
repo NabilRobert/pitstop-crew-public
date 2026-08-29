@@ -27,6 +27,40 @@ export interface SegmentPerformanceRow {
   conversions: number
 }
 
+// v2 Stage 1 — ad groups + keywords + Quality Score.
+export interface AdGroupPerformanceRow {
+  date: string
+  ad_group_id: number
+  ad_group: string
+  campaign_id: number
+  campaign: string
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+}
+
+export type QsBucket = 'above_average' | 'average' | 'below_average'
+
+export interface KeywordPerformanceRow {
+  date: string
+  keyword_id: number
+  text: string
+  match_type: 'exact' | 'phrase' | 'broad'
+  ad_group_id: number
+  ad_group: string
+  campaign_id: number
+  campaign: string
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+  quality_score: number | null
+  expected_ctr: QsBucket | null
+  ad_relevance: QsBucket | null
+  landing_page_experience: QsBucket | null
+}
+
 export interface CriticIssue {
   quote: string
   reason: string
