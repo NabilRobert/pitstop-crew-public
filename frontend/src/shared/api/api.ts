@@ -23,6 +23,7 @@ import type {
   AssistantConversation,
   AdGroupPerformanceRow,
   KeywordPerformanceRow,
+  SearchTermPerformanceRow,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -80,6 +81,8 @@ export const api = {
     request<AdGroupPerformanceRow[]>(`/ad-groups/performance?days=${days}${campaignId ? `&campaignId=${campaignId}` : ''}`),
   keywordPerformance: (days = 30, adGroupId?: number) =>
     request<KeywordPerformanceRow[]>(`/keywords/performance?days=${days}${adGroupId ? `&adGroupId=${adGroupId}` : ''}`),
+  searchTermPerformance: (days = 30, keywordId?: number) =>
+    request<SearchTermPerformanceRow[]>(`/search-terms/performance?days=${days}${keywordId ? `&keywordId=${keywordId}` : ''}`),
   segmentPerformance: (days = 30) => request<SegmentPerformanceRow[]>(`/segments/performance?days=${days}`),
   settings: () => request<Settings>('/settings'),
   updateSettings: (payload: Partial<Settings>) =>

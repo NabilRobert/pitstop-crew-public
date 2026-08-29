@@ -61,6 +61,25 @@ export interface KeywordPerformanceRow {
   landing_page_experience: QsBucket | null
 }
 
+// v2 Stage 2 — search terms. Each row is anchored to exactly one
+// triggering keyword (see backend/schema.sql's search_terms table).
+export interface SearchTermPerformanceRow {
+  date: string
+  search_term_id: number
+  search_term: string
+  match_flavor: 'close_variant' | 'broader'
+  keyword_id: number
+  keyword: string
+  ad_group_id: number
+  ad_group: string
+  campaign_id: number
+  campaign: string
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+}
+
 export interface CriticIssue {
   quote: string
   reason: string

@@ -1,6 +1,6 @@
 import { ref, watch, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
-import type { AdGroupPerformanceRow, KeywordPerformanceRow, QsBucket } from '../../shared/api/types'
+import type { AdGroupPerformanceRow, KeywordPerformanceRow, QsBucket, SearchTermPerformanceRow } from '../../shared/api/types'
 
 // Fixed window for this first drill-down slice — the campaign detail page
 // doesn't have its own period selector yet (a reasonable follow-up, not
@@ -30,6 +30,15 @@ export interface KeywordRow extends Totals {
   expected_ctr: QsBucket | null
   ad_relevance: QsBucket | null
   landing_page_experience: QsBucket | null
+}
+
+export interface SearchTermRow extends Totals {
+  search_term_id: number
+  search_term: string
+  match_flavor: 'close_variant' | 'broader'
+  keyword: string
+  ctr: number
+  wasted: boolean
 }
 
 function aggregateAdGroups(rows: AdGroupPerformanceRow[]): AdGroupRow[] {
@@ -101,12 +110,45 @@ function aggregateKeywords(rows: KeywordPerformanceRow[]): KeywordRow[] {
     .sort((a, b) => b.cost_micros - a.cost_micros)
 }
 
+/** Aggregates per-day search term rows into one row per search term, summing
+ * metrics. `wasted` flags terms with real spend and zero conversions —
+ * negative-keyword candidates — computed off the summed totals rather than
+ * any single day, since one bad day doesn't make a term worth excluding. */
+function aggregateSearchTerms(rows: SearchTermPerformanceRow[]): SearchTermRow[] {
+  const byTerm = new Map<number, SearchTermRow>()
+  for (const r of rows) {
+    if (!byTerm.has(r.search_term_id)) {
+      byTerm.set(r.search_term_id, {
+        search_term_id: r.search_term_id,
+        search_term: r.search_term,
+        match_flavor: r.match_flavor,
+        keyword: r.keyword,
+        impressions: 0,
+        clicks: 0,
+        cost_micros: 0,
+        conversions: 0,
+        ctr: 0,
+        wasted: false,
+      })
+    }
+    const agg = byTerm.get(r.search_term_id)!
+    agg.impressions += r.impressions
+    agg.clicks += r.clicks
+    agg.cost_micros += r.cost_micros
+    agg.conversions += r.conversions
+  }
+  return Array.from(byTerm.values())
+    .map((t) => ({ ...t, ctr: t.impressions ? (t.clicks / t.impressions) * 100 : 0, wasted: t.clicks > 0 && t.conversions === 0 }))
+    .sort((a, b) => b.cost_micros - a.cost_micros)
+}
+
 export function useCampaignDetail(campaignId: Ref<string | number>) {
   const loading = ref(true)
   const error = ref<string | null>(null)
   const campaignName = ref('')
   const adGroupRows = ref<AdGroupRow[]>([])
   const keywordRows = ref<KeywordRow[]>([])
+  const searchTermRows = ref<SearchTermRow[]>([])
 
   async function load() {
     loading.value = true
@@ -119,7 +161,12 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
 
       const adGroupIds = [...new Set(adGroupPerf.map((r) => r.ad_group_id))]
       const keywordPerfByAdGroup = await Promise.all(adGroupIds.map((agId) => api.keywordPerformance(DAYS, agId)))
-      keywordRows.value = aggregateKeywords(keywordPerfByAdGroup.flat())
+      const keywordPerf = keywordPerfByAdGroup.flat()
+      keywordRows.value = aggregateKeywords(keywordPerf)
+
+      const keywordIds = [...new Set(keywordPerf.map((r) => r.keyword_id))]
+      const searchTermPerfByKeyword = await Promise.all(keywordIds.map((kwId) => api.searchTermPerformance(DAYS, kwId)))
+      searchTermRows.value = aggregateSearchTerms(searchTermPerfByKeyword.flat())
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -129,5 +176,5 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
 
   watch(campaignId, load, { immediate: true })
 
-  return { loading, error, campaignName, adGroupRows, keywordRows }
+  return { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows }
 }

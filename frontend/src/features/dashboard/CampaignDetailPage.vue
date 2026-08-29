@@ -3,6 +3,7 @@ import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatMicrosAsIDR, formatNumber, formatPercent } from '../../shared/utils/format'
 import KeywordTable from './KeywordTable.vue'
+import SearchTermTable from './SearchTermTable.vue'
 import { useCampaignDetail } from './useCampaignDetail'
 
 const props = defineProps({
@@ -11,7 +12,7 @@ const props = defineProps({
 
 const { t } = useI18n()
 
-const { loading, error, campaignName, adGroupRows, keywordRows } = useCampaignDetail(toRef(props, 'id'))
+const { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows } = useCampaignDetail(toRef(props, 'id'))
 </script>
 
 <template>
@@ -80,6 +81,11 @@ const { loading, error, campaignName, adGroupRows, keywordRows } = useCampaignDe
         {{ t('campaignDetail.keywordsHeading') }}
       </h2>
       <KeywordTable :rows="keywordRows" />
+
+      <h2 class="mb-3 mt-8 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
+        {{ t('campaignDetail.searchTermsHeading') }}
+      </h2>
+      <SearchTermTable :rows="searchTermRows" />
     </template>
   </main>
 </template>

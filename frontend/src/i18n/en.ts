@@ -107,6 +107,22 @@ export default {
     below: 'below average',
     noData: 'No keyword data yet.',
   },
+  searchTermTable: {
+    columns: {
+      searchTerm: 'Search Term',
+      keyword: 'Keyword',
+      impressions: 'Impressions',
+      clicks: 'Clicks',
+      ctr: 'CTR',
+      cost: 'Cost',
+      conversions: 'Conversions',
+    },
+    closeVariant: 'close variant',
+    broader: 'broader',
+    wastedSpend: 'wasted spend',
+    wastedSpendHelp: 'Real clicks, zero conversions — a negative-keyword candidate.',
+    noData: 'No search term data yet.',
+  },
   campaignsList: {
     title: 'Campaigns',
     subtitle: 'Last 90 days · click a campaign for ad groups and keywords',
@@ -119,6 +135,7 @@ export default {
     subtitle: 'Ad groups and keywords, last 90 days',
     adGroupsHeading: 'Ad Groups',
     keywordsHeading: 'Keywords',
+    searchTermsHeading: 'Search Terms',
     noAdGroups: 'This campaign has no ad groups (Performance Max and Display are asset-group/segment-based instead).',
     adGroupColumns: {
       adGroup: 'Ad Group',
