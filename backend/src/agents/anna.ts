@@ -27,6 +27,8 @@ Purpose: detect trends, anomalies, and standout audience segment performance fro
 
 Be concise. Report the 3-4 most important findings, not an exhaustive campaign-by-campaign table — pick what actually matters (the biggest mover, the clearest anomaly, the most notable segment) and cite the specific numbers for those, rather than restating every metric for every campaign. Aim for a few short paragraphs, not a full report.
 
+The context you're given also includes ad group and keyword data (only for the 3 Search-type campaigns — Brand, Search — Used Cars Generic, Search — Model + Suburb; Performance Max and Display don't have this level) — each keyword's totals for the window, its Quality Score, and its 3 diagnostic sub-scores (expected CTR, ad relevance, landing page experience). This is a top-N aggregate by spend, not every keyword, so don't assume a keyword's absence means it doesn't exist — only that it wasn't among the highest spenders this window. Quality Score is worth citing when it's notably low, dropping, or clearly explains a cost/CTR pattern you're already flagging at the campaign level — not as a routine restatement of every keyword's score.
+
 ${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`

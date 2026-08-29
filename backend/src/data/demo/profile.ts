@@ -81,3 +81,79 @@ export const REMARKETING_SEGMENTS: RemarketingProfile[] = [
 
 // Campaigns that get a geography breakdown (kept to 2 to bound row count).
 export const GEOGRAPHY_CAMPAIGNS = ['search_generic', 'pmax']
+
+// v2 Stage 1 — ad groups + keywords + Quality Score. See docs/v2-*-plan.md.
+// Only the 3 Search-type campaigns get ad groups: PMax has no ad-group
+// level in the real API (it's asset-group based, see Stage 6), and Display
+// is deliberately excluded too to bound row count.
+export interface AdGroupProfile {
+  key: string
+  campaignKey: string
+  name: string
+  share: number // share of the parent campaign's daily totals
+}
+
+export const AD_GROUPS: AdGroupProfile[] = [
+  { key: 'brand_dealer_name', campaignKey: 'brand', name: 'Brand — Dealer Name', share: 0.6 },
+  { key: 'brand_location', campaignKey: 'brand', name: 'Brand — Location Variants', share: 0.4 },
+  { key: 'generic_used_cars', campaignKey: 'search_generic', name: 'Used Cars Generic', share: 0.55 },
+  { key: 'generic_used_suvs', campaignKey: 'search_generic', name: 'Used SUVs Generic', share: 0.45 },
+  { key: 'model_toyota', campaignKey: 'search_model', name: 'Model — Toyota', share: 0.35 },
+  { key: 'model_honda', campaignKey: 'search_model', name: 'Model — Honda', share: 0.3 },
+  { key: 'model_suzuki', campaignKey: 'search_model', name: 'Model — Suzuki', share: 0.2 },
+  { key: 'model_daihatsu', campaignKey: 'search_model', name: 'Model — Daihatsu', share: 0.15 },
+]
+
+export interface KeywordProfile {
+  key: string
+  adGroupKey: string
+  text: string
+  matchType: 'exact' | 'phrase' | 'broad'
+  share: number // share of the parent ad group's daily totals
+  baseQualityScore: number // 1-10; search_model's keywords erode from this as the decline progresses
+}
+
+// 3 keywords per ad group, share of the parent ad group's totals. Base
+// QS 6-8 — realistic mid-to-good range, not universally excellent (leaves
+// room for the decline-tied erosion on search_model to read as a real drop
+// rather than a floor being hit).
+export const KEYWORDS: KeywordProfile[] = [
+  // Brand — Dealer Name
+  { key: 'kw_brand_name_exact', adGroupKey: 'brand_dealer_name', text: '[dealer name]', matchType: 'exact', share: 0.5, baseQualityScore: 8 },
+  { key: 'kw_brand_name_phrase', adGroupKey: 'brand_dealer_name', text: '"dealer name used cars"', matchType: 'phrase', share: 0.3, baseQualityScore: 8 },
+  { key: 'kw_brand_name_broad', adGroupKey: 'brand_dealer_name', text: 'dealer name', matchType: 'broad', share: 0.2, baseQualityScore: 7 },
+  // Brand — Location Variants
+  { key: 'kw_brand_loc_exact', adGroupKey: 'brand_location', text: '[dealer name jakarta]', matchType: 'exact', share: 0.45, baseQualityScore: 8 },
+  { key: 'kw_brand_loc_phrase', adGroupKey: 'brand_location', text: '"dealer name near me"', matchType: 'phrase', share: 0.35, baseQualityScore: 7 },
+  { key: 'kw_brand_loc_broad', adGroupKey: 'brand_location', text: 'dealer name location', matchType: 'broad', share: 0.2, baseQualityScore: 7 },
+  // Used Cars Generic
+  { key: 'kw_generic_cars_broad', adGroupKey: 'generic_used_cars', text: 'used cars for sale', matchType: 'broad', share: 0.4, baseQualityScore: 6 },
+  { key: 'kw_generic_cars_phrase', adGroupKey: 'generic_used_cars', text: '"used cars jakarta"', matchType: 'phrase', share: 0.35, baseQualityScore: 7 },
+  { key: 'kw_generic_cars_exact', adGroupKey: 'generic_used_cars', text: '[used cars near me]', matchType: 'exact', share: 0.25, baseQualityScore: 7 },
+  // Used SUVs Generic
+  { key: 'kw_generic_suvs_broad', adGroupKey: 'generic_used_suvs', text: 'used suvs for sale', matchType: 'broad', share: 0.45, baseQualityScore: 6 },
+  { key: 'kw_generic_suvs_phrase', adGroupKey: 'generic_used_suvs', text: '"used suv near me"', matchType: 'phrase', share: 0.3, baseQualityScore: 6 },
+  { key: 'kw_generic_suvs_exact', adGroupKey: 'generic_used_suvs', text: '[used suv jakarta]', matchType: 'exact', share: 0.25, baseQualityScore: 7 },
+  // Model — Toyota
+  { key: 'kw_toyota_exact', adGroupKey: 'model_toyota', text: '[used toyota jakarta]', matchType: 'exact', share: 0.4, baseQualityScore: 7 },
+  { key: 'kw_toyota_phrase', adGroupKey: 'model_toyota', text: '"used toyota for sale"', matchType: 'phrase', share: 0.35, baseQualityScore: 7 },
+  { key: 'kw_toyota_broad', adGroupKey: 'model_toyota', text: 'used toyota near me', matchType: 'broad', share: 0.25, baseQualityScore: 6 },
+  // Model — Honda
+  { key: 'kw_honda_exact', adGroupKey: 'model_honda', text: '[used honda jakarta]', matchType: 'exact', share: 0.4, baseQualityScore: 7 },
+  { key: 'kw_honda_phrase', adGroupKey: 'model_honda', text: '"used honda for sale"', matchType: 'phrase', share: 0.35, baseQualityScore: 6 },
+  { key: 'kw_honda_broad', adGroupKey: 'model_honda', text: 'used honda near me', matchType: 'broad', share: 0.25, baseQualityScore: 6 },
+  // Model — Suzuki
+  { key: 'kw_suzuki_exact', adGroupKey: 'model_suzuki', text: '[used suzuki jakarta]', matchType: 'exact', share: 0.4, baseQualityScore: 7 },
+  { key: 'kw_suzuki_phrase', adGroupKey: 'model_suzuki', text: '"used suzuki for sale"', matchType: 'phrase', share: 0.35, baseQualityScore: 6 },
+  { key: 'kw_suzuki_broad', adGroupKey: 'model_suzuki', text: 'used suzuki near me', matchType: 'broad', share: 0.25, baseQualityScore: 6 },
+  // Model — Daihatsu
+  { key: 'kw_daihatsu_exact', adGroupKey: 'model_daihatsu', text: '[used daihatsu jakarta]', matchType: 'exact', share: 0.4, baseQualityScore: 7 },
+  { key: 'kw_daihatsu_phrase', adGroupKey: 'model_daihatsu', text: '"used daihatsu for sale"', matchType: 'phrase', share: 0.35, baseQualityScore: 6 },
+  { key: 'kw_daihatsu_broad', adGroupKey: 'model_daihatsu', text: 'used daihatsu near me', matchType: 'broad', share: 0.25, baseQualityScore: 6 },
+]
+
+// How much base Quality Score search_model's keywords can erode by the end
+// of the decline window (see generator.ts's declineMultiplier) — ties QS
+// drift causally to the existing decline story instead of being a second,
+// disconnected feature.
+export const QS_EROSION_MAX_POINTS = 3

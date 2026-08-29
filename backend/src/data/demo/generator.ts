@@ -86,6 +86,48 @@ function splitConservingTotal(
   return result
 }
 
+/** Perturbs each of `baseShares`' values by independent per-key noise, then
+ * re-normalizes so they still sum to 1.0, before handing off to
+ * splitConservingTotal — gives believable day-to-day share wobble at every
+ * v2 hierarchy level (ad group, keyword, and — future stages — search
+ * term/ad/asset group) while exactly conserving the parent total. One
+ * shared primitive reused at every level rather than a bespoke one per
+ * stage. */
+function noisyConservingSplit(
+  total: number,
+  baseShares: Record<string, number>,
+  seed: number,
+  day: string,
+  keyPrefix: string
+): Record<string, number> {
+  const noisy: Record<string, number> = {}
+  let sum = 0
+  for (const key of Object.keys(baseShares)) {
+    const noise = uniform(entityRng(seed, day, `${keyPrefix}:${key}:share-noise`), 0.85, 1.15)
+    noisy[key] = baseShares[key] * noise
+    sum += noisy[key]
+  }
+  const normalized: Record<string, number> = {}
+  for (const key of Object.keys(noisy)) normalized[key] = sum > 0 ? noisy[key] / sum : 0
+  return splitConservingTotal(total, normalized, '', 1.0)
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+type QsBucket = 'above_average' | 'average' | 'below_average'
+
+/** Qualitative diagnostic sub-scores derived from the numeric Quality
+ * Score — real Google Ads reports these three independently of each
+ * other, but deriving all three from one number is a reasonable
+ * simplification for synthetic data (see docs/v2-*-plan.md). */
+function qsBucket(qs: number): QsBucket {
+  if (qs >= 7) return 'above_average'
+  if (qs >= 4) return 'average'
+  return 'below_average'
+}
+
 export interface CampaignDay {
   campaignKey: string
   impressions: number
@@ -104,11 +146,37 @@ export interface SegmentDay {
   conversions: number
 }
 
+export interface AdGroupDay {
+  campaignKey: string
+  adGroupKey: string
+  impressions: number
+  clicks: number
+  costMicros: number
+  conversions: number
+}
+
+export interface KeywordDay {
+  adGroupKey: string
+  keywordKey: string
+  text: string
+  matchType: 'exact' | 'phrase' | 'broad'
+  impressions: number
+  clicks: number
+  costMicros: number
+  conversions: number
+  qualityScore: number
+  expectedCtr: QsBucket
+  adRelevance: QsBucket
+  landingPageExperience: QsBucket
+}
+
 export interface DayData {
   date: string
   state: State
   campaigns: CampaignDay[]
   segments: SegmentDay[]
+  adGroups: AdGroupDay[]
+  keywords: KeywordDay[]
 }
 
 interface RawSegmentRow {
@@ -132,6 +200,8 @@ export function generateDay(
 
   const campaignsOut: CampaignDay[] = []
   const rawSegmentRows: RawSegmentRow[] = []
+  const adGroupsOut: AdGroupDay[] = []
+  const keywordsOut: KeywordDay[] = []
 
   for (const c of profile.CAMPAIGNS) {
     const baseMult = stateMultiplier(state, seed, targetDate, c.key)
@@ -218,6 +288,74 @@ export function generateDay(
         }
       }
     }
+
+    // v2 Stage 1 — ad groups + keywords + Quality Score. Only the 3 Search
+    // campaigns have ad groups (see profile.ts's AD_GROUPS) — PMax has no
+    // ad-group level in the real API (asset-group based instead, Stage 6),
+    // Display is excluded to bound row count.
+    const campaignAdGroups = profile.AD_GROUPS.filter((ag) => ag.campaignKey === c.key)
+    if (campaignAdGroups.length > 0) {
+      const adGroupShares: Record<string, number> = {}
+      for (const ag of campaignAdGroups) adGroupShares[ag.key] = ag.share
+
+      const agImpressions = noisyConservingSplit(impressions, adGroupShares, seed, targetDate, `${c.key}:adgroup:impressions`)
+      const agClicks = noisyConservingSplit(clicks, adGroupShares, seed, targetDate, `${c.key}:adgroup:clicks`)
+      const agCost = noisyConservingSplit(costMicros, adGroupShares, seed, targetDate, `${c.key}:adgroup:cost`)
+      const agConversions = noisyConservingSplit(conversions, adGroupShares, seed, targetDate, `${c.key}:adgroup:conversions`)
+
+      for (const ag of campaignAdGroups) {
+        const agImp = Math.round(agImpressions[ag.key])
+        const agClk = Math.round(agClicks[ag.key])
+        const agCst = Math.round(agCost[ag.key])
+        const agConv = Math.round(agConversions[ag.key] * 100) / 100
+        adGroupsOut.push({
+          campaignKey: c.key,
+          adGroupKey: ag.key,
+          impressions: agImp,
+          clicks: agClk,
+          costMicros: agCst,
+          conversions: agConv,
+        })
+
+        const adGroupKeywords = profile.KEYWORDS.filter((k) => k.adGroupKey === ag.key)
+        if (adGroupKeywords.length === 0) continue
+        const keywordShares: Record<string, number> = {}
+        for (const k of adGroupKeywords) keywordShares[k.key] = k.share
+
+        const kwImpressions = noisyConservingSplit(agImp, keywordShares, seed, targetDate, `${ag.key}:kw:impressions`)
+        const kwClicks = noisyConservingSplit(agClk, keywordShares, seed, targetDate, `${ag.key}:kw:clicks`)
+        const kwCost = noisyConservingSplit(agCst, keywordShares, seed, targetDate, `${ag.key}:kw:cost`)
+        const kwConversions = noisyConservingSplit(agConv, keywordShares, seed, targetDate, `${ag.key}:kw:conversions`)
+
+        for (const k of adGroupKeywords) {
+          // Quality Score erosion is tied to the same declineMultiplier
+          // driving search_model's decline story — a real, correlatable
+          // finding ("QS dropped as the decline progressed"), not a second
+          // disconnected feature. Every other campaign's keywords keep
+          // their static base QS.
+          const qs =
+            c.key === profile.DECLINING_CAMPAIGN
+              ? clamp(Math.round(k.baseQualityScore - (1 - declMult) * profile.QS_EROSION_MAX_POINTS), 1, 10)
+              : k.baseQualityScore
+          const bucket = qsBucket(qs)
+
+          keywordsOut.push({
+            adGroupKey: ag.key,
+            keywordKey: k.key,
+            text: k.text,
+            matchType: k.matchType,
+            impressions: Math.round(kwImpressions[k.key]),
+            clicks: Math.round(kwClicks[k.key]),
+            costMicros: Math.round(kwCost[k.key]),
+            conversions: Math.round(kwConversions[k.key] * 100) / 100,
+            qualityScore: qs,
+            expectedCtr: bucket,
+            adRelevance: bucket,
+            landingPageExperience: bucket,
+          })
+        }
+      }
+    }
   }
 
   return {
@@ -225,6 +363,8 @@ export function generateDay(
     state,
     campaigns: campaignsOut,
     segments: pivotSegments(rawSegmentRows),
+    adGroups: adGroupsOut,
+    keywords: keywordsOut,
   }
 }
 

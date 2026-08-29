@@ -92,3 +92,59 @@ export async function buildHistoricalSummary(endDate: string, days: number): Pro
   )
   return CURRENCY_NOTE + JSON.stringify(rows)
 }
+
+// v2 Stage 1 — ad groups + keywords + Quality Score. Top-N aggregated over
+// the window, NOT a raw dump (per docs/v2-*-plan.md decision #9): keyword-
+// level data for ~8 ad groups x ~3 keywords each over a 30-day window is
+// 700+ rows — far too much for a token-budget-constrained prompt (see
+// anna.ts's MAX_TOKENS comment on gpt-5-mini's hidden reasoning-token
+// cost). Mirrors buildHistoricalSummary's aggregate-not-dump pattern above,
+// ordered by total spend so the model sees what actually matters first.
+export async function buildAdGroupKeywordContext(
+  endDate: string,
+  days: number,
+  campaignId?: number | null,
+  topN = 10
+): Promise<string> {
+  const startDate = addDays(endDate, -days)
+  const params: unknown[] = [startDate, endDate]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND ag.campaign_id = $${params.length}`
+  }
+  params.push(topN)
+  const rows = await query(
+    `SELECT c.name AS campaign, ag.name AS ad_group, k.text AS keyword, k.match_type,
+            SUM(kp.impressions) AS total_impressions, SUM(kp.clicks) AS total_clicks,
+            SUM(kp.cost_micros) AS total_cost_micros, ROUND(SUM(kp.conversions)::numeric, 2) AS total_conversions,
+            (ARRAY_AGG(kp.quality_score ORDER BY kp.date DESC))[1] AS latest_quality_score,
+            MIN(kp.quality_score) AS min_quality_score_in_window,
+            (ARRAY_AGG(kp.expected_ctr ORDER BY kp.date DESC))[1] AS latest_expected_ctr,
+            (ARRAY_AGG(kp.ad_relevance ORDER BY kp.date DESC))[1] AS latest_ad_relevance,
+            (ARRAY_AGG(kp.landing_page_experience ORDER BY kp.date DESC))[1] AS latest_landing_page_experience
+     FROM keyword_performance kp
+     JOIN keywords k ON k.id = kp.keyword_id
+     JOIN ad_groups ag ON ag.id = k.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE kp.date BETWEEN $1 AND $2 ${campaignFilter}
+     GROUP BY c.name, ag.name, k.text, k.match_type
+     ORDER BY total_cost_micros DESC
+     LIMIT $${params.length}`,
+    params
+  )
+  return CURRENCY_NOTE + JSON.stringify(rows)
+}
+
+/** Composes buildPerformanceContext + every v2 builder added so far —
+ * used by both the daily pipeline (orchestrator.ts) and the Ask feature
+ * (ask.ts), so asking "what's my Quality Score on Search-Model?" actually
+ * has data to answer from instead of two divergent context-building
+ * paths. Grows one function call at a time as later v2 stages land. */
+export async function buildFullContext(args: BuildPerformanceContextArgs = {}): Promise<string> {
+  const endDate = args.endDate ?? new Date().toISOString().slice(0, 10)
+  const days = args.days ?? 30
+  const performanceContext = await buildPerformanceContext(args)
+  const adGroupKeywordContext = await buildAdGroupKeywordContext(endDate, days, args.campaignId)
+  return `${performanceContext}\n\nTop ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}`
+}

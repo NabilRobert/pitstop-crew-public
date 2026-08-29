@@ -28,7 +28,7 @@ export async function syncDay(targetDate: string, seed = 0, dataSource = 'demo')
   const overrides = await getOverrides()
   const dayData = generateDay(targetDate, seed, overrides)
   await withTransaction(async (client) => {
-    await upsertDay(client, dayData, new Map(), new Map())
+    await upsertDay(client, dayData, new Map(), new Map(), new Map(), new Map())
   })
   return dayData
 }
@@ -58,8 +58,10 @@ export async function syncTrailingWindow(
   await withTransaction(async (client) => {
     const campaignIds = new Map<string, number>()
     const segmentIds = new Map<string, number>()
+    const adGroupIds = new Map<string, number>()
+    const keywordIds = new Map<string, number>()
     for (const dayData of dayDatas) {
-      await upsertDay(client, dayData, campaignIds, segmentIds)
+      await upsertDay(client, dayData, campaignIds, segmentIds, adGroupIds, keywordIds)
     }
   })
   return dayDatas
@@ -139,14 +141,16 @@ async function getOrCreateLiveCampaign(
   return inserted.rows[0].id
 }
 
-/** `campaignIds`/`segmentIds` are caller-owned so a multi-day sync can
- * share one cache across the whole window instead of re-resolving the
- * same ~5 campaigns and ~15 segment values on every single day. */
+/** `campaignIds`/`segmentIds`/`adGroupIds`/`keywordIds` are caller-owned so
+ * a multi-day sync can share one cache across the whole window instead of
+ * re-resolving the same handful of natural keys on every single day. */
 async function upsertDay(
   client: PoolClient,
   dayData: DayData,
   campaignIds: Map<string, number>,
-  segmentIds: Map<string, number>
+  segmentIds: Map<string, number>,
+  adGroupIds: Map<string, number>,
+  keywordIds: Map<string, number>
 ): Promise<void> {
   async function campaignIdFor(key: string): Promise<number> {
     if (!campaignIds.has(key)) campaignIds.set(key, await getOrCreateCampaign(client, key))
@@ -156,6 +160,14 @@ async function upsertDay(
     const k = `${segType}|${segValue}`
     if (!segmentIds.has(k)) segmentIds.set(k, await getOrCreateSegment(client, segType, segValue))
     return segmentIds.get(k)!
+  }
+  async function adGroupIdFor(adGroupKey: string, campaignId: number): Promise<number> {
+    if (!adGroupIds.has(adGroupKey)) adGroupIds.set(adGroupKey, await getOrCreateAdGroup(client, adGroupKey, campaignId))
+    return adGroupIds.get(adGroupKey)!
+  }
+  async function keywordIdFor(keywordKey: string, adGroupId: number): Promise<number> {
+    if (!keywordIds.has(keywordKey)) keywordIds.set(keywordKey, await getOrCreateKeyword(client, keywordKey, adGroupId))
+    return keywordIds.get(keywordKey)!
   }
 
   for (const c of dayData.campaigns) {
@@ -188,6 +200,58 @@ async function upsertDay(
       [campaignId, segmentId, dayData.date, s.impressions, s.clicks, s.costMicros, s.conversions]
     )
   }
+
+  // v2 Stage 1 — ad groups + keyword performance (incl. Quality Score).
+  for (const ag of dayData.adGroups) {
+    const campaignId = await campaignIdFor(ag.campaignKey)
+    const adGroupId = await adGroupIdFor(ag.adGroupKey, campaignId)
+    await client.query(
+      `INSERT INTO ad_group_performance
+          (ad_group_id, date, impressions, clicks, cost_micros, conversions)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT(ad_group_id, date) DO UPDATE SET
+          impressions = excluded.impressions,
+          clicks = excluded.clicks,
+          cost_micros = excluded.cost_micros,
+          conversions = excluded.conversions`,
+      [adGroupId, dayData.date, ag.impressions, ag.clicks, ag.costMicros, ag.conversions]
+    )
+  }
+
+  for (const k of dayData.keywords) {
+    // adGroupIds is already populated by the loop above (every keyword's
+    // parent ad group is generated in the same DayData), so this is a
+    // cache hit, not a second resolve-by-natural-key round trip.
+    const adGroupId = adGroupIds.get(k.adGroupKey)!
+    const keywordId = await keywordIdFor(k.keywordKey, adGroupId)
+    await client.query(
+      `INSERT INTO keyword_performance
+          (keyword_id, date, impressions, clicks, cost_micros, conversions,
+           quality_score, expected_ctr, ad_relevance, landing_page_experience)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT(keyword_id, date) DO UPDATE SET
+          impressions = excluded.impressions,
+          clicks = excluded.clicks,
+          cost_micros = excluded.cost_micros,
+          conversions = excluded.conversions,
+          quality_score = excluded.quality_score,
+          expected_ctr = excluded.expected_ctr,
+          ad_relevance = excluded.ad_relevance,
+          landing_page_experience = excluded.landing_page_experience`,
+      [
+        keywordId,
+        dayData.date,
+        k.impressions,
+        k.clicks,
+        k.costMicros,
+        k.conversions,
+        k.qualityScore,
+        k.expectedCtr,
+        k.adRelevance,
+        k.landingPageExperience,
+      ]
+    )
+  }
 }
 
 async function getOrCreateCampaign(client: PoolClient, campaignKey: string): Promise<number> {
@@ -213,6 +277,35 @@ async function getOrCreateSegment(client: PoolClient, segmentType: string, segme
   const inserted = await client.query<{ id: number }>(
     'INSERT INTO segments (segment_type, segment_value) VALUES ($1, $2) RETURNING id',
     [segmentType, segmentValue]
+  )
+  return inserted.rows[0].id
+}
+
+async function getOrCreateAdGroup(client: PoolClient, adGroupKey: string, campaignId: number): Promise<number> {
+  const name = profile.AD_GROUPS.find((ag) => ag.key === adGroupKey)!.name
+  const existing = await client.query<{ id: number }>(
+    'SELECT id FROM ad_groups WHERE campaign_id = $1 AND name = $2',
+    [campaignId, name]
+  )
+  if (existing.rows[0]) return existing.rows[0].id
+  const inserted = await client.query<{ id: number }>(
+    "INSERT INTO ad_groups (campaign_id, name, data_source, status) VALUES ($1, $2, 'demo', 'enabled') RETURNING id",
+    [campaignId, name]
+  )
+  return inserted.rows[0].id
+}
+
+async function getOrCreateKeyword(client: PoolClient, keywordKey: string, adGroupId: number): Promise<number> {
+  const kw = profile.KEYWORDS.find((k) => k.key === keywordKey)!
+  const existing = await client.query<{ id: number }>(
+    'SELECT id FROM keywords WHERE ad_group_id = $1 AND text = $2 AND match_type = $3',
+    [adGroupId, kw.text, kw.matchType]
+  )
+  if (existing.rows[0]) return existing.rows[0].id
+  const inserted = await client.query<{ id: number }>(
+    `INSERT INTO keywords (ad_group_id, text, match_type, data_source, status)
+     VALUES ($1, $2, $3, 'demo', 'enabled') RETURNING id`,
+    [adGroupId, kw.text, kw.matchType]
   )
   return inserted.rows[0].id
 }

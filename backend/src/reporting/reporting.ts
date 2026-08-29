@@ -84,6 +84,57 @@ export async function getPerformanceSeries(days = 30, endDate?: string) {
   )
 }
 
+// v2 Stage 1 — ad groups + keywords + Quality Score. Same days/endDate,
+// one JOIN, raw rows shape as getSegmentBreakdown/getPerformanceSeries above.
+
+/** Backs the Campaign -> Ad Groups drill-down page. */
+export async function getAdGroupPerformance(days = 30, endDate?: string, campaignId?: number) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  const params: unknown[] = [start, end]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND ag.campaign_id = $${params.length}`
+  }
+  return query(
+    `SELECT agp.date, ag.id AS ad_group_id, ag.name AS ad_group, c.id AS campaign_id, c.name AS campaign,
+            agp.impressions, agp.clicks, agp.cost_micros, agp.conversions
+     FROM ad_group_performance agp
+     JOIN ad_groups ag ON ag.id = agp.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE agp.date BETWEEN $1 AND $2 ${campaignFilter}
+     ORDER BY agp.date, c.name, ag.name`,
+    params
+  )
+}
+
+/** Backs the Ad Group -> Keywords drill-down page, including per-day
+ * Quality Score + its 3 diagnostic sub-scores. */
+export async function getKeywordPerformance(days = 30, endDate?: string, adGroupId?: number) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  const params: unknown[] = [start, end]
+  let adGroupFilter = ''
+  if (adGroupId != null) {
+    params.push(adGroupId)
+    adGroupFilter = `AND kp.keyword_id IN (SELECT id FROM keywords WHERE ad_group_id = $${params.length})`
+  }
+  return query(
+    `SELECT kp.date, k.id AS keyword_id, k.text, k.match_type, ag.id AS ad_group_id, ag.name AS ad_group,
+            c.id AS campaign_id, c.name AS campaign,
+            kp.impressions, kp.clicks, kp.cost_micros, kp.conversions,
+            kp.quality_score, kp.expected_ctr, kp.ad_relevance, kp.landing_page_experience
+     FROM keyword_performance kp
+     JOIN keywords k ON k.id = kp.keyword_id
+     JOIN ad_groups ag ON ag.id = k.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE kp.date BETWEEN $1 AND $2 ${adGroupFilter}
+     ORDER BY kp.date, c.name, ag.name, k.text`,
+    params
+  )
+}
+
 /** Finds the analysis/recommendation that belong with a given summary —
  * pinned to the exact pipeline run that produced all three when available
  * (pipeline_run_id), falling back to "latest for this report_date" only

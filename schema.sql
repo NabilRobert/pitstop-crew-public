@@ -287,3 +287,66 @@ CREATE INDEX IF NOT EXISTS idx_ai_outputs_campaign ON ai_outputs(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_ai_outputs_period_agent ON ai_outputs(period, agent_type, report_date);
 CREATE INDEX IF NOT EXISTS idx_ask_log_output ON ask_log(output_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_type_status ON pipeline_runs(run_type, status);
+
+-- v2 Stage 1 — ad groups + keywords + Quality Score. See docs/v2-*-plan.md.
+-- Genuinely new fact tables, not segment-like rows: ad group -> keyword is a
+-- strict containment hierarchy (every keyword belongs to exactly one ad
+-- group), unlike segments/segment_performance's optional orthogonal cuts of
+-- a campaign's totals (device, geography). Matches how the real Google Ads
+-- API also models these as distinct resources, not segments of `campaign`.
+CREATE TABLE IF NOT EXISTS ad_groups (
+    id                 SERIAL PRIMARY KEY,
+    campaign_id        INTEGER NOT NULL REFERENCES campaigns(id),
+    google_ad_group_id TEXT,                 -- NULL for demo ad groups, populated once live-mode covers this level
+    name               TEXT NOT NULL,
+    status             TEXT,
+    data_source        TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS ad_group_performance (
+    id           SERIAL PRIMARY KEY,
+    ad_group_id  INTEGER NOT NULL REFERENCES ad_groups(id),
+    date         DATE NOT NULL,
+    impressions  INTEGER NOT NULL DEFAULT 0,
+    clicks       INTEGER NOT NULL DEFAULT 0,
+    cost_micros  BIGINT NOT NULL DEFAULT 0,
+    conversions  REAL NOT NULL DEFAULT 0,
+    UNIQUE (ad_group_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS keywords (
+    id                 SERIAL PRIMARY KEY,
+    ad_group_id        INTEGER NOT NULL REFERENCES ad_groups(id),
+    google_keyword_id  TEXT,
+    text               TEXT NOT NULL,
+    match_type         TEXT NOT NULL CHECK (match_type IN ('exact', 'phrase', 'broad')),
+    status             TEXT,
+    data_source        TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (ad_group_id, text, match_type)
+);
+
+-- Quality Score (full score + all 3 diagnostic sub-scores) is stored PER DAY
+-- here, not as a static attribute on `keywords` — lets QS visibly drift
+-- across the demo window (see profile.ts's decline-correlated erosion for
+-- search_model's keywords), matching how Google Ads itself recomputes QS
+-- continuously rather than fixing it once.
+CREATE TABLE IF NOT EXISTS keyword_performance (
+    id                       SERIAL PRIMARY KEY,
+    keyword_id               INTEGER NOT NULL REFERENCES keywords(id),
+    date                     DATE NOT NULL,
+    impressions              INTEGER NOT NULL DEFAULT 0,
+    clicks                   INTEGER NOT NULL DEFAULT 0,
+    cost_micros              BIGINT NOT NULL DEFAULT 0,
+    conversions              REAL NOT NULL DEFAULT 0,
+    quality_score            INTEGER CHECK (quality_score BETWEEN 1 AND 10),
+    expected_ctr             TEXT CHECK (expected_ctr IN ('above_average', 'average', 'below_average')),
+    ad_relevance             TEXT CHECK (ad_relevance IN ('above_average', 'average', 'below_average')),
+    landing_page_experience  TEXT CHECK (landing_page_experience IN ('above_average', 'average', 'below_average')),
+    UNIQUE (keyword_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_group_performance_date ON ad_group_performance(date);
+CREATE INDEX IF NOT EXISTS idx_keyword_performance_date ON keyword_performance(date);
