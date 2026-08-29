@@ -10,6 +10,7 @@ export default {
   },
   nav: {
     dashboard: 'Dashboard',
+    campaigns: 'Campaigns',
     reports: 'Reports',
     systemHealth: 'System Health',
     learning: 'Learning',
@@ -105,6 +106,11 @@ export default {
     avg: 'average',
     below: 'below average',
     noData: 'No keyword data yet.',
+  },
+  campaignsList: {
+    title: 'Campaigns',
+    subtitle: 'Last 90 days · click a campaign for ad groups and keywords',
+    loading: 'Loading campaigns…',
   },
   campaignDetail: {
     back: '← Back to dashboard',

@@ -10,6 +10,7 @@ export default {
   },
   nav: {
     dashboard: 'Dasbor',
+    campaigns: 'Kampanye',
     reports: 'Laporan',
     systemHealth: 'Kondisi Sistem',
     learning: 'Pembelajaran',
@@ -105,6 +106,11 @@ export default {
     avg: 'rata-rata',
     below: 'di bawah rata-rata',
     noData: 'Belum ada data kata kunci.',
+  },
+  campaignsList: {
+    title: 'Kampanye',
+    subtitle: '90 hari terakhir · klik kampanye untuk lihat grup iklan dan kata kunci',
+    loading: 'Memuat kampanye…',
   },
   campaignDetail: {
     back: '← Kembali ke dasbor',
