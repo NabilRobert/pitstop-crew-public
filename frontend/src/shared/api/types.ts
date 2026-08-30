@@ -80,6 +80,28 @@ export interface SearchTermPerformanceRow {
   conversions: number
 }
 
+// v2 Stage 3 — ads/creatives. ad_strength is a static per-ad attribute
+// (doesn't drift day to day, unlike keyword Quality Score).
+export type AdStrength = 'poor' | 'average' | 'good' | 'excellent'
+
+export interface AdPerformanceRow {
+  date: string
+  ad_id: number
+  label: string
+  headlines: string[]
+  descriptions: string[]
+  final_url: string
+  ad_strength: AdStrength
+  ad_group_id: number
+  ad_group: string
+  campaign_id: number
+  campaign: string
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+}
+
 export interface CriticIssue {
   quote: string
   reason: string

@@ -24,6 +24,7 @@ import type {
   AdGroupPerformanceRow,
   KeywordPerformanceRow,
   SearchTermPerformanceRow,
+  AdPerformanceRow,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -83,6 +84,8 @@ export const api = {
     request<KeywordPerformanceRow[]>(`/keywords/performance?days=${days}${adGroupId ? `&adGroupId=${adGroupId}` : ''}`),
   searchTermPerformance: (days = 30, keywordId?: number) =>
     request<SearchTermPerformanceRow[]>(`/search-terms/performance?days=${days}${keywordId ? `&keywordId=${keywordId}` : ''}`),
+  adPerformance: (days = 30, adGroupId?: number) =>
+    request<AdPerformanceRow[]>(`/ads/performance?days=${days}${adGroupId ? `&adGroupId=${adGroupId}` : ''}`),
   segmentPerformance: (days = 30) => request<SegmentPerformanceRow[]>(`/segments/performance?days=${days}`),
   settings: () => request<Settings>('/settings'),
   updateSettings: (payload: Partial<Settings>) =>

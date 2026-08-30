@@ -123,6 +123,28 @@ export default {
     wastedSpendHelp: 'Ada klik nyata, nol konversi — kandidat kata kunci negatif.',
     noData: 'Belum ada data kata pencarian.',
   },
+  adPerformanceTable: {
+    columns: {
+      ad: 'Iklan',
+      adGroup: 'Grup Iklan',
+      impressions: 'Tayangan',
+      clicks: 'Klik',
+      ctr: 'CTR',
+      cost: 'Biaya',
+      conversions: 'Konversi',
+      adStrength: 'Kekuatan',
+    },
+    columnHelp: {
+      adStrength: 'Penilaian Google untuk variasi dan relevansi judul/deskripsi iklan ini. Statis — tidak berubah setiap hari seperti Skor Kualitas.',
+    },
+    strength: {
+      poor: 'Buruk',
+      average: 'Rata-rata',
+      good: 'Baik',
+      excellent: 'Sangat Baik',
+    },
+    noData: 'Belum ada data iklan.',
+  },
   campaignsList: {
     title: 'Kampanye',
     subtitle: '90 hari terakhir · klik kampanye untuk lihat grup iklan dan kata kunci',
@@ -136,6 +158,7 @@ export default {
     adGroupsHeading: 'Grup Iklan',
     keywordsHeading: 'Kata Kunci',
     searchTermsHeading: 'Kata Pencarian',
+    adsHeading: 'Iklan',
     noAdGroups: 'Kampanye ini tidak memiliki grup iklan (Performance Max dan Display menggunakan asset group/segmen sebagai gantinya).',
     adGroupColumns: {
       adGroup: 'Grup Iklan',

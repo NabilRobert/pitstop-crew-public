@@ -123,6 +123,28 @@ export default {
     wastedSpendHelp: 'Real clicks, zero conversions — a negative-keyword candidate.',
     noData: 'No search term data yet.',
   },
+  adPerformanceTable: {
+    columns: {
+      ad: 'Ad',
+      adGroup: 'Ad Group',
+      impressions: 'Impressions',
+      clicks: 'Clicks',
+      ctr: 'CTR',
+      cost: 'Cost',
+      conversions: 'Conversions',
+      adStrength: 'Strength',
+    },
+    columnHelp: {
+      adStrength: "Google's rating of this ad's headline/description variety and relevance. Static — doesn't drift day to day like Quality Score.",
+    },
+    strength: {
+      poor: 'Poor',
+      average: 'Average',
+      good: 'Good',
+      excellent: 'Excellent',
+    },
+    noData: 'No ad data yet.',
+  },
   campaignsList: {
     title: 'Campaigns',
     subtitle: 'Last 90 days · click a campaign for ad groups and keywords',
@@ -136,6 +158,7 @@ export default {
     adGroupsHeading: 'Ad Groups',
     keywordsHeading: 'Keywords',
     searchTermsHeading: 'Search Terms',
+    adsHeading: 'Ads',
     noAdGroups: 'This campaign has no ad groups (Performance Max and Display are asset-group/segment-based instead).',
     adGroupColumns: {
       adGroup: 'Ad Group',

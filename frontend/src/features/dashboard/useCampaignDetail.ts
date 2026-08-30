@@ -1,6 +1,13 @@
 import { ref, watch, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
-import type { AdGroupPerformanceRow, KeywordPerformanceRow, QsBucket, SearchTermPerformanceRow } from '../../shared/api/types'
+import type {
+  AdGroupPerformanceRow,
+  KeywordPerformanceRow,
+  QsBucket,
+  SearchTermPerformanceRow,
+  AdPerformanceRow,
+  AdStrength,
+} from '../../shared/api/types'
 
 // Fixed window for this first drill-down slice — the campaign detail page
 // doesn't have its own period selector yet (a reasonable follow-up, not
@@ -39,6 +46,16 @@ export interface SearchTermRow extends Totals {
   keyword: string
   ctr: number
   wasted: boolean
+}
+
+export interface AdRow extends Totals {
+  ad_id: number
+  label: string
+  headlines: string[]
+  descriptions: string[]
+  ad_strength: AdStrength
+  ad_group: string
+  ctr: number
 }
 
 function aggregateAdGroups(rows: AdGroupPerformanceRow[]): AdGroupRow[] {
@@ -142,6 +159,38 @@ function aggregateSearchTerms(rows: SearchTermPerformanceRow[]): SearchTermRow[]
     .sort((a, b) => b.cost_micros - a.cost_micros)
 }
 
+/** Aggregates per-day ad rows into one row per ad, summing metrics.
+ * label/headlines/descriptions/ad_strength are static per ad (unlike
+ * Quality Score) so any row's copy is fine to take. */
+function aggregateAds(rows: AdPerformanceRow[]): AdRow[] {
+  const byAd = new Map<number, AdRow>()
+  for (const r of rows) {
+    if (!byAd.has(r.ad_id)) {
+      byAd.set(r.ad_id, {
+        ad_id: r.ad_id,
+        label: r.label,
+        headlines: r.headlines,
+        descriptions: r.descriptions,
+        ad_strength: r.ad_strength,
+        ad_group: r.ad_group,
+        impressions: 0,
+        clicks: 0,
+        cost_micros: 0,
+        conversions: 0,
+        ctr: 0,
+      })
+    }
+    const agg = byAd.get(r.ad_id)!
+    agg.impressions += r.impressions
+    agg.clicks += r.clicks
+    agg.cost_micros += r.cost_micros
+    agg.conversions += r.conversions
+  }
+  return Array.from(byAd.values())
+    .map((a) => ({ ...a, ctr: a.impressions ? (a.clicks / a.impressions) * 100 : 0 }))
+    .sort((a, b) => b.cost_micros - a.cost_micros)
+}
+
 export function useCampaignDetail(campaignId: Ref<string | number>) {
   const loading = ref(true)
   const error = ref<string | null>(null)
@@ -149,6 +198,7 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
   const adGroupRows = ref<AdGroupRow[]>([])
   const keywordRows = ref<KeywordRow[]>([])
   const searchTermRows = ref<SearchTermRow[]>([])
+  const adRows = ref<AdRow[]>([])
 
   async function load() {
     loading.value = true
@@ -160,9 +210,13 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
       adGroupRows.value = aggregateAdGroups(adGroupPerf)
 
       const adGroupIds = [...new Set(adGroupPerf.map((r) => r.ad_group_id))]
-      const keywordPerfByAdGroup = await Promise.all(adGroupIds.map((agId) => api.keywordPerformance(DAYS, agId)))
+      const [keywordPerfByAdGroup, adPerfByAdGroup] = await Promise.all([
+        Promise.all(adGroupIds.map((agId) => api.keywordPerformance(DAYS, agId))),
+        Promise.all(adGroupIds.map((agId) => api.adPerformance(DAYS, agId))),
+      ])
       const keywordPerf = keywordPerfByAdGroup.flat()
       keywordRows.value = aggregateKeywords(keywordPerf)
+      adRows.value = aggregateAds(adPerfByAdGroup.flat())
 
       const keywordIds = [...new Set(keywordPerf.map((r) => r.keyword_id))]
       const searchTermPerfByKeyword = await Promise.all(keywordIds.map((kwId) => api.searchTermPerformance(DAYS, kwId)))
@@ -176,5 +230,5 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
 
   watch(campaignId, load, { immediate: true })
 
-  return { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows }
+  return { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, adRows }
 }
