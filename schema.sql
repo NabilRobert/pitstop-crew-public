@@ -350,3 +350,64 @@ CREATE TABLE IF NOT EXISTS keyword_performance (
 
 CREATE INDEX IF NOT EXISTS idx_ad_group_performance_date ON ad_group_performance(date);
 CREATE INDEX IF NOT EXISTS idx_keyword_performance_date ON keyword_performance(date);
+
+-- v2 Stage 2 — search terms. See docs/v2-backend-plan.md. Anchored to
+-- exactly one triggering keyword (keyword_id) — a deliberate simplification
+-- vs. the real API's looser attribution (a search term can technically
+-- surface under more than one keyword's auction).
+CREATE TABLE IF NOT EXISTS search_terms (
+    id             SERIAL PRIMARY KEY,
+    ad_group_id    INTEGER NOT NULL REFERENCES ad_groups(id),
+    keyword_id     INTEGER REFERENCES keywords(id),
+    text           TEXT NOT NULL,
+    match_flavor   TEXT NOT NULL CHECK (match_flavor IN ('close_variant', 'broader')),
+    data_source    TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (ad_group_id, text)
+);
+
+CREATE TABLE IF NOT EXISTS search_term_performance (
+    id               SERIAL PRIMARY KEY,
+    search_term_id   INTEGER NOT NULL REFERENCES search_terms(id),
+    date             DATE NOT NULL,
+    impressions      INTEGER NOT NULL DEFAULT 0,
+    clicks           INTEGER NOT NULL DEFAULT 0,
+    cost_micros      BIGINT NOT NULL DEFAULT 0,
+    conversions      REAL NOT NULL DEFAULT 0,
+    UNIQUE (search_term_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_term_performance_date ON search_term_performance(date);
+
+-- v2 Stage 3 — ads/creatives. See docs/v2-backend-plan.md. ad_strength
+-- lives here on `ads`, not `ad_performance` — unlike Quality Score, it's
+-- treated as a static per-ad attribute (correlated once with the ad's
+-- profile share in profile.ts), not something that drifts day to day.
+CREATE TABLE IF NOT EXISTS ads (
+    id             SERIAL PRIMARY KEY,
+    ad_group_id    INTEGER NOT NULL REFERENCES ad_groups(id),
+    google_ad_id   TEXT,
+    label          TEXT NOT NULL,
+    ad_type        TEXT NOT NULL DEFAULT 'responsive_search_ad',
+    headlines      JSONB NOT NULL,
+    descriptions   JSONB NOT NULL,
+    final_url      TEXT,
+    status         TEXT,
+    ad_strength    TEXT CHECK (ad_strength IN ('poor', 'average', 'good', 'excellent')),
+    data_source    TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (ad_group_id, label)
+);
+
+CREATE TABLE IF NOT EXISTS ad_performance (
+    id           SERIAL PRIMARY KEY,
+    ad_id        INTEGER NOT NULL REFERENCES ads(id),
+    date         DATE NOT NULL,
+    impressions  INTEGER NOT NULL DEFAULT 0,
+    clicks       INTEGER NOT NULL DEFAULT 0,
+    cost_micros  BIGINT NOT NULL DEFAULT 0,
+    conversions  REAL NOT NULL DEFAULT 0,
+    UNIQUE (ad_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_performance_date ON ad_performance(date);

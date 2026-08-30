@@ -135,6 +135,61 @@ export async function getKeywordPerformance(days = 30, endDate?: string, adGroup
   )
 }
 
+// v2 Stage 2 — search terms.
+
+/** Backs the Keyword -> Search Terms drill-down page. */
+export async function getSearchTermPerformance(days = 30, endDate?: string, keywordId?: number) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  const params: unknown[] = [start, end]
+  let keywordFilter = ''
+  if (keywordId != null) {
+    params.push(keywordId)
+    keywordFilter = `AND st.keyword_id = $${params.length}`
+  }
+  return query(
+    `SELECT stp.date, st.id AS search_term_id, st.text AS search_term, st.match_flavor,
+            k.id AS keyword_id, k.text AS keyword, ag.id AS ad_group_id, ag.name AS ad_group,
+            c.id AS campaign_id, c.name AS campaign,
+            stp.impressions, stp.clicks, stp.cost_micros, stp.conversions
+     FROM search_term_performance stp
+     JOIN search_terms st ON st.id = stp.search_term_id
+     JOIN ad_groups ag ON ag.id = st.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     LEFT JOIN keywords k ON k.id = st.keyword_id
+     WHERE stp.date BETWEEN $1 AND $2 ${keywordFilter}
+     ORDER BY stp.date, c.name, ag.name, st.text`,
+    params
+  )
+}
+
+// v2 Stage 3 — ads/creatives.
+
+/** Backs the Ad Group -> Ads drill-down page, including each ad's static
+ * headlines/descriptions/ad_strength. */
+export async function getAdPerformance(days = 30, endDate?: string, adGroupId?: number) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  const params: unknown[] = [start, end]
+  let adGroupFilter = ''
+  if (adGroupId != null) {
+    params.push(adGroupId)
+    adGroupFilter = `AND a.ad_group_id = $${params.length}`
+  }
+  return query(
+    `SELECT ap.date, a.id AS ad_id, a.label, a.headlines, a.descriptions, a.final_url, a.ad_strength,
+            ag.id AS ad_group_id, ag.name AS ad_group, c.id AS campaign_id, c.name AS campaign,
+            ap.impressions, ap.clicks, ap.cost_micros, ap.conversions
+     FROM ad_performance ap
+     JOIN ads a ON a.id = ap.ad_id
+     JOIN ad_groups ag ON ag.id = a.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE ap.date BETWEEN $1 AND $2 ${adGroupFilter}
+     ORDER BY ap.date, c.name, ag.name, a.label`,
+    params
+  )
+}
+
 /** Finds the analysis/recommendation that belong with a given summary —
  * pinned to the exact pipeline run that produced all three when available
  * (pipeline_run_id), falling back to "latest for this report_date" only

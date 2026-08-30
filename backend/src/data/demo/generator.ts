@@ -170,6 +170,27 @@ export interface KeywordDay {
   landingPageExperience: QsBucket
 }
 
+export interface SearchTermDay {
+  adGroupKey: string
+  keywordKey: string
+  searchTermKey: string
+  text: string
+  matchFlavor: 'close_variant' | 'broader'
+  impressions: number
+  clicks: number
+  costMicros: number
+  conversions: number
+}
+
+export interface AdDay {
+  adGroupKey: string
+  adKey: string
+  impressions: number
+  clicks: number
+  costMicros: number
+  conversions: number
+}
+
 export interface DayData {
   date: string
   state: State
@@ -177,6 +198,8 @@ export interface DayData {
   segments: SegmentDay[]
   adGroups: AdGroupDay[]
   keywords: KeywordDay[]
+  searchTerms: SearchTermDay[]
+  ads: AdDay[]
 }
 
 interface RawSegmentRow {
@@ -202,6 +225,8 @@ export function generateDay(
   const rawSegmentRows: RawSegmentRow[] = []
   const adGroupsOut: AdGroupDay[] = []
   const keywordsOut: KeywordDay[] = []
+  const searchTermsOut: SearchTermDay[] = []
+  const adsOut: AdDay[] = []
 
   for (const c of profile.CAMPAIGNS) {
     const baseMult = stateMultiplier(state, seed, targetDate, c.key)
@@ -317,6 +342,31 @@ export function generateDay(
           conversions: agConv,
         })
 
+        // v2 Stage 3 — ads/creatives, split off the same ad group totals
+        // as keywords (a sibling of keywords under the ad group, not a
+        // child of them).
+        const adGroupAds = profile.ADS.filter((a) => a.adGroupKey === ag.key)
+        if (adGroupAds.length > 0) {
+          const adShares: Record<string, number> = {}
+          for (const a of adGroupAds) adShares[a.key] = a.share
+
+          const adImpressions = noisyConservingSplit(agImp, adShares, seed, targetDate, `${ag.key}:ad:impressions`)
+          const adClicks = noisyConservingSplit(agClk, adShares, seed, targetDate, `${ag.key}:ad:clicks`)
+          const adCost = noisyConservingSplit(agCst, adShares, seed, targetDate, `${ag.key}:ad:cost`)
+          const adConversions = noisyConservingSplit(agConv, adShares, seed, targetDate, `${ag.key}:ad:conversions`)
+
+          for (const a of adGroupAds) {
+            adsOut.push({
+              adGroupKey: ag.key,
+              adKey: a.key,
+              impressions: Math.round(adImpressions[a.key]),
+              clicks: Math.round(adClicks[a.key]),
+              costMicros: Math.round(adCost[a.key]),
+              conversions: Math.round(adConversions[a.key] * 100) / 100,
+            })
+          }
+        }
+
         const adGroupKeywords = profile.KEYWORDS.filter((k) => k.adGroupKey === ag.key)
         if (adGroupKeywords.length === 0) continue
         const keywordShares: Record<string, number> = {}
@@ -339,20 +389,50 @@ export function generateDay(
               : k.baseQualityScore
           const bucket = qsBucket(qs)
 
+          const kwImp = Math.round(kwImpressions[k.key])
+          const kwClk = Math.round(kwClicks[k.key])
+          const kwCst = Math.round(kwCost[k.key])
+          const kwConv = Math.round(kwConversions[k.key] * 100) / 100
+
           keywordsOut.push({
             adGroupKey: ag.key,
             keywordKey: k.key,
             text: k.text,
             matchType: k.matchType,
-            impressions: Math.round(kwImpressions[k.key]),
-            clicks: Math.round(kwClicks[k.key]),
-            costMicros: Math.round(kwCost[k.key]),
-            conversions: Math.round(kwConversions[k.key] * 100) / 100,
+            impressions: kwImp,
+            clicks: kwClk,
+            costMicros: kwCst,
+            conversions: kwConv,
             qualityScore: qs,
             expectedCtr: bucket,
             adRelevance: bucket,
             landingPageExperience: bucket,
           })
+
+          // v2 Stage 2 — search terms, anchored to this one keyword.
+          const keywordSearchTerms = profile.SEARCH_TERMS.filter((st) => st.keywordKey === k.key)
+          if (keywordSearchTerms.length === 0) continue
+          const searchTermShares: Record<string, number> = {}
+          for (const st of keywordSearchTerms) searchTermShares[st.key] = st.share
+
+          const stImpressions = noisyConservingSplit(kwImp, searchTermShares, seed, targetDate, `${k.key}:st:impressions`)
+          const stClicks = noisyConservingSplit(kwClk, searchTermShares, seed, targetDate, `${k.key}:st:clicks`)
+          const stCost = noisyConservingSplit(kwCst, searchTermShares, seed, targetDate, `${k.key}:st:cost`)
+          const stConversions = noisyConservingSplit(kwConv, searchTermShares, seed, targetDate, `${k.key}:st:conversions`)
+
+          for (const st of keywordSearchTerms) {
+            searchTermsOut.push({
+              adGroupKey: ag.key,
+              keywordKey: k.key,
+              searchTermKey: st.key,
+              text: st.text,
+              matchFlavor: st.matchFlavor,
+              impressions: Math.round(stImpressions[st.key]),
+              clicks: Math.round(stClicks[st.key]),
+              costMicros: Math.round(stCost[st.key]),
+              conversions: Math.round(stConversions[st.key] * 100) / 100,
+            })
+          }
         }
       }
     }
@@ -365,6 +445,8 @@ export function generateDay(
     segments: pivotSegments(rawSegmentRows),
     adGroups: adGroupsOut,
     keywords: keywordsOut,
+    searchTerms: searchTermsOut,
+    ads: adsOut,
   }
 }
 

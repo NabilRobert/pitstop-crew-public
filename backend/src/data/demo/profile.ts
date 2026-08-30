@@ -113,7 +113,7 @@ export interface KeywordProfile {
   baseQualityScore: number // 1-10; search_model's keywords erode from this as the decline progresses
 }
 
-// 3 keywords per ad group, share of the parent ad group's totals. Base
+// 3-5 keywords per ad group, share of the parent ad group's totals. Base
 // QS 6-8 — realistic mid-to-good range, not universally excellent (leaves
 // room for the decline-tied erosion on search_model to read as a real drop
 // rather than a floor being hit).
@@ -157,3 +157,261 @@ export const KEYWORDS: KeywordProfile[] = [
 // drift causally to the existing decline story instead of being a second,
 // disconnected feature.
 export const QS_EROSION_MAX_POINTS = 3
+
+// v2 Stage 2 — search terms. See docs/v2-backend-plan.md. Anchored to
+// exactly one triggering keyword (a deliberate simplification vs. the real
+// API's looser attribution). Each keyword gets exactly 2: 1 close_variant
+// (a near-exact rewording of what was actually bid on, gets the larger
+// share — realistic, since close variants dominate search-term volume for
+// a well-targeted keyword) + 1 broader (a more generic/adjacent phrase,
+// smaller share — the kind of term worth reviewing as a negative-keyword
+// candidate if it's burning spend with nothing to show for it).
+export interface SearchTermProfile {
+  key: string
+  keywordKey: string
+  adGroupKey: string
+  text: string
+  matchFlavor: 'close_variant' | 'broader'
+  share: number // share of the parent keyword's daily totals
+}
+
+export const SEARCH_TERMS: SearchTermProfile[] = [
+  { key: 'st_brand_name_exact_close', keywordKey: 'kw_brand_name_exact', adGroupKey: 'brand_dealer_name', text: 'dealer name reviews', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_brand_name_exact_broad', keywordKey: 'kw_brand_name_exact', adGroupKey: 'brand_dealer_name', text: 'car dealer jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_brand_name_phrase_close', keywordKey: 'kw_brand_name_phrase', adGroupKey: 'brand_dealer_name', text: 'dealer name used car lot', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_brand_name_phrase_broad', keywordKey: 'kw_brand_name_phrase', adGroupKey: 'brand_dealer_name', text: 'used car dealership jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_brand_name_broad_close', keywordKey: 'kw_brand_name_broad', adGroupKey: 'brand_dealer_name', text: 'dealer name cars', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_brand_name_broad_broad', keywordKey: 'kw_brand_name_broad', adGroupKey: 'brand_dealer_name', text: 'car dealership near me', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_brand_loc_exact_close', keywordKey: 'kw_brand_loc_exact', adGroupKey: 'brand_location', text: 'dealer name jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_brand_loc_exact_broad', keywordKey: 'kw_brand_loc_exact', adGroupKey: 'brand_location', text: 'car dealer jakarta selatan', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_brand_loc_phrase_close', keywordKey: 'kw_brand_loc_phrase', adGroupKey: 'brand_location', text: 'dealer name close by', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_brand_loc_phrase_broad', keywordKey: 'kw_brand_loc_phrase', adGroupKey: 'brand_location', text: 'nearest used car dealer', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_brand_loc_broad_close', keywordKey: 'kw_brand_loc_broad', adGroupKey: 'brand_location', text: 'dealer name address', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_brand_loc_broad_broad', keywordKey: 'kw_brand_loc_broad', adGroupKey: 'brand_location', text: 'car dealership location jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_generic_cars_broad_close', keywordKey: 'kw_generic_cars_broad', adGroupKey: 'generic_used_cars', text: 'used cars for sale near me', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_generic_cars_broad_broad', keywordKey: 'kw_generic_cars_broad', adGroupKey: 'generic_used_cars', text: 'buy used car indonesia', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_generic_cars_phrase_close', keywordKey: 'kw_generic_cars_phrase', adGroupKey: 'generic_used_cars', text: 'used cars jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_generic_cars_phrase_broad', keywordKey: 'kw_generic_cars_phrase', adGroupKey: 'generic_used_cars', text: 'mobil bekas jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_generic_cars_exact_close', keywordKey: 'kw_generic_cars_exact', adGroupKey: 'generic_used_cars', text: 'used cars near me now', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_generic_cars_exact_broad', keywordKey: 'kw_generic_cars_exact', adGroupKey: 'generic_used_cars', text: 'cheap used cars jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_generic_suvs_broad_close', keywordKey: 'kw_generic_suvs_broad', adGroupKey: 'generic_used_suvs', text: 'used suvs for sale near me', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_generic_suvs_broad_broad', keywordKey: 'kw_generic_suvs_broad', adGroupKey: 'generic_used_suvs', text: 'buy used suv indonesia', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_generic_suvs_phrase_close', keywordKey: 'kw_generic_suvs_phrase', adGroupKey: 'generic_used_suvs', text: 'used suv near me now', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_generic_suvs_phrase_broad', keywordKey: 'kw_generic_suvs_phrase', adGroupKey: 'generic_used_suvs', text: 'mobil suv bekas jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_generic_suvs_exact_close', keywordKey: 'kw_generic_suvs_exact', adGroupKey: 'generic_used_suvs', text: 'used suv jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_generic_suvs_exact_broad', keywordKey: 'kw_generic_suvs_exact', adGroupKey: 'generic_used_suvs', text: 'cheap used suv jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_toyota_exact_close', keywordKey: 'kw_toyota_exact', adGroupKey: 'model_toyota', text: 'used toyota jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_toyota_exact_broad', keywordKey: 'kw_toyota_exact', adGroupKey: 'model_toyota', text: 'toyota bekas jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_toyota_phrase_close', keywordKey: 'kw_toyota_phrase', adGroupKey: 'model_toyota', text: 'used toyota for sale near me', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_toyota_phrase_broad', keywordKey: 'kw_toyota_phrase', adGroupKey: 'model_toyota', text: 'toyota dealer used cars', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_toyota_broad_close', keywordKey: 'kw_toyota_broad', adGroupKey: 'model_toyota', text: 'used toyota nearby', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_toyota_broad_broad', keywordKey: 'kw_toyota_broad', adGroupKey: 'model_toyota', text: 'toyota second jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_honda_exact_close', keywordKey: 'kw_honda_exact', adGroupKey: 'model_honda', text: 'used honda jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_honda_exact_broad', keywordKey: 'kw_honda_exact', adGroupKey: 'model_honda', text: 'honda bekas jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_honda_phrase_close', keywordKey: 'kw_honda_phrase', adGroupKey: 'model_honda', text: 'used honda for sale near me', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_honda_phrase_broad', keywordKey: 'kw_honda_phrase', adGroupKey: 'model_honda', text: 'honda dealer used cars', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_honda_broad_close', keywordKey: 'kw_honda_broad', adGroupKey: 'model_honda', text: 'used honda nearby', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_honda_broad_broad', keywordKey: 'kw_honda_broad', adGroupKey: 'model_honda', text: 'honda second jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_suzuki_exact_close', keywordKey: 'kw_suzuki_exact', adGroupKey: 'model_suzuki', text: 'used suzuki jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_suzuki_exact_broad', keywordKey: 'kw_suzuki_exact', adGroupKey: 'model_suzuki', text: 'suzuki bekas jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_suzuki_phrase_close', keywordKey: 'kw_suzuki_phrase', adGroupKey: 'model_suzuki', text: 'used suzuki for sale near me', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_suzuki_phrase_broad', keywordKey: 'kw_suzuki_phrase', adGroupKey: 'model_suzuki', text: 'suzuki dealer used cars', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_suzuki_broad_close', keywordKey: 'kw_suzuki_broad', adGroupKey: 'model_suzuki', text: 'used suzuki nearby', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_suzuki_broad_broad', keywordKey: 'kw_suzuki_broad', adGroupKey: 'model_suzuki', text: 'suzuki second jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_daihatsu_exact_close', keywordKey: 'kw_daihatsu_exact', adGroupKey: 'model_daihatsu', text: 'used daihatsu jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_daihatsu_exact_broad', keywordKey: 'kw_daihatsu_exact', adGroupKey: 'model_daihatsu', text: 'daihatsu bekas jakarta', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_daihatsu_phrase_close', keywordKey: 'kw_daihatsu_phrase', adGroupKey: 'model_daihatsu', text: 'used daihatsu for sale near me', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_daihatsu_phrase_broad', keywordKey: 'kw_daihatsu_phrase', adGroupKey: 'model_daihatsu', text: 'daihatsu dealer used cars', matchFlavor: 'broader', share: 0.4 },
+  { key: 'st_daihatsu_broad_close', keywordKey: 'kw_daihatsu_broad', adGroupKey: 'model_daihatsu', text: 'used daihatsu nearby', matchFlavor: 'close_variant', share: 0.6 },
+  { key: 'st_daihatsu_broad_broad', keywordKey: 'kw_daihatsu_broad', adGroupKey: 'model_daihatsu', text: 'daihatsu second jakarta', matchFlavor: 'broader', share: 0.4 },
+]
+
+// v2 Stage 3 — ads/creatives. See docs/v2-backend-plan.md. 2 static
+// RSA-style ads per ad group (16 total — the low end of the plan's "2-3"
+// range, same reasoning as Stage 2's search-term count), each themed per
+// ad group. ad_strength is loosely correlated with share within each pair
+// — the higher-share ad in a pair has the better rating, a one-time
+// design choice (not day-to-day drift, unlike Quality Score — see
+// schema.sql's comment on why ad_strength lives on `ads`, not a
+// per-day performance table).
+export interface AdProfile {
+  key: string
+  adGroupKey: string
+  label: string
+  headlines: string[]
+  descriptions: string[]
+  finalUrl: string
+  adStrength: 'poor' | 'average' | 'good' | 'excellent'
+  share: number // share of the parent ad group's daily totals
+}
+
+export const ADS: AdProfile[] = [
+  // Brand — Dealer Name
+  {
+    key: 'ad_brand_name_a',
+    adGroupKey: 'brand_dealer_name',
+    label: 'Brand — Dealer Name A',
+    headlines: ['Dealer Name Used Cars', 'Trusted Jakarta Car Dealer', 'Quality Pre-Owned Vehicles', 'Visit Our Showroom Today', 'Best Prices Guaranteed'],
+    descriptions: ['Browse hundreds of certified used cars with warranty included.', 'Trade in your car and drive home the same day.', 'Financing available for all credit types.'],
+    finalUrl: 'https://dealername.example.com/',
+    adStrength: 'excellent',
+    share: 0.6,
+  },
+  {
+    key: 'ad_brand_name_b',
+    adGroupKey: 'brand_dealer_name',
+    label: 'Brand — Dealer Name B',
+    headlines: ['Dealer Name Car Sales', 'Used Cars Jakarta', 'Great Deals Every Day', 'Shop Our Inventory Online'],
+    descriptions: ['Find your next car from our large selection.', 'Easy financing and fast approval.'],
+    finalUrl: 'https://dealername.example.com/',
+    adStrength: 'good',
+    share: 0.4,
+  },
+  // Brand — Location Variants
+  {
+    key: 'ad_brand_loc_a',
+    adGroupKey: 'brand_location',
+    label: 'Brand — Location A',
+    headlines: ["Dealer Name Near You", "Jakarta's Trusted Dealer", 'Convenient Locations', 'Test Drive Today', 'Open 7 Days a Week'],
+    descriptions: ['Multiple locations across Jakarta for your convenience.', 'Walk in or book a test drive online.', 'Friendly staff ready to help you find the right car.'],
+    finalUrl: 'https://dealername.example.com/locations',
+    adStrength: 'good',
+    share: 0.55,
+  },
+  {
+    key: 'ad_brand_loc_b',
+    adGroupKey: 'brand_location',
+    label: 'Brand — Location B',
+    headlines: ['Find Dealer Name', 'Nearby Car Dealer', 'Visit Us Today', 'Cars For Every Budget'],
+    descriptions: ['Check our location hours and directions.', 'Ask about our current promotions.'],
+    finalUrl: 'https://dealername.example.com/locations',
+    adStrength: 'average',
+    share: 0.45,
+  },
+  // Used Cars Generic
+  {
+    key: 'ad_generic_cars_a',
+    adGroupKey: 'generic_used_cars',
+    label: 'Used Cars Generic A',
+    headlines: ['Used Cars For Sale', 'Certified Pre-Owned Cars', 'Affordable Used Vehicles', 'Inspected & Warrantied', 'Shop Used Cars Online'],
+    descriptions: ['Every car passes a 150-point inspection before sale.', 'Flexible financing options for every budget.', 'New inventory added weekly.'],
+    finalUrl: 'https://dealername.example.com/used-cars',
+    adStrength: 'good',
+    share: 0.55,
+  },
+  {
+    key: 'ad_generic_cars_b',
+    adGroupKey: 'generic_used_cars',
+    label: 'Used Cars Generic B',
+    headlines: ['Buy A Used Car Today', 'Used Car Deals Jakarta', 'Reliable Used Vehicles', 'Great Selection In Stock'],
+    descriptions: ['Browse our full inventory online.', 'Trade-ins welcome, get an instant quote.'],
+    finalUrl: 'https://dealername.example.com/used-cars',
+    adStrength: 'average',
+    share: 0.45,
+  },
+  // Used SUVs Generic
+  {
+    key: 'ad_generic_suvs_a',
+    adGroupKey: 'generic_used_suvs',
+    label: 'Used SUVs Generic A',
+    headlines: ['Used SUVs For Sale', 'Family-Ready SUVs', 'Spacious & Reliable', 'Certified Used SUVs', 'Test Drive An SUV Today'],
+    descriptions: ['Explore our selection of family-friendly SUVs.', 'All SUVs inspected and warrantied.', 'Financing available, apply online in minutes.'],
+    finalUrl: 'https://dealername.example.com/used-suvs',
+    adStrength: 'good',
+    share: 0.55,
+  },
+  {
+    key: 'ad_generic_suvs_b',
+    adGroupKey: 'generic_used_suvs',
+    label: 'Used SUVs Generic B',
+    headlines: ['Buy A Used SUV', 'SUV Deals Jakarta', 'Spacious Used SUVs In Stock', 'Shop SUVs Online'],
+    descriptions: ['Check out our current SUV inventory.', 'Ask about trade-in value today.'],
+    finalUrl: 'https://dealername.example.com/used-suvs',
+    adStrength: 'average',
+    share: 0.45,
+  },
+  // Model — Toyota
+  {
+    key: 'ad_toyota_a',
+    adGroupKey: 'model_toyota',
+    label: 'Model Toyota A',
+    headlines: ['Used Toyota For Sale', 'Certified Toyota Vehicles', 'Reliable Toyota Models', 'Toyota Financing Available', 'Shop Toyota Inventory'],
+    descriptions: ['Every used Toyota is inspected and warrantied.', 'Flexible financing plans to fit your budget.', 'Ask about our Toyota trade-in program.'],
+    finalUrl: 'https://dealername.example.com/toyota',
+    adStrength: 'good',
+    share: 0.6,
+  },
+  {
+    key: 'ad_toyota_b',
+    adGroupKey: 'model_toyota',
+    label: 'Model Toyota B',
+    headlines: ['Buy A Used Toyota', 'Toyota Deals Jakarta', 'Toyota Models In Stock'],
+    descriptions: ['Browse our Toyota inventory online.', 'Great prices on quality Toyota vehicles.'],
+    finalUrl: 'https://dealername.example.com/toyota',
+    adStrength: 'average',
+    share: 0.4,
+  },
+  // Model — Honda
+  {
+    key: 'ad_honda_a',
+    adGroupKey: 'model_honda',
+    label: 'Model Honda A',
+    headlines: ['Used Honda For Sale', 'Certified Honda Vehicles', 'Reliable Honda Models', 'Honda Financing Available', 'Shop Honda Inventory'],
+    descriptions: ['Every used Honda is inspected and warrantied.', 'Flexible financing plans to fit your budget.', 'Ask about our Honda trade-in program.'],
+    finalUrl: 'https://dealername.example.com/honda',
+    adStrength: 'good',
+    share: 0.6,
+  },
+  {
+    key: 'ad_honda_b',
+    adGroupKey: 'model_honda',
+    label: 'Model Honda B',
+    headlines: ['Buy A Used Honda', 'Honda Deals Jakarta', 'Honda Models In Stock'],
+    descriptions: ['Browse our Honda inventory online.', 'Great prices on quality Honda vehicles.'],
+    finalUrl: 'https://dealername.example.com/honda',
+    adStrength: 'average',
+    share: 0.4,
+  },
+  // Model — Suzuki
+  {
+    key: 'ad_suzuki_a',
+    adGroupKey: 'model_suzuki',
+    label: 'Model Suzuki A',
+    headlines: ['Used Suzuki For Sale', 'Suzuki Vehicles In Stock', 'Affordable Suzuki Models', 'Shop Suzuki Inventory'],
+    descriptions: ['Browse our Suzuki inventory online.', 'Ask about financing options today.'],
+    finalUrl: 'https://dealername.example.com/suzuki',
+    adStrength: 'average',
+    share: 0.55,
+  },
+  {
+    key: 'ad_suzuki_b',
+    adGroupKey: 'model_suzuki',
+    label: 'Model Suzuki B',
+    headlines: ['Buy A Used Suzuki', 'Suzuki Deals Jakarta', 'Suzuki Models Available'],
+    descriptions: ['Check out our current Suzuki listings.', 'Great prices on used Suzuki cars.'],
+    finalUrl: 'https://dealername.example.com/suzuki',
+    adStrength: 'poor',
+    share: 0.45,
+  },
+  // Model — Daihatsu
+  {
+    key: 'ad_daihatsu_a',
+    adGroupKey: 'model_daihatsu',
+    label: 'Model Daihatsu A',
+    headlines: ['Used Daihatsu For Sale', 'Daihatsu Vehicles In Stock', 'Affordable Daihatsu Models', 'Shop Daihatsu Inventory'],
+    descriptions: ['Browse our Daihatsu inventory online.', 'Ask about financing options today.'],
+    finalUrl: 'https://dealername.example.com/daihatsu',
+    adStrength: 'average',
+    share: 0.55,
+  },
+  {
+    key: 'ad_daihatsu_b',
+    adGroupKey: 'model_daihatsu',
+    label: 'Model Daihatsu B',
+    headlines: ['Buy A Used Daihatsu', 'Daihatsu Deals Jakarta', 'Daihatsu Models Available'],
+    descriptions: ['Check out our current Daihatsu listings.', 'Great prices on used Daihatsu cars.'],
+    finalUrl: 'https://dealername.example.com/daihatsu',
+    adStrength: 'poor',
+    share: 0.45,
+  },
+]

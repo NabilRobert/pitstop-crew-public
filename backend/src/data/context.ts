@@ -95,8 +95,8 @@ export async function buildHistoricalSummary(endDate: string, days: number): Pro
 
 // v2 Stage 1 — ad groups + keywords + Quality Score. Top-N aggregated over
 // the window, NOT a raw dump (per docs/v2-*-plan.md decision #9): keyword-
-// level data for ~8 ad groups x ~3 keywords each over a 30-day window is
-// 700+ rows — far too much for a token-budget-constrained prompt (see
+// level data for ~8 ad groups x ~4 keywords each over a 30-day window is
+// 1000+ rows — far too much for a token-budget-constrained prompt (see
 // anna.ts's MAX_TOKENS comment on gpt-5-mini's hidden reasoning-token
 // cost). Mirrors buildHistoricalSummary's aggregate-not-dump pattern above,
 // ordered by total spend so the model sees what actually matters first.
@@ -136,6 +136,89 @@ export async function buildAdGroupKeywordContext(
   return CURRENCY_NOTE + JSON.stringify(rows)
 }
 
+// v2 Stage 2 — search terms. Top-N by "wasted spend" specifically, not
+// just top-N by cost like the keyword builder above: the whole point of
+// search-term data is finding negative-keyword candidates, so this
+// prioritizes terms with near-zero conversions first (ordered by cost
+// among those), then falls back to worst cost-per-conversion if fewer
+// than topN terms have zero conversions. Same aggregate-not-dump
+// reasoning as buildAdGroupKeywordContext.
+export async function buildSearchTermContext(
+  endDate: string,
+  days: number,
+  campaignId?: number | null,
+  topN = 10
+): Promise<string> {
+  const startDate = addDays(endDate, -days)
+  const params: unknown[] = [startDate, endDate]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND ag.campaign_id = $${params.length}`
+  }
+  params.push(topN)
+  const rows = await query(
+    `SELECT c.name AS campaign, ag.name AS ad_group, k.text AS keyword, st.text AS search_term, st.match_flavor,
+            SUM(stp.impressions) AS total_impressions, SUM(stp.clicks) AS total_clicks,
+            SUM(stp.cost_micros) AS total_cost_micros, ROUND(SUM(stp.conversions)::numeric, 2) AS total_conversions,
+            ROUND((SUM(stp.cost_micros) / NULLIF(SUM(stp.conversions), 0))::numeric, 0) AS cost_per_conversion_micros
+     FROM search_term_performance stp
+     JOIN search_terms st ON st.id = stp.search_term_id
+     JOIN ad_groups ag ON ag.id = st.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     LEFT JOIN keywords k ON k.id = st.keyword_id
+     WHERE stp.date BETWEEN $1 AND $2 ${campaignFilter}
+     GROUP BY c.name, ag.name, k.text, st.text, st.match_flavor
+     ORDER BY (SUM(stp.conversions) < 0.1) DESC, SUM(stp.cost_micros) DESC
+     LIMIT $${params.length}`,
+    params
+  )
+  return (
+    CURRENCY_NOTE +
+    'These are ranked by "wasted spend" — zero/near-zero-conversion search terms first (highest cost among those), ' +
+    'then worst cost-per-conversion — not by raw spend, since the point of search-term data is spotting negative-keyword candidates.\n\n' +
+    JSON.stringify(rows)
+  )
+}
+
+// v2 Stage 3 — ads/creatives. Only 16 ads total exist (2 per ad group,
+// 8 ad groups), nowhere near the keyword/search-term row-count problem —
+// so this returns every ad's aggregate, not a filtered top-N, though it
+// still takes a topN param for consistency/future-proofing if the ad
+// count ever grows. ad_strength is a static per-ad attribute (see
+// schema.sql), included directly rather than needing a "latest" pick
+// the way per-day Quality Score does.
+export async function buildAdContext(
+  endDate: string,
+  days: number,
+  campaignId?: number | null,
+  topN = 20
+): Promise<string> {
+  const startDate = addDays(endDate, -days)
+  const params: unknown[] = [startDate, endDate]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND ag.campaign_id = $${params.length}`
+  }
+  params.push(topN)
+  const rows = await query(
+    `SELECT c.name AS campaign, ag.name AS ad_group, a.label AS ad, a.headlines, a.descriptions, a.ad_strength,
+            SUM(ap.impressions) AS total_impressions, SUM(ap.clicks) AS total_clicks,
+            SUM(ap.cost_micros) AS total_cost_micros, ROUND(SUM(ap.conversions)::numeric, 2) AS total_conversions
+     FROM ad_performance ap
+     JOIN ads a ON a.id = ap.ad_id
+     JOIN ad_groups ag ON ag.id = a.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE ap.date BETWEEN $1 AND $2 ${campaignFilter}
+     GROUP BY c.name, ag.name, a.label, a.headlines, a.descriptions, a.ad_strength
+     ORDER BY total_cost_micros DESC
+     LIMIT $${params.length}`,
+    params
+  )
+  return CURRENCY_NOTE + JSON.stringify(rows)
+}
+
 /** Composes buildPerformanceContext + every v2 builder added so far —
  * used by both the daily pipeline (orchestrator.ts) and the Ask feature
  * (ask.ts), so asking "what's my Quality Score on Search-Model?" actually
@@ -146,5 +229,12 @@ export async function buildFullContext(args: BuildPerformanceContextArgs = {}): 
   const days = args.days ?? 30
   const performanceContext = await buildPerformanceContext(args)
   const adGroupKeywordContext = await buildAdGroupKeywordContext(endDate, days, args.campaignId)
-  return `${performanceContext}\n\nTop ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}`
+  const searchTermContext = await buildSearchTermContext(endDate, days, args.campaignId)
+  const adContext = await buildAdContext(endDate, days, args.campaignId)
+  return (
+    `${performanceContext}\n\n` +
+    `Top ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}\n\n` +
+    `Search terms with the most wasted spend this window (aggregated top-N, see note above):\n${searchTermContext}\n\n` +
+    `Ad creatives (headlines/descriptions/ad_strength) with their performance this window:\n${adContext}`
+  )
 }

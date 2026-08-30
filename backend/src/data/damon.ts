@@ -1,7 +1,7 @@
 // Damon — data agent. Not an LLM (see agents/data.md).
 //
 // Demo-mode path is fully built and tested. Live-mode covers basic
-// campaign performance only (PROJECT.md step 6's exact scope: "start with
+// campaign performance only (docs/PROJECT.md step 6's exact scope: "start with
 // basic campaign performance, last 30 days") — untested against a real
 // account, since Basic Access is still pending and the account has no
 // live campaigns yet. Device/geography/demographic live segment fetching
@@ -28,12 +28,12 @@ export async function syncDay(targetDate: string, seed = 0, dataSource = 'demo')
   const overrides = await getOverrides()
   const dayData = generateDay(targetDate, seed, overrides)
   await withTransaction(async (client) => {
-    await upsertDay(client, dayData, new Map(), new Map(), new Map(), new Map())
+    await upsertDay(client, dayData, new Map(), new Map(), new Map(), new Map(), new Map(), new Map())
   })
   return dayData
 }
 
-/** Re-fetches the trailing window, not just `endDate` — see PROJECT.md →
+/** Re-fetches the trailing window, not just `endDate` — see docs/PROJECT.md →
  * Automation: Google Ads conversions can be attributed days after the
  * click, so re-upserting recent history keeps it accurate.
  *
@@ -60,8 +60,10 @@ export async function syncTrailingWindow(
     const segmentIds = new Map<string, number>()
     const adGroupIds = new Map<string, number>()
     const keywordIds = new Map<string, number>()
+    const searchTermIds = new Map<string, number>()
+    const adIds = new Map<string, number>()
     for (const dayData of dayDatas) {
-      await upsertDay(client, dayData, campaignIds, segmentIds, adGroupIds, keywordIds)
+      await upsertDay(client, dayData, campaignIds, segmentIds, adGroupIds, keywordIds, searchTermIds, adIds)
     }
   })
   return dayDatas
@@ -150,7 +152,9 @@ async function upsertDay(
   campaignIds: Map<string, number>,
   segmentIds: Map<string, number>,
   adGroupIds: Map<string, number>,
-  keywordIds: Map<string, number>
+  keywordIds: Map<string, number>,
+  searchTermIds: Map<string, number>,
+  adIds: Map<string, number>
 ): Promise<void> {
   async function campaignIdFor(key: string): Promise<number> {
     if (!campaignIds.has(key)) campaignIds.set(key, await getOrCreateCampaign(client, key))
@@ -168,6 +172,16 @@ async function upsertDay(
   async function keywordIdFor(keywordKey: string, adGroupId: number): Promise<number> {
     if (!keywordIds.has(keywordKey)) keywordIds.set(keywordKey, await getOrCreateKeyword(client, keywordKey, adGroupId))
     return keywordIds.get(keywordKey)!
+  }
+  async function searchTermIdFor(searchTermKey: string, adGroupId: number, keywordId: number | null): Promise<number> {
+    if (!searchTermIds.has(searchTermKey)) {
+      searchTermIds.set(searchTermKey, await getOrCreateSearchTerm(client, searchTermKey, adGroupId, keywordId))
+    }
+    return searchTermIds.get(searchTermKey)!
+  }
+  async function adIdFor(adKey: string, adGroupId: number): Promise<number> {
+    if (!adIds.has(adKey)) adIds.set(adKey, await getOrCreateAd(client, adKey, adGroupId))
+    return adIds.get(adKey)!
   }
 
   for (const c of dayData.campaigns) {
@@ -252,6 +266,47 @@ async function upsertDay(
       ]
     )
   }
+
+  // v2 Stage 2 — search term performance.
+  for (const st of dayData.searchTerms) {
+    // adGroupIds/keywordIds are already populated by the loops above (every
+    // search term's parent ad group and keyword are generated in the same
+    // DayData), so both are cache hits, not extra resolve-by-natural-key
+    // round trips.
+    const adGroupId = adGroupIds.get(st.adGroupKey)!
+    const keywordId = keywordIds.get(st.keywordKey) ?? null
+    const searchTermId = await searchTermIdFor(st.searchTermKey, adGroupId, keywordId)
+    await client.query(
+      `INSERT INTO search_term_performance
+          (search_term_id, date, impressions, clicks, cost_micros, conversions)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT(search_term_id, date) DO UPDATE SET
+          impressions = excluded.impressions,
+          clicks = excluded.clicks,
+          cost_micros = excluded.cost_micros,
+          conversions = excluded.conversions`,
+      [searchTermId, dayData.date, st.impressions, st.clicks, st.costMicros, st.conversions]
+    )
+  }
+
+  // v2 Stage 3 — ad performance.
+  for (const a of dayData.ads) {
+    // adGroupIds is already populated by the ad-group loop above (every
+    // ad's parent ad group is generated in the same DayData).
+    const adGroupId = adGroupIds.get(a.adGroupKey)!
+    const adId = await adIdFor(a.adKey, adGroupId)
+    await client.query(
+      `INSERT INTO ad_performance
+          (ad_id, date, impressions, clicks, cost_micros, conversions)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT(ad_id, date) DO UPDATE SET
+          impressions = excluded.impressions,
+          clicks = excluded.clicks,
+          cost_micros = excluded.cost_micros,
+          conversions = excluded.conversions`,
+      [adId, dayData.date, a.impressions, a.clicks, a.costMicros, a.conversions]
+    )
+  }
 }
 
 async function getOrCreateCampaign(client: PoolClient, campaignKey: string): Promise<number> {
@@ -306,6 +361,45 @@ async function getOrCreateKeyword(client: PoolClient, keywordKey: string, adGrou
     `INSERT INTO keywords (ad_group_id, text, match_type, data_source, status)
      VALUES ($1, $2, $3, 'demo', 'enabled') RETURNING id`,
     [adGroupId, kw.text, kw.matchType]
+  )
+  return inserted.rows[0].id
+}
+
+async function getOrCreateAd(client: PoolClient, adKey: string, adGroupId: number): Promise<number> {
+  const a = profile.ADS.find((ad) => ad.key === adKey)!
+  const existing = await client.query<{ id: number }>('SELECT id FROM ads WHERE ad_group_id = $1 AND label = $2', [
+    adGroupId,
+    a.label,
+  ])
+  if (existing.rows[0]) return existing.rows[0].id
+  const inserted = await client.query<{ id: number }>(
+    `INSERT INTO ads (ad_group_id, label, headlines, descriptions, final_url, ad_strength, data_source, status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'demo', 'enabled') RETURNING id`,
+    // headlines/descriptions are jsonb columns — pass pre-serialized JSON
+    // text explicitly rather than relying on pg's own object->jsonb
+    // coercion, to avoid ambiguity about which parameter types get
+    // auto-detected as jsonb vs. a plain array-typed column.
+    [adGroupId, a.label, JSON.stringify(a.headlines), JSON.stringify(a.descriptions), a.finalUrl, a.adStrength]
+  )
+  return inserted.rows[0].id
+}
+
+async function getOrCreateSearchTerm(
+  client: PoolClient,
+  searchTermKey: string,
+  adGroupId: number,
+  keywordId: number | null
+): Promise<number> {
+  const st = profile.SEARCH_TERMS.find((s) => s.key === searchTermKey)!
+  const existing = await client.query<{ id: number }>(
+    'SELECT id FROM search_terms WHERE ad_group_id = $1 AND text = $2',
+    [adGroupId, st.text]
+  )
+  if (existing.rows[0]) return existing.rows[0].id
+  const inserted = await client.query<{ id: number }>(
+    `INSERT INTO search_terms (ad_group_id, keyword_id, text, match_flavor, data_source)
+     VALUES ($1, $2, $3, $4, 'demo') RETURNING id`,
+    [adGroupId, keywordId, st.text, st.matchFlavor]
   )
   return inserted.rows[0].id
 }

@@ -27,6 +27,8 @@ import { router as voiceRoutes } from './routes/voice.js'
 import { router as assistantRoutes } from './routes/assistant.js'
 import { router as adGroupsRoutes } from './routes/adGroups.js'
 import { router as keywordsRoutes } from './routes/keywords.js'
+import { router as searchTermsRoutes } from './routes/searchTerms.js'
+import { router as adsRoutes } from './routes/ads.js'
 
 const app = express()
 app.use(express.json())
@@ -61,6 +63,8 @@ app.use(voiceRoutes)
 app.use(assistantRoutes)
 app.use(adGroupsRoutes)
 app.use(keywordsRoutes)
+app.use(searchTermsRoutes)
+app.use(adsRoutes)
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
