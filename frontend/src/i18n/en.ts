@@ -65,6 +65,8 @@ export default {
     ctr: 'CTR',
     cost: 'Cost',
     conversions: 'Conversions',
+    impressionShare: 'Impression Share',
+    optimizationScore: 'Optimization Score',
   },
   campaignTable: {
     columns: {
@@ -144,6 +146,10 @@ export default {
       excellent: 'Excellent',
     },
     noData: 'No ad data yet.',
+  },
+  impressionShareChart: {
+    title: 'Search Impression Share',
+    optimizationScore: 'Optimization Score',
   },
   campaignsList: {
     title: 'Campaigns',

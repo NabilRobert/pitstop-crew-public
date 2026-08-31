@@ -15,6 +15,15 @@ export interface PerformanceRow {
   clicks: number
   cost_micros: number
   conversions: number
+  // v2 Stage 4 — impression share + optimization score. Populated only
+  // for Search-type campaigns (Brand, Search — Used Cars Generic,
+  // Search — Model + Suburb) — null for Performance Max/Display.
+  // search_rank_lost_impression_share is derived server-side, not a
+  // metric Google Ads reports directly. All 4 are 0-1 fractions.
+  search_impression_share: number | null
+  search_budget_lost_impression_share: number | null
+  search_rank_lost_impression_share: number | null
+  optimization_score: number | null
 }
 
 export interface SegmentPerformanceRow {

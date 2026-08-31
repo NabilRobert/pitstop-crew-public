@@ -26,6 +26,8 @@ const {
   campaigns,
   totals,
   ctr,
+  blendedImpressionShare,
+  blendedOptimizationScore,
   campaignRows,
   lastRunLabel,
   latestReportLink,
@@ -79,6 +81,17 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
         <MetricCard :label="t('metrics.clicks')" :value="formatNumber(totals.clicks)" />
         <MetricCard :label="t('metrics.ctr')" :value="formatPercent(ctr)" accent="giallo" />
         <MetricCard :label="t('metrics.cost')" :value="formatMicrosAsIDR(totals.cost_micros)" accent="rosso" />
+        <MetricCard
+          v-if="blendedImpressionShare !== null"
+          :label="t('metrics.impressionShare')"
+          :value="formatPercent(blendedImpressionShare * 100, 0)"
+          accent="verde"
+        />
+        <MetricCard
+          v-if="blendedOptimizationScore !== null"
+          :label="t('metrics.optimizationScore')"
+          :value="formatPercent(blendedOptimizationScore * 100, 0)"
+        />
       </div>
 
       <div class="mb-8">

@@ -63,6 +63,27 @@ export function useDashboard() {
 
   const ctr = computed(() => (totals.value.impressions ? (totals.value.clicks / totals.value.impressions) * 100 : 0))
 
+  // v2 Stage 4 — impression share + optimization score. "Blended" per
+  // Google Ads' own usage of the term: an impressions-weighted average
+  // across whichever campaigns report each metric (Search-type only for
+  // impression share; see PerformanceRow), not a plain average — a
+  // bigger campaign's number should count for more. Rows from PMax/
+  // Display (null values) are excluded from both, not treated as 0.
+  function blendedShare(rows: PerformanceRow[], pick: (r: PerformanceRow) => number | null): number | null {
+    let weightedSum = 0
+    let weight = 0
+    for (const r of rows) {
+      const value = pick(r)
+      if (value === null) continue
+      weightedSum += value * r.impressions
+      weight += r.impressions
+    }
+    return weight ? weightedSum / weight : null
+  }
+
+  const blendedImpressionShare = computed(() => blendedShare(performance.value, (r) => r.search_impression_share))
+  const blendedOptimizationScore = computed(() => blendedShare(performance.value, (r) => r.optimization_score))
+
   const campaignRows = computed<CampaignRow[]>(() => {
     const byCampaign = new Map<string, Totals & { campaign: string }>()
     for (const row of performance.value) {
@@ -135,6 +156,8 @@ export function useDashboard() {
     campaigns,
     totals,
     ctr,
+    blendedImpressionShare,
+    blendedOptimizationScore,
     campaignRows,
     lastRunLabel,
     latestReportLink,

@@ -5,6 +5,7 @@ import { formatMicrosAsIDR, formatNumber, formatPercent } from '../../shared/uti
 import KeywordTable from './KeywordTable.vue'
 import SearchTermTable from './SearchTermTable.vue'
 import AdPerformanceTable from './AdPerformanceTable.vue'
+import ImpressionShareChart from './ImpressionShareChart.vue'
 import { useCampaignDetail } from './useCampaignDetail'
 
 const props = defineProps({
@@ -13,9 +14,8 @@ const props = defineProps({
 
 const { t } = useI18n()
 
-const { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, adRows } = useCampaignDetail(
-  toRef(props, 'id')
-)
+const { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, adRows, impressionShareRows } =
+  useCampaignDetail(toRef(props, 'id'))
 </script>
 
 <template>
@@ -36,6 +36,10 @@ const { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, 
     <template v-else>
       <h1 class="mb-1 mt-4 font-display text-2xl font-bold text-ink">{{ campaignName }}</h1>
       <p class="mb-8 font-mono text-xs text-ink-faint">{{ t('campaignDetail.subtitle') }}</p>
+
+      <div v-if="impressionShareRows.length" class="mb-8">
+        <ImpressionShareChart :rows="impressionShareRows" />
+      </div>
 
       <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
         {{ t('campaignDetail.adGroupsHeading') }}

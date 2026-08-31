@@ -7,6 +7,7 @@ import type {
   SearchTermPerformanceRow,
   AdPerformanceRow,
   AdStrength,
+  PerformanceRow,
 } from '../../shared/api/types'
 
 // Fixed window for this first drill-down slice — the campaign detail page
@@ -199,15 +200,30 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
   const keywordRows = ref<KeywordRow[]>([])
   const searchTermRows = ref<SearchTermRow[]>([])
   const adRows = ref<AdRow[]>([])
+  // v2 Stage 4 — impression share + optimization score. Rides the
+  // existing /performance endpoint (campaign_performance columns, not a
+  // new table), filtered client-side to this campaign by name — the
+  // same pattern CampaignTable.vue already uses, since PerformanceRow
+  // only carries the campaign's name, not its id. Empty for PMax/Display
+  // (search_impression_share is null there), which is what conditionally
+  // hides the chart on the page.
+  const impressionShareRows = ref<PerformanceRow[]>([])
 
   async function load() {
     loading.value = true
     error.value = null
     try {
       const id = Number(campaignId.value)
-      const [campaigns, adGroupPerf] = await Promise.all([api.campaigns(), api.adGroupPerformance(DAYS, id)])
+      const [campaigns, adGroupPerf, perf] = await Promise.all([
+        api.campaigns(),
+        api.adGroupPerformance(DAYS, id),
+        api.performance(DAYS),
+      ])
       campaignName.value = campaigns.find((c) => c.id === id)?.name ?? ''
       adGroupRows.value = aggregateAdGroups(adGroupPerf)
+      impressionShareRows.value = perf
+        .filter((r) => r.campaign === campaignName.value && r.search_impression_share !== null)
+        .sort((a, b) => a.date.localeCompare(b.date))
 
       const adGroupIds = [...new Set(adGroupPerf.map((r) => r.ad_group_id))]
       const [keywordPerfByAdGroup, adPerfByAdGroup] = await Promise.all([
@@ -230,5 +246,5 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
 
   watch(campaignId, load, { immediate: true })
 
-  return { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, adRows }
+  return { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, adRows, impressionShareRows }
 }

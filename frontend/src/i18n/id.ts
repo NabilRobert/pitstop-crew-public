@@ -65,6 +65,8 @@ export default {
     ctr: 'CTR',
     cost: 'Biaya',
     conversions: 'Konversi',
+    impressionShare: 'Pangsa Tayangan',
+    optimizationScore: 'Skor Optimasi',
   },
   campaignTable: {
     columns: {
@@ -144,6 +146,10 @@ export default {
       excellent: 'Sangat Baik',
     },
     noData: 'Belum ada data iklan.',
+  },
+  impressionShareChart: {
+    title: 'Pangsa Tayangan Pencarian',
+    optimizationScore: 'Skor Optimasi',
   },
   campaignsList: {
     title: 'Kampanye',
