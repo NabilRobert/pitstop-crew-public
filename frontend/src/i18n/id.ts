@@ -201,6 +201,10 @@ export default {
     impressions: 'tayangan',
     conversions: 'konversi',
   },
+  changeEventTimeline: {
+    title: 'Riwayat Perubahan',
+    noData: 'Belum ada perubahan tercatat pada periode ini.',
+  },
   trendChart: {
     title: 'Tren',
   },

@@ -152,6 +152,21 @@ export interface RecommendationRow {
   applied: boolean
 }
 
+// v2 Stage 8 — change history. campaign/campaign_id are null for
+// account-level changes.
+export interface ChangeEventRow {
+  id: number
+  changed_at: string
+  campaign_id: number | null
+  campaign: string | null
+  resource_type: string
+  change_operation: 'CREATE' | 'UPDATE' | 'REMOVE'
+  field_changed: string | null
+  old_value: string | null
+  new_value: string | null
+  changed_by: string
+}
+
 export interface CriticIssue {
   quote: string
   reason: string

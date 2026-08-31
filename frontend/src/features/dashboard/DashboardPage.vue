@@ -14,6 +14,7 @@ import CampaignBarChart from './CampaignBarChart.vue'
 import SegmentBreakdownChart from './SegmentBreakdownChart.vue'
 import ConversionActionChart from './ConversionActionChart.vue'
 import RecommendationsList from './RecommendationsList.vue'
+import ChangeEventTimeline from './ChangeEventTimeline.vue'
 import { useReportDrawer } from '../../shared/report/useReportDrawer'
 import { useDashboard, PERIOD_OPTIONS } from './useDashboard'
 
@@ -26,6 +27,7 @@ const {
   segmentPerformance,
   conversionActions,
   recommendations,
+  changeEvents,
   dailyReport,
   campaigns,
   totals,
@@ -209,8 +211,9 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
         <ConversionActionChart :rows="conversionActions" />
       </div>
 
-      <div class="mt-8">
+      <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <RecommendationsList :rows="recommendations" />
+        <ChangeEventTimeline :rows="changeEvents" />
       </div>
 
       <ReportDrawer :open="!!activeDrawer" :title="drawerTitle()" @close="closeDrawer">

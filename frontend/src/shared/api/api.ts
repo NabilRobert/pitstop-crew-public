@@ -28,6 +28,7 @@ import type {
   ConversionActionRow,
   AssetGroupPerformanceRow,
   RecommendationRow,
+  ChangeEventRow,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -94,6 +95,7 @@ export const api = {
   assetGroupPerformance: (days = 30) =>
     request<AssetGroupPerformanceRow[]>(`/asset-groups/performance?days=${days}`),
   recommendations: (days = 30) => request<RecommendationRow[]>(`/recommendations?days=${days}`),
+  changeEvents: (days = 30) => request<ChangeEventRow[]>(`/change-events?days=${days}`),
   segmentPerformance: (days = 30) => request<SegmentPerformanceRow[]>(`/segments/performance?days=${days}`),
   settings: () => request<Settings>('/settings'),
   updateSettings: (payload: Partial<Settings>) =>

@@ -201,6 +201,10 @@ export default {
     impressions: 'impressions',
     conversions: 'conversions',
   },
+  changeEventTimeline: {
+    title: 'Change History',
+    noData: 'No changes recorded this window.',
+  },
   trendChart: {
     title: 'Trend',
   },

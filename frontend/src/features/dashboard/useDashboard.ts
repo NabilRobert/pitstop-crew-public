@@ -8,6 +8,7 @@ import type {
   SegmentPerformanceRow,
   ConversionActionRow,
   RecommendationRow,
+  ChangeEventRow,
   Report,
   SystemHealth,
 } from '../../shared/api/types'
@@ -57,6 +58,9 @@ export function useDashboard() {
   // legitimately show fewer (or none) if their generated_date falls
   // outside it.
   const recommendations = ref<RecommendationRow[]>([])
+  // v2 Stage 8 — change history. Same episodic/scripted, period-scoped
+  // pattern as recommendations above.
+  const changeEvents = ref<ChangeEventRow[]>([])
   const dailyReport = ref<Report>({ analysis: null, recommendation: null, summary: null })
   const systemHealth = ref<SystemHealth | null>(null)
   // Not period-scoped (campaign identity doesn't change with the date
@@ -145,17 +149,19 @@ export function useDashboard() {
   let requestToken = 0
   async function loadPerformance() {
     const token = ++requestToken
-    const [perf, segPerf, convActions, recs] = await Promise.all([
+    const [perf, segPerf, convActions, recs, changes] = await Promise.all([
       api.performance(days.value),
       api.segmentPerformance(days.value),
       api.conversionActionBreakdown(days.value),
       api.recommendations(days.value),
+      api.changeEvents(days.value),
     ])
     if (token !== requestToken) return
     performance.value = perf
     segmentPerformance.value = segPerf
     conversionActions.value = convActions
     recommendations.value = recs
+    changeEvents.value = changes
   }
 
   watch(days, () => {
@@ -190,6 +196,7 @@ export function useDashboard() {
     segmentPerformance,
     conversionActions,
     recommendations,
+    changeEvents,
     dailyReport,
     systemHealth,
     campaigns,
