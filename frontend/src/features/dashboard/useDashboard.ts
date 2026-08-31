@@ -115,8 +115,21 @@ export function useDashboard() {
   // dailyReport/systemHealth aren't period-scoped (a report, a health
   // snapshot) — only performance/segmentPerformance need refetching when
   // the selected period changes.
+  //
+  // requestToken guards against out-of-order responses: switching the
+  // period fires a new fetch without cancelling the previous one, and
+  // this backend's response time is highly variable under load (observed
+  // anywhere from ~1s to 100+s for other endpoints this session) — a
+  // slower earlier request can resolve AFTER a faster later one and
+  // silently overwrite it with stale data, making the chart look frozen
+  // on whatever period happened to win the race rather than the one
+  // currently selected. Only the response matching the request that was
+  // still latest when it resolves gets applied.
+  let requestToken = 0
   async function loadPerformance() {
+    const token = ++requestToken
     const [perf, segPerf] = await Promise.all([api.performance(days.value), api.segmentPerformance(days.value)])
+    if (token !== requestToken) return
     performance.value = perf
     segmentPerformance.value = segPerf
   }
