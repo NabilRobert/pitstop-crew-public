@@ -488,3 +488,26 @@ export const CONVERSION_ACTIONS: ConversionActionProfile[] = [
   { key: 'phone_call', name: 'Phone Call', category: 'PHONE_CALL_LEAD', countingType: 'ONE_PER_CLICK', share: 0.3 },
   { key: 'financing_page_visit', name: 'Financing Page Visit', category: 'PAGE_VIEW', countingType: 'MANY_PER_CLICK', share: 0.2 },
 ]
+
+// v2 Stage 6 — PMax asset groups. See docs/v2-*-plan.md. Scoped to the
+// `pmax` campaign only — PMax has no ad-group level in the real API
+// (asset-group based instead, see AD_GROUPS' comment). Themed by vehicle
+// category, splitting pmax's daily totals the same way ad groups split
+// their parent campaign's (via noisyConservingSplit — this is a genuine
+// sub-hierarchy, unlike Stage 5's flat account-wide conversion-action
+// split). adStrength is treated as static per asset group here (see
+// schema.sql's comment) even though the column lives on the per-day
+// performance table — matches Stage 3's ads.ad_strength simplification.
+export interface AssetGroupProfile {
+  key: string
+  name: string
+  share: number // share of pmax's daily totals
+  adStrength: 'poor' | 'average' | 'good' | 'excellent'
+}
+
+export const ASSET_GROUPS: AssetGroupProfile[] = [
+  { key: 'suvs_crossovers', name: 'SUVs & Crossovers', share: 0.35, adStrength: 'good' },
+  { key: 'sedans', name: 'Sedans', share: 0.3, adStrength: 'good' },
+  { key: 'trucks_pickups', name: 'Trucks & Pickups', share: 0.2, adStrength: 'average' },
+  { key: 'hatchbacks', name: 'Hatchbacks', share: 0.15, adStrength: 'average' },
+]

@@ -223,6 +223,26 @@ export async function getConversionActionBreakdown(days = 30, endDate?: string) 
   )
 }
 
+// v2 Stage 6 — PMax asset groups.
+
+/** Backs the PMax -> Asset Groups drill-down page, including each group's
+ * ad_strength for the day. Not scoped by campaignId param — every row is
+ * already implicitly pmax-only, since asset_groups only exist there. */
+export async function getAssetGroupPerformance(days = 30, endDate?: string) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  return query(
+    `SELECT agp.date, ag.id AS asset_group_id, ag.name AS asset_group, c.id AS campaign_id, c.name AS campaign,
+            agp.impressions, agp.clicks, agp.cost_micros, agp.conversions, agp.ad_strength
+     FROM asset_group_performance agp
+     JOIN asset_groups ag ON ag.id = agp.asset_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE agp.date BETWEEN $1 AND $2
+     ORDER BY agp.date, ag.name`,
+    [start, end]
+  )
+}
+
 /** Finds the analysis/recommendation that belong with a given summary —
  * pinned to the exact pipeline run that produced all three when available
  * (pipeline_run_id), falling back to "latest for this report_date" only

@@ -28,7 +28,18 @@ export async function syncDay(targetDate: string, seed = 0, dataSource = 'demo')
   const overrides = await getOverrides()
   const dayData = generateDay(targetDate, seed, overrides)
   await withTransaction(async (client) => {
-    await upsertDay(client, dayData, new Map(), new Map(), new Map(), new Map(), new Map(), new Map(), new Map())
+    await upsertDay(
+      client,
+      dayData,
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map()
+    )
   })
   return dayData
 }
@@ -63,6 +74,7 @@ export async function syncTrailingWindow(
     const searchTermIds = new Map<string, number>()
     const adIds = new Map<string, number>()
     const conversionActionIds = new Map<string, number>()
+    const assetGroupIds = new Map<string, number>()
     for (const dayData of dayDatas) {
       await upsertDay(
         client,
@@ -73,7 +85,8 @@ export async function syncTrailingWindow(
         keywordIds,
         searchTermIds,
         adIds,
-        conversionActionIds
+        conversionActionIds,
+        assetGroupIds
       )
     }
   })
@@ -166,7 +179,8 @@ async function upsertDay(
   keywordIds: Map<string, number>,
   searchTermIds: Map<string, number>,
   adIds: Map<string, number>,
-  conversionActionIds: Map<string, number>
+  conversionActionIds: Map<string, number>,
+  assetGroupIds: Map<string, number>
 ): Promise<void> {
   async function campaignIdFor(key: string): Promise<number> {
     if (!campaignIds.has(key)) campaignIds.set(key, await getOrCreateCampaign(client, key))
@@ -200,6 +214,12 @@ async function upsertDay(
       conversionActionIds.set(conversionActionKey, await getOrCreateConversionAction(client, conversionActionKey))
     }
     return conversionActionIds.get(conversionActionKey)!
+  }
+  async function assetGroupIdFor(assetGroupKey: string, campaignId: number): Promise<number> {
+    if (!assetGroupIds.has(assetGroupKey)) {
+      assetGroupIds.set(assetGroupKey, await getOrCreateAssetGroup(client, assetGroupKey, campaignId))
+    }
+    return assetGroupIds.get(assetGroupKey)!
   }
 
   for (const c of dayData.campaigns) {
@@ -358,6 +378,24 @@ async function upsertDay(
       [campaignId, conversionActionId, dayData.date, ca.conversions]
     )
   }
+
+  // v2 Stage 6 — PMax asset group performance.
+  for (const ag of dayData.assetGroups) {
+    const campaignId = await campaignIdFor(ag.campaignKey)
+    const assetGroupId = await assetGroupIdFor(ag.assetGroupKey, campaignId)
+    await client.query(
+      `INSERT INTO asset_group_performance
+          (asset_group_id, date, impressions, clicks, cost_micros, conversions, ad_strength)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT(asset_group_id, date) DO UPDATE SET
+          impressions = excluded.impressions,
+          clicks = excluded.clicks,
+          cost_micros = excluded.cost_micros,
+          conversions = excluded.conversions,
+          ad_strength = excluded.ad_strength`,
+      [assetGroupId, dayData.date, ag.impressions, ag.clicks, ag.costMicros, ag.conversions, ag.adStrength]
+    )
+  }
 }
 
 async function getOrCreateCampaign(client: PoolClient, campaignKey: string): Promise<number> {
@@ -470,6 +508,20 @@ async function getOrCreateConversionAction(client: PoolClient, conversionActionK
     `INSERT INTO conversion_actions (name, category, counting_type, data_source, status)
      VALUES ($1, $2, $3, 'demo', 'enabled') RETURNING id`,
     [ca.name, ca.category, ca.countingType]
+  )
+  return inserted.rows[0].id
+}
+
+async function getOrCreateAssetGroup(client: PoolClient, assetGroupKey: string, campaignId: number): Promise<number> {
+  const name = profile.ASSET_GROUPS.find((ag) => ag.key === assetGroupKey)!.name
+  const existing = await client.query<{ id: number }>(
+    'SELECT id FROM asset_groups WHERE campaign_id = $1 AND name = $2',
+    [campaignId, name]
+  )
+  if (existing.rows[0]) return existing.rows[0].id
+  const inserted = await client.query<{ id: number }>(
+    "INSERT INTO asset_groups (campaign_id, name, data_source, status) VALUES ($1, $2, 'demo', 'enabled') RETURNING id",
+    [campaignId, name]
   )
   return inserted.rows[0].id
 }

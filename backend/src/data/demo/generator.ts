@@ -250,6 +250,16 @@ export interface ConversionActionDay {
   conversions: number
 }
 
+export interface AssetGroupDay {
+  campaignKey: string
+  assetGroupKey: string
+  impressions: number
+  clicks: number
+  costMicros: number
+  conversions: number
+  adStrength: 'poor' | 'average' | 'good' | 'excellent'
+}
+
 export interface DayData {
   date: string
   state: State
@@ -260,6 +270,7 @@ export interface DayData {
   searchTerms: SearchTermDay[]
   ads: AdDay[]
   conversionActions: ConversionActionDay[]
+  assetGroups: AssetGroupDay[]
 }
 
 interface RawSegmentRow {
@@ -288,6 +299,7 @@ export function generateDay(
   const searchTermsOut: SearchTermDay[] = []
   const adsOut: AdDay[] = []
   const conversionActionsOut: ConversionActionDay[] = []
+  const assetGroupsOut: AssetGroupDay[] = []
 
   for (const c of profile.CAMPAIGNS) {
     const baseMult = stateMultiplier(state, seed, targetDate, c.key)
@@ -331,6 +343,33 @@ export function generateDay(
         conversionActionKey: ca.key,
         conversions: Math.round(conversionActionSplit[ca.key] * 100) / 100,
       })
+    }
+
+    // v2 Stage 6 — PMax asset groups. Scoped to pmax only — real PMax
+    // has no ad-group level (asset-group based instead). Splits pmax's
+    // totals the same way ad groups split their parent campaign's (a
+    // genuine sub-hierarchy, unlike Stage 5's flat conversion-action
+    // split), reusing noisyConservingSplit for day-to-day share wobble.
+    if (c.key === 'pmax') {
+      const assetGroupShares: Record<string, number> = {}
+      for (const ag of profile.ASSET_GROUPS) assetGroupShares[ag.key] = ag.share
+
+      const agImpressions = noisyConservingSplit(impressions, assetGroupShares, seed, targetDate, `${c.key}:assetgroup:impressions`)
+      const agClicks = noisyConservingSplit(clicks, assetGroupShares, seed, targetDate, `${c.key}:assetgroup:clicks`)
+      const agCost = noisyConservingSplit(costMicros, assetGroupShares, seed, targetDate, `${c.key}:assetgroup:cost`)
+      const agConversions = noisyConservingSplit(conversions, assetGroupShares, seed, targetDate, `${c.key}:assetgroup:conversions`)
+
+      for (const ag of profile.ASSET_GROUPS) {
+        assetGroupsOut.push({
+          campaignKey: c.key,
+          assetGroupKey: ag.key,
+          impressions: Math.round(agImpressions[ag.key]),
+          clicks: Math.round(agClicks[ag.key]),
+          costMicros: Math.round(agCost[ag.key]),
+          conversions: Math.round(agConversions[ag.key] * 100) / 100,
+          adStrength: ag.adStrength,
+        })
+      }
     }
 
     // Device breakdown — every campaign.
@@ -537,6 +576,7 @@ export function generateDay(
     searchTerms: searchTermsOut,
     ads: adsOut,
     conversionActions: conversionActionsOut,
+    assetGroups: assetGroupsOut,
   }
 }
 

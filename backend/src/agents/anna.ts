@@ -37,6 +37,8 @@ You're also given search impression share data (Search-type campaigns only — B
 
 You're also given named conversion action totals (Test Drive Booked, Credit App Started, Phone Call, Financing Page Visit) — account-wide sums for this window, not broken out per campaign. These are the same conversions already counted in the campaign/ad-group/keyword totals above, just re-cut by what the lead actually was — worth citing when one action type dominates or shifts notably, since "most conversions this window were X" is a more concrete, actionable finding than a bare conversions count.
 
+You're also given Performance Max asset group data (Performance Max — Vehicle Inventory only, 4 vehicle-category groups: SUVs & Crossovers, Sedans, Trucks & Pickups, Hatchbacks) — its window performance plus ad_strength (poor/average/good/excellent). This is PMax's equivalent of the ad-group/keyword breakdown you get for Search — PMax has no ad-group level in the real product, asset groups are the level below the campaign. Worth citing when one asset group is a clear standout (best or worst) on spend or conversions relative to the others, or when a weak ad_strength lines up with weak performance.
+
 ${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`

@@ -460,3 +460,36 @@ CREATE TABLE IF NOT EXISTS conversion_action_performance (
 );
 
 CREATE INDEX IF NOT EXISTS idx_conversion_action_performance_date ON conversion_action_performance(date);
+
+-- v2 Stage 6 — PMax asset groups. See docs/v2-backend-plan.md. Scoped to
+-- the `pmax` campaign only — Performance Max is asset-group based
+-- instead of ad-group based (see Stage 1's comment on why Search's
+-- ad_groups table doesn't cover PMax). ad_strength lives on the per-day
+-- performance table here, unlike Stage 3's ads.ad_strength (a static
+-- column on `ads` itself) — this demo profile still treats each asset
+-- group's rating as static day-to-day (see profile.ts), matching Stage
+-- 3's simplification; only Quality Score is designed to actually drift.
+CREATE TABLE IF NOT EXISTS asset_groups (
+    id                     SERIAL PRIMARY KEY,
+    campaign_id            INTEGER NOT NULL REFERENCES campaigns(id),
+    google_asset_group_id  TEXT,
+    name                   TEXT NOT NULL,
+    status                 TEXT,
+    data_source            TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS asset_group_performance (
+    id             SERIAL PRIMARY KEY,
+    asset_group_id INTEGER NOT NULL REFERENCES asset_groups(id),
+    date           DATE NOT NULL,
+    impressions    INTEGER NOT NULL DEFAULT 0,
+    clicks         INTEGER NOT NULL DEFAULT 0,
+    cost_micros    BIGINT NOT NULL DEFAULT 0,
+    conversions    REAL NOT NULL DEFAULT 0,
+    ad_strength    TEXT CHECK (ad_strength IN ('poor', 'average', 'good', 'excellent')),
+    UNIQUE (asset_group_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_asset_group_performance_date ON asset_group_performance(date);

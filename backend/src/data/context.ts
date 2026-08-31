@@ -298,6 +298,41 @@ export async function buildConversionActionContext(
   )
 }
 
+// v2 Stage 6 — PMax asset groups. Only 4 rows total (scoped to the pmax
+// campaign only — real PMax has no ad-group level, asset-group based
+// instead), same "bounded, return everything" reasoning as buildAdContext.
+// campaignId filter accepted for consistency with the other builders —
+// scoping to any non-pmax campaign correctly returns zero rows, since
+// asset_groups only exist under pmax.
+export async function buildAssetGroupContext(
+  endDate: string,
+  days: number,
+  campaignId?: number | null,
+  topN = 10
+): Promise<string> {
+  const startDate = addDays(endDate, -days)
+  const params: unknown[] = [startDate, endDate]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND ag.campaign_id = $${params.length}`
+  }
+  params.push(topN)
+  const rows = await query(
+    `SELECT ag.name AS asset_group, SUM(agp.impressions) AS total_impressions, SUM(agp.clicks) AS total_clicks,
+            SUM(agp.cost_micros) AS total_cost_micros, ROUND(SUM(agp.conversions)::numeric, 2) AS total_conversions,
+            (ARRAY_AGG(agp.ad_strength ORDER BY agp.date DESC))[1] AS ad_strength
+     FROM asset_group_performance agp
+     JOIN asset_groups ag ON ag.id = agp.asset_group_id
+     WHERE agp.date BETWEEN $1 AND $2 ${campaignFilter}
+     GROUP BY ag.name
+     ORDER BY total_cost_micros DESC
+     LIMIT $${params.length}`,
+    params
+  )
+  return CURRENCY_NOTE + JSON.stringify(rows)
+}
+
 /** Composes buildPerformanceContext + every v2 builder added so far —
  * used by both the daily pipeline (orchestrator.ts) and the Ask feature
  * (ask.ts), so asking "what's my Quality Score on Search-Model?" actually
@@ -312,12 +347,14 @@ export async function buildFullContext(args: BuildPerformanceContextArgs = {}): 
   const adContext = await buildAdContext(endDate, days, args.campaignId)
   const impressionShareContext = await buildImpressionShareContext(endDate, days, args.campaignId)
   const conversionActionContext = await buildConversionActionContext(endDate, days, args.campaignId)
+  const assetGroupContext = await buildAssetGroupContext(endDate, days, args.campaignId)
   return (
     `${performanceContext}\n\n` +
     `Top ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}\n\n` +
     `Search terms with the most wasted spend this window (aggregated top-N, see note above):\n${searchTermContext}\n\n` +
     `Ad creatives (headlines/descriptions/ad_strength) with their performance this window:\n${adContext}\n\n` +
     `Search impression share, why it's lost, and Optimization Score this window (see note above on scope):\n${impressionShareContext}\n\n` +
-    `Named conversion actions this window (account-wide totals):\n${conversionActionContext}`
+    `Named conversion actions this window (account-wide totals):\n${conversionActionContext}\n\n` +
+    `Performance Max asset groups (vehicle-category-themed, pmax campaign only) this window:\n${assetGroupContext}`
   )
 }
