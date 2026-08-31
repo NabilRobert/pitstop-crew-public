@@ -1,5 +1,5 @@
-// v2 Stage 7 (and Stage 8, once added) — episodic/scripted demo events:
-// Google Ads' own Recommendations, and (stage 8) change history. See
+// v2 Stage 7/8 — episodic/scripted demo events: Google Ads' own
+// Recommendations, and change history. See
 // docs/v2-backend-plan.md decision #7. Same purity contract as
 // generator.ts's generateDay: no Date.now(), no unseeded random — just
 // profile.ts's static dayOffset-keyed arrays resolved into absolute
@@ -39,5 +39,31 @@ export function getRecommendations(): ResolvedRecommendation[] {
     dismissed: r.dismissed,
     applied: r.applied,
     generatedDate: addDays(profile.START_DATE, r.dayOffset),
+  }))
+}
+
+export interface ResolvedChangeEvent {
+  key: string
+  campaignKey: string | null
+  resourceType: string
+  changeOperation: 'CREATE' | 'UPDATE' | 'REMOVE'
+  fieldChanged: string | null
+  oldValue: string | null
+  newValue: string | null
+  changedBy: string
+  changedAt: string // ISO timestamp
+}
+
+export function getChangeEvents(): ResolvedChangeEvent[] {
+  return profile.CHANGE_EVENTS.map((c) => ({
+    key: c.key,
+    campaignKey: c.campaignKey,
+    resourceType: c.resourceType,
+    changeOperation: c.changeOperation,
+    fieldChanged: c.fieldChanged,
+    oldValue: c.oldValue,
+    newValue: c.newValue,
+    changedBy: c.changedBy,
+    changedAt: `${addDays(profile.START_DATE, c.dayOffset)}T${c.timeOfDay}Z`,
   }))
 }

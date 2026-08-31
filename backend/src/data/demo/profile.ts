@@ -594,3 +594,81 @@ export const RECOMMENDATIONS: RecommendationProfile[] = [
     dayOffset: 40,
   },
 ]
+
+// v2 Stage 8 — change history. See docs/v2-*-plan.md decision #7: same
+// episodic/scripted pattern as RECOMMENDATIONS above, resolved by
+// scriptedEvents.ts. dayOffset is days since START_DATE; timeOfDay gives
+// changed_at (a TIMESTAMPTZ) a plausible business-hours time, not just a
+// bare date.
+//
+// The budget-cut event lands EXACTLY at DECLINE_START_DAY on
+// search_model — the plan's one required correlation, so change history
+// and the decline's start line up causally (a real "why" story for
+// Anna/Rico), not two disconnected features. The RSA-headlines event on
+// Model Suzuki B is a deliberate second correlation, timed just after
+// Stage 7's rec_suzuki_rsa_assets recommendation (dayOffset 70) — this
+// change event is that recommendation actually being applied, not an
+// unrelated coincidence.
+export interface ChangeEventProfile {
+  key: string
+  campaignKey: string | null // null = account-level
+  resourceType: string // CAMPAIGN, CAMPAIGN_BUDGET, AD_GROUP, AD, KEYWORD, BIDDING_STRATEGY
+  changeOperation: 'CREATE' | 'UPDATE' | 'REMOVE'
+  fieldChanged: string | null
+  oldValue: string | null
+  newValue: string | null
+  changedBy: string
+  dayOffset: number
+  timeOfDay: string // HH:MM:SS, UTC
+}
+
+export const CHANGE_EVENTS: ChangeEventProfile[] = [
+  {
+    key: 'change_search_model_budget_cut',
+    campaignKey: 'search_model',
+    resourceType: 'CAMPAIGN_BUDGET',
+    changeOperation: 'UPDATE',
+    fieldChanged: 'daily_budget',
+    oldValue: 'Rp 30,000/day',
+    newValue: 'Rp 20,000/day',
+    changedBy: 'ads-manager@dealername.com',
+    dayOffset: DECLINE_START_DAY,
+    timeOfDay: '09:15:00',
+  },
+  {
+    key: 'change_account_portfolio_bidding',
+    campaignKey: null,
+    resourceType: 'BIDDING_STRATEGY',
+    changeOperation: 'CREATE',
+    fieldChanged: null,
+    oldValue: null,
+    newValue: 'Maximize Conversions (portfolio)',
+    changedBy: 'ads-manager@dealername.com',
+    dayOffset: 45,
+    timeOfDay: '11:00:00',
+  },
+  {
+    key: 'change_generic_bidding_strategy',
+    campaignKey: 'search_generic',
+    resourceType: 'BIDDING_STRATEGY',
+    changeOperation: 'UPDATE',
+    fieldChanged: 'bidding_strategy_type',
+    oldValue: 'Manual CPC',
+    newValue: 'Maximize Conversions',
+    changedBy: 'ads-manager@dealername.com',
+    dayOffset: 50,
+    timeOfDay: '14:30:00',
+  },
+  {
+    key: 'change_suzuki_b_headlines_added',
+    campaignKey: 'search_model',
+    resourceType: 'AD',
+    changeOperation: 'UPDATE',
+    fieldChanged: 'headlines',
+    oldValue: '3 headlines',
+    newValue: '5 headlines',
+    changedBy: 'ads-manager@dealername.com',
+    dayOffset: 75,
+    timeOfDay: '10:45:00',
+  },
+]

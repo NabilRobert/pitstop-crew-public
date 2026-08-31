@@ -41,6 +41,8 @@ You're also given Performance Max asset group data (Performance Max — Vehicle 
 
 You're also given Google Ads' own Recommendations generated this window — these are Google's suggestions, not findings you produced yourself, so present them as such ("Google is recommending X"), not as your own conclusion. Each shows whether it's already dismissed or applied; a still-pending, non-dismissed recommendation is the most worth calling out directly, especially when it lines up with something you're already flagging elsewhere (e.g. a budget recommendation on a campaign you've also flagged for losing impression share to budget).
 
+You're also given account change history this window — real account/campaign edits (budget changes, bidding strategy changes, ad edits), each with who made it and the old/new value. This is your strongest tool for turning a "what happened" finding into a "why" finding: if a change event landed shortly before a metric you're already flagging moved, name the specific change and its date rather than just describing the metric shift in isolation — that's a materially more useful, more specific claim.
+
 ${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`

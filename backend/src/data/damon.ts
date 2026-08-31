@@ -13,7 +13,7 @@ import { withTransaction } from './db.js'
 import { generateDay, type DayData } from './demo/generator.js'
 import * as profile from './demo/profile.js'
 import { getOverrides } from './demo/timeMachine.js'
-import { getRecommendations } from './demo/scriptedEvents.js'
+import { getRecommendations, getChangeEvents } from './demo/scriptedEvents.js'
 import { GADS_TARGET_CUSTOMER_ID } from '../platform/config.js'
 
 function addDays(dateStr: string, days: number): string {
@@ -91,24 +91,26 @@ export async function syncTrailingWindow(
       )
     }
   })
-  // v2 Stage 7 — Google Ads' own Recommendations. Unconditional, not
-  // batched into the per-day loop above: this is a static, episodic list
-  // (see profile.ts's RECOMMENDATIONS), idempotently upserted every sync
-  // regardless of the requested window — cheap (currently 4 rows).
+  // v2 Stage 7/8 — Recommendations + change history. Unconditional, not
+  // batched into the per-day loop above: these are static, episodic
+  // lists (see profile.ts's RECOMMENDATIONS/CHANGE_EVENTS), idempotently
+  // upserted every sync regardless of the requested window — cheap
+  // (currently 4 + 4 rows).
   await syncScriptedEvents()
   return dayDatas
 }
 
-/** v2 Stage 7 — idempotently upserts profile.ts's static Recommendations
- * list (via scriptedEvents.ts's pure resolver). Deliberately NOT an
- * INSERT ... ON CONFLICT despite recommendations' UNIQUE constraint
- * covering exactly these columns: Postgres treats NULL as distinct from
- * NULL for uniqueness purposes, so ON CONFLICT (campaign_id, ...) would
- * never fire for account-level rows (campaign_id IS NULL) — every re-run
- * would insert a fresh duplicate instead of updating. `IS NOT DISTINCT
- * FROM` (NULL-safe equality) sidesteps that, so this explicit
- * check-then-insert/update works correctly for both scoped and
- * account-level recommendations alike. */
+/** v2 Stage 7/8 — idempotently upserts profile.ts's static Recommendations
+ * and change-events lists (via scriptedEvents.ts's pure resolvers).
+ * Deliberately NOT INSERT ... ON CONFLICT despite both tables' UNIQUE
+ * constraints covering exactly these columns: Postgres treats NULL as
+ * distinct from NULL for uniqueness purposes, so ON CONFLICT would never
+ * fire for account-level rows (campaign_id IS NULL) — every re-run would
+ * insert a fresh duplicate instead of updating. `IS NOT DISTINCT FROM`
+ * (NULL-safe equality) sidesteps that, so this explicit check-then-
+ * insert/update works correctly for both scoped and account-level rows
+ * alike (change_events also has a nullable field_changed in its unique
+ * key — same treatment). */
 export async function syncScriptedEvents(): Promise<void> {
   const recommendations = getRecommendations()
   await withTransaction(async (client) => {
@@ -149,6 +151,42 @@ export async function syncScriptedEvents(): Promise<void> {
             r.dismissed,
             r.applied,
             r.generatedDate,
+          ]
+        )
+      }
+    }
+
+    const changeEvents = getChangeEvents()
+    for (const c of changeEvents) {
+      const campaignId = c.campaignKey != null ? await campaignIdFor(c.campaignKey) : null
+      const existing = await client.query<{ id: number }>(
+        `SELECT id FROM change_events
+         WHERE campaign_id IS NOT DISTINCT FROM $1
+           AND changed_at = $2 AND field_changed IS NOT DISTINCT FROM $3`,
+        [campaignId, c.changedAt, c.fieldChanged]
+      )
+      if (existing.rows[0]) {
+        await client.query(
+          `UPDATE change_events SET
+              resource_type = $1, change_operation = $2, old_value = $3, new_value = $4, changed_by = $5
+           WHERE id = $6`,
+          [c.resourceType, c.changeOperation, c.oldValue, c.newValue, c.changedBy, existing.rows[0].id]
+        )
+      } else {
+        await client.query(
+          `INSERT INTO change_events
+              (campaign_id, changed_at, resource_type, change_operation,
+               field_changed, old_value, new_value, changed_by, data_source)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'demo')`,
+          [
+            campaignId,
+            c.changedAt,
+            c.resourceType,
+            c.changeOperation,
+            c.fieldChanged,
+            c.oldValue,
+            c.newValue,
+            c.changedBy,
           ]
         )
       }

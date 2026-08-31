@@ -368,6 +368,42 @@ export async function buildRecommendationsContext(
   )
 }
 
+// v2 Stage 8 — change history. Only 4 rows total (a static, hand-
+// authored list — see profile.ts's CHANGE_EVENTS), same "bounded,
+// return everything" reasoning as buildRecommendationsContext. campaign
+// is null for account-level changes (LEFT JOIN, not INNER).
+export async function buildChangeEventContext(
+  endDate: string,
+  days: number,
+  campaignId?: number | null
+): Promise<string> {
+  const startDate = `${addDays(endDate, -days)}T00:00:00Z`
+  const endDateTime = `${endDate}T23:59:59Z`
+  const params: unknown[] = [startDate, endDateTime]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND ce.campaign_id = $${params.length}`
+  }
+  const rows = await query(
+    `SELECT ce.changed_at, c.name AS campaign, ce.resource_type, ce.change_operation,
+            ce.field_changed, ce.old_value, ce.new_value, ce.changed_by
+     FROM change_events ce
+     LEFT JOIN campaigns c ON c.id = ce.campaign_id
+     WHERE ce.changed_at BETWEEN $1 AND $2 ${campaignFilter}
+     ORDER BY ce.changed_at DESC`,
+    params
+  )
+  return (
+    'Account change history for this window — real account/campaign edits (budget changes, bidding strategy ' +
+    "changes, ad edits), not AI-generated findings. campaign is null for account-level changes. Worth " +
+    "correlating against a performance shift you're already flagging on the same campaign around the same " +
+    "date — a change event landing right before a metric moves is a much stronger, more specific claim than " +
+    "citing the metric move alone.\n\n" +
+    JSON.stringify(rows)
+  )
+}
+
 /** Composes buildPerformanceContext + every v2 builder added so far —
  * used by both the daily pipeline (orchestrator.ts) and the Ask feature
  * (ask.ts), so asking "what's my Quality Score on Search-Model?" actually
@@ -384,6 +420,7 @@ export async function buildFullContext(args: BuildPerformanceContextArgs = {}): 
   const conversionActionContext = await buildConversionActionContext(endDate, days, args.campaignId)
   const assetGroupContext = await buildAssetGroupContext(endDate, days, args.campaignId)
   const recommendationsContext = await buildRecommendationsContext(endDate, days, args.campaignId)
+  const changeEventContext = await buildChangeEventContext(endDate, days, args.campaignId)
   return (
     `${performanceContext}\n\n` +
     `Top ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}\n\n` +
@@ -392,6 +429,7 @@ export async function buildFullContext(args: BuildPerformanceContextArgs = {}): 
     `Search impression share, why it's lost, and Optimization Score this window (see note above on scope):\n${impressionShareContext}\n\n` +
     `Named conversion actions this window (account-wide totals):\n${conversionActionContext}\n\n` +
     `Performance Max asset groups (vehicle-category-themed, pmax campaign only) this window:\n${assetGroupContext}\n\n` +
-    `Google Ads' own Recommendations generated this window (see note above on scope):\n${recommendationsContext}`
+    `Google Ads' own Recommendations generated this window (see note above on scope):\n${recommendationsContext}\n\n` +
+    `Account change history this window (see note above on scope):\n${changeEventContext}`
   )
 }

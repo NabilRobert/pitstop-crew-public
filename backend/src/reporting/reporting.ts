@@ -261,6 +261,25 @@ export async function getRecommendations(days = 30, endDate?: string) {
   )
 }
 
+// v2 Stage 8 — change history.
+
+/** Backs a Change History list view. campaign is null for account-level
+ * changes (LEFT JOIN, not INNER). */
+export async function getChangeEvents(days = 30, endDate?: string) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = `${addDays(end, -days)}T00:00:00Z`
+  const endDateTime = `${end}T23:59:59Z`
+  return query(
+    `SELECT ce.id, ce.changed_at, c.id AS campaign_id, c.name AS campaign, ce.resource_type,
+            ce.change_operation, ce.field_changed, ce.old_value, ce.new_value, ce.changed_by
+     FROM change_events ce
+     LEFT JOIN campaigns c ON c.id = ce.campaign_id
+     WHERE ce.changed_at BETWEEN $1 AND $2
+     ORDER BY ce.changed_at DESC`,
+    [start, endDateTime]
+  )
+}
+
 /** Finds the analysis/recommendation that belong with a given summary —
  * pinned to the exact pipeline run that produced all three when available
  * (pipeline_run_id), falling back to "latest for this report_date" only

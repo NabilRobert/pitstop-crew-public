@@ -517,3 +517,30 @@ CREATE TABLE IF NOT EXISTS recommendations (
     created_at                TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (campaign_id, generated_date, recommendation_type, title)
 );
+
+-- v2 Stage 8 — change history. See docs/v2-backend-plan.md. Episodic/
+-- scripted, same pattern as Stage 7's recommendations (static list in
+-- profile.ts, resolved by scriptedEvents.ts, idempotently upserted).
+-- field_changed/old_value/new_value are deliberately flattened text vs.
+-- the real API's full protobuf resource snapshots — far more directly
+-- quotable by Anna, and there's no UI need for a full diff. campaign_id
+-- NULL means an account-level change (e.g. a portfolio bid strategy not
+-- tied to one campaign). One change event lands exactly at
+-- DECLINE_START_DAY on search_model (a budget cut) — see profile.ts.
+CREATE TABLE IF NOT EXISTS change_events (
+    id                      SERIAL PRIMARY KEY,
+    campaign_id             INTEGER REFERENCES campaigns(id),
+    google_change_event_id  TEXT,
+    changed_at              TIMESTAMPTZ NOT NULL,
+    resource_type           TEXT NOT NULL, -- CAMPAIGN, CAMPAIGN_BUDGET, AD_GROUP, AD, KEYWORD, BIDDING_STRATEGY
+    change_operation        TEXT NOT NULL CHECK (change_operation IN ('CREATE', 'UPDATE', 'REMOVE')),
+    field_changed           TEXT,
+    old_value               TEXT,
+    new_value               TEXT,
+    changed_by              TEXT,
+    data_source             TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, changed_at, field_changed)
+);
+
+CREATE INDEX IF NOT EXISTS idx_change_events_changed_at ON change_events(changed_at);
