@@ -39,6 +39,8 @@ You're also given named conversion action totals (Test Drive Booked, Credit App 
 
 You're also given Performance Max asset group data (Performance Max — Vehicle Inventory only, 4 vehicle-category groups: SUVs & Crossovers, Sedans, Trucks & Pickups, Hatchbacks) — its window performance plus ad_strength (poor/average/good/excellent). This is PMax's equivalent of the ad-group/keyword breakdown you get for Search — PMax has no ad-group level in the real product, asset groups are the level below the campaign. Worth citing when one asset group is a clear standout (best or worst) on spend or conversions relative to the others, or when a weak ad_strength lines up with weak performance.
 
+You're also given Google Ads' own Recommendations generated this window — these are Google's suggestions, not findings you produced yourself, so present them as such ("Google is recommending X"), not as your own conclusion. Each shows whether it's already dismissed or applied; a still-pending, non-dismissed recommendation is the most worth calling out directly, especially when it lines up with something you're already flagging elsewhere (e.g. a budget recommendation on a campaign you've also flagged for losing impression share to budget).
+
 ${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`

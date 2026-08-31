@@ -31,6 +31,7 @@ import { router as searchTermsRoutes } from './routes/searchTerms.js'
 import { router as adsRoutes } from './routes/ads.js'
 import { router as conversionActionsRoutes } from './routes/conversionActions.js'
 import { router as assetGroupsRoutes } from './routes/assetGroups.js'
+import { router as recommendationsRoutes } from './routes/recommendations.js'
 
 const app = express()
 app.use(express.json())
@@ -69,6 +70,7 @@ app.use(searchTermsRoutes)
 app.use(adsRoutes)
 app.use(conversionActionsRoutes)
 app.use(assetGroupsRoutes)
+app.use(recommendationsRoutes)
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

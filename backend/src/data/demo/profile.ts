@@ -511,3 +511,86 @@ export const ASSET_GROUPS: AssetGroupProfile[] = [
   { key: 'trucks_pickups', name: 'Trucks & Pickups', share: 0.2, adStrength: 'average' },
   { key: 'hatchbacks', name: 'Hatchbacks', share: 0.15, adStrength: 'average' },
 ]
+
+// v2 Stage 7 — Google Ads' own Recommendations. See docs/v2-*-plan.md
+// decision #7: episodic/scripted, not generated inside the daily Markov
+// loop — a static, hand-authored list (same pattern as DECLINE_START_DAY/
+// SEASONAL_SPIKE_START_DAY), resolved into absolute dates by
+// scriptedEvents.ts. dayOffset is days since START_DATE, same convention
+// as the decline/spike constants above.
+//
+// The budget recommendation for search_model is deliberately dated after
+// DECLINE_START_DAY + DECLINE_DURATION_DAYS (i.e. once the decline is
+// well underway and its budget-lost impression share — Stage 4 — is
+// visibly elevated) — a genuine "why" story: this recommendation exists
+// *because* that diagnosis is already visible in the data, not two
+// disconnected features. The RSA-asset recommendation similarly targets
+// Model Suzuki B, the poor-rated ad from Stage 3. dismissed/applied vary
+// across the list on purpose — a real account has a mix of pending,
+// dismissed, and already-applied recommendations, not a uniform state.
+export interface RecommendationProfile {
+  key: string
+  campaignKey: string | null // null = account-level
+  recommendationType: string
+  title: string
+  description: string
+  impactImpressionsPct: number | null
+  impactConversionsPct: number | null
+  dismissed: boolean
+  applied: boolean
+  dayOffset: number
+}
+
+export const RECOMMENDATIONS: RecommendationProfile[] = [
+  {
+    key: 'rec_search_model_budget',
+    campaignKey: 'search_model',
+    recommendationType: 'CAMPAIGN_BUDGET',
+    title: 'Increase budget for Search — Model + Suburb',
+    description:
+      'This campaign is losing a significant share of impressions to budget constraints, not ad rank. Raising the daily budget could recover missed impressions and conversions.',
+    impactImpressionsPct: 18,
+    impactConversionsPct: 12,
+    dismissed: false,
+    applied: false,
+    dayOffset: 65,
+  },
+  {
+    key: 'rec_suzuki_rsa_assets',
+    campaignKey: 'search_model',
+    recommendationType: 'RESPONSIVE_SEARCH_AD_ASSET',
+    title: 'Add more headlines to Model Suzuki B',
+    description:
+      'This ad has a Poor ad strength rating. Adding more unique headlines and descriptions can improve ad strength and performance.',
+    impactImpressionsPct: 4,
+    impactConversionsPct: 3,
+    dismissed: false,
+    applied: false,
+    dayOffset: 70,
+  },
+  {
+    key: 'rec_generic_keyword_match_type',
+    campaignKey: 'search_generic',
+    recommendationType: 'KEYWORD_MATCH_TYPE',
+    title: 'Broaden match type for "used cars for sale"',
+    description: 'Switching this keyword to broad match could capture more relevant search volume.',
+    impactImpressionsPct: 6,
+    impactConversionsPct: 2,
+    dismissed: true,
+    applied: false,
+    dayOffset: 55,
+  },
+  {
+    key: 'rec_account_callout_extensions',
+    campaignKey: null,
+    recommendationType: 'CALLOUT_EXTENSION',
+    title: 'Add callout extensions to your account',
+    description:
+      'Callout extensions highlight unique selling points like "Free Financing" or "150-Point Inspection" alongside your ads.',
+    impactImpressionsPct: null,
+    impactConversionsPct: 3,
+    dismissed: false,
+    applied: true,
+    dayOffset: 40,
+  },
+]

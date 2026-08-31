@@ -243,6 +243,24 @@ export async function getAssetGroupPerformance(days = 30, endDate?: string) {
   )
 }
 
+// v2 Stage 7 — Google Ads' own Recommendations.
+
+/** Backs a Recommendations list view. campaign is null for account-level
+ * recommendations (LEFT JOIN, not INNER). */
+export async function getRecommendations(days = 30, endDate?: string) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  return query(
+    `SELECT r.id, r.generated_date, c.id AS campaign_id, c.name AS campaign, r.recommendation_type,
+            r.title, r.description, r.impact_impressions_pct, r.impact_conversions_pct, r.dismissed, r.applied
+     FROM recommendations r
+     LEFT JOIN campaigns c ON c.id = r.campaign_id
+     WHERE r.generated_date BETWEEN $1 AND $2
+     ORDER BY r.generated_date DESC`,
+    [start, end]
+  )
+}
+
 /** Finds the analysis/recommendation that belong with a given summary —
  * pinned to the exact pipeline run that produced all three when available
  * (pipeline_run_id), falling back to "latest for this report_date" only

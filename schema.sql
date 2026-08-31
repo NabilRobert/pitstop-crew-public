@@ -493,3 +493,27 @@ CREATE TABLE IF NOT EXISTS asset_group_performance (
 );
 
 CREATE INDEX IF NOT EXISTS idx_asset_group_performance_date ON asset_group_performance(date);
+
+-- v2 Stage 7 — Google Ads' own Recommendations. See docs/v2-backend-plan.md.
+-- Episodic/scripted, not generated inside the daily Markov loop: a
+-- static, hand-authored list in profile.ts (src/data/demo/scriptedEvents.ts
+-- resolves its dayOffsets to absolute dates), upserted idempotently once
+-- rather than derived fresh from (date, seed) on every call — matches
+-- the existing DECLINE_START_DAY/SEASONAL_SPIKE_START_DAY scripted-moment
+-- pattern. campaign_id NULL means an account-level recommendation.
+CREATE TABLE IF NOT EXISTS recommendations (
+    id                        SERIAL PRIMARY KEY,
+    campaign_id               INTEGER REFERENCES campaigns(id),
+    google_recommendation_id  TEXT,
+    recommendation_type       TEXT NOT NULL,
+    title                     TEXT NOT NULL,
+    description               TEXT,
+    impact_impressions_pct    REAL,
+    impact_conversions_pct    REAL,
+    dismissed                 BOOLEAN NOT NULL DEFAULT false,
+    applied                   BOOLEAN NOT NULL DEFAULT false,
+    generated_date            DATE NOT NULL,
+    data_source               TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, generated_date, recommendation_type, title)
+);

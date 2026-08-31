@@ -13,6 +13,7 @@ import { withTransaction } from './db.js'
 import { generateDay, type DayData } from './demo/generator.js'
 import * as profile from './demo/profile.js'
 import { getOverrides } from './demo/timeMachine.js'
+import { getRecommendations } from './demo/scriptedEvents.js'
 import { GADS_TARGET_CUSTOMER_ID } from '../platform/config.js'
 
 function addDays(dateStr: string, days: number): string {
@@ -90,7 +91,69 @@ export async function syncTrailingWindow(
       )
     }
   })
+  // v2 Stage 7 — Google Ads' own Recommendations. Unconditional, not
+  // batched into the per-day loop above: this is a static, episodic list
+  // (see profile.ts's RECOMMENDATIONS), idempotently upserted every sync
+  // regardless of the requested window — cheap (currently 4 rows).
+  await syncScriptedEvents()
   return dayDatas
+}
+
+/** v2 Stage 7 — idempotently upserts profile.ts's static Recommendations
+ * list (via scriptedEvents.ts's pure resolver). Deliberately NOT an
+ * INSERT ... ON CONFLICT despite recommendations' UNIQUE constraint
+ * covering exactly these columns: Postgres treats NULL as distinct from
+ * NULL for uniqueness purposes, so ON CONFLICT (campaign_id, ...) would
+ * never fire for account-level rows (campaign_id IS NULL) — every re-run
+ * would insert a fresh duplicate instead of updating. `IS NOT DISTINCT
+ * FROM` (NULL-safe equality) sidesteps that, so this explicit
+ * check-then-insert/update works correctly for both scoped and
+ * account-level recommendations alike. */
+export async function syncScriptedEvents(): Promise<void> {
+  const recommendations = getRecommendations()
+  await withTransaction(async (client) => {
+    const campaignIds = new Map<string, number>()
+    async function campaignIdFor(key: string): Promise<number> {
+      if (!campaignIds.has(key)) campaignIds.set(key, await getOrCreateCampaign(client, key))
+      return campaignIds.get(key)!
+    }
+    for (const r of recommendations) {
+      const campaignId = r.campaignKey != null ? await campaignIdFor(r.campaignKey) : null
+      const existing = await client.query<{ id: number }>(
+        `SELECT id FROM recommendations
+         WHERE campaign_id IS NOT DISTINCT FROM $1
+           AND generated_date = $2 AND recommendation_type = $3 AND title = $4`,
+        [campaignId, r.generatedDate, r.recommendationType, r.title]
+      )
+      if (existing.rows[0]) {
+        await client.query(
+          `UPDATE recommendations SET
+              description = $1, impact_impressions_pct = $2, impact_conversions_pct = $3,
+              dismissed = $4, applied = $5
+           WHERE id = $6`,
+          [r.description, r.impactImpressionsPct, r.impactConversionsPct, r.dismissed, r.applied, existing.rows[0].id]
+        )
+      } else {
+        await client.query(
+          `INSERT INTO recommendations
+              (campaign_id, recommendation_type, title, description,
+               impact_impressions_pct, impact_conversions_pct, dismissed, applied, generated_date, data_source)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'demo')`,
+          [
+            campaignId,
+            r.recommendationType,
+            r.title,
+            r.description,
+            r.impactImpressionsPct,
+            r.impactConversionsPct,
+            r.dismissed,
+            r.applied,
+            r.generatedDate,
+          ]
+        )
+      }
+    }
+  })
 }
 
 /** Basic campaign performance only — see module docstring. Returns the
