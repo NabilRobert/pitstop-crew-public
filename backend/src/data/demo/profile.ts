@@ -672,3 +672,34 @@ export const CHANGE_EVENTS: ChangeEventProfile[] = [
     timeOfDay: '10:45:00',
   },
 ]
+
+// v2 Stage 9 — demographic segments. See docs/v2-*-plan.md decision #5:
+// no schema change needed, segments.segment_type already covers
+// age_range/household_income. Split unconditionally across all 5
+// campaigns — same code path as DEVICES above, no geography-style
+// campaign restriction and no in-market-style outperformance boost.
+// Shares reflect a realistic used-car-buyer skew: 25-54 dominates,
+// income skews toward "top 50%" (a car purchase, even used, is a
+// meaningful expense).
+export interface AgeRangeProfile {
+  value: string
+  share: number
+}
+export const AGE_RANGES: AgeRangeProfile[] = [
+  { value: '18-24', share: 0.08 },
+  { value: '25-34', share: 0.28 },
+  { value: '35-44', share: 0.27 },
+  { value: '45-54', share: 0.2 },
+  { value: '55-64', share: 0.12 },
+  { value: '65+', share: 0.05 },
+]
+
+export interface HouseholdIncomeProfile {
+  value: string
+  share: number
+}
+export const HOUSEHOLD_INCOMES: HouseholdIncomeProfile[] = [
+  { value: 'Top 50%', share: 0.55 },
+  { value: 'Lower 50%', share: 0.3 },
+  { value: 'Unknown', share: 0.15 },
+]

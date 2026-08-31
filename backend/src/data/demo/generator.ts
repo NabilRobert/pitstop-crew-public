@@ -396,6 +396,56 @@ export function generateDay(
       })
     }
 
+    // v2 Stage 9 — demographic segments (age_range/household_income).
+    // Same unconditional, every-campaign, no-boost pattern as the device
+    // breakdown above — no geography-style campaign restriction, no
+    // in-market-style outperformance boost.
+    const ageRangeShares: Record<string, number> = {}
+    for (const a of profile.AGE_RANGES) ageRangeShares[a.value] = a.share
+    for (const [field, total] of [
+      ['impressions', impressions],
+      ['clicks', clicks],
+      ['costMicros', costMicros],
+    ] as const) {
+      const split = splitConservingTotal(total, ageRangeShares, '', 1.0)
+      for (const [value, amount] of Object.entries(split)) {
+        rawSegmentRows.push({ campaignKey: c.key, segmentType: 'age_range', segmentValue: value, field, amount })
+      }
+    }
+    const ageRangeConvSplit = splitConservingTotal(conversions, ageRangeShares, '', 1.0)
+    for (const [value, amount] of Object.entries(ageRangeConvSplit)) {
+      rawSegmentRows.push({
+        campaignKey: c.key,
+        segmentType: 'age_range',
+        segmentValue: value,
+        field: 'conversions',
+        amount,
+      })
+    }
+
+    const householdIncomeShares: Record<string, number> = {}
+    for (const h of profile.HOUSEHOLD_INCOMES) householdIncomeShares[h.value] = h.share
+    for (const [field, total] of [
+      ['impressions', impressions],
+      ['clicks', clicks],
+      ['costMicros', costMicros],
+    ] as const) {
+      const split = splitConservingTotal(total, householdIncomeShares, '', 1.0)
+      for (const [value, amount] of Object.entries(split)) {
+        rawSegmentRows.push({ campaignKey: c.key, segmentType: 'household_income', segmentValue: value, field, amount })
+      }
+    }
+    const householdIncomeConvSplit = splitConservingTotal(conversions, householdIncomeShares, '', 1.0)
+    for (const [value, amount] of Object.entries(householdIncomeConvSplit)) {
+      rawSegmentRows.push({
+        campaignKey: c.key,
+        segmentType: 'household_income',
+        segmentValue: value,
+        field: 'conversions',
+        amount,
+      })
+    }
+
     // Geography breakdown — search_generic and pmax only, with the
     // deliberately outperforming suburb boosted on conversions.
     if (profile.GEOGRAPHY_CAMPAIGNS.includes(c.key)) {
