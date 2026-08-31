@@ -12,6 +12,7 @@ import WhyTrailPanel from '../../shared/report/WhyTrailPanel.vue'
 import TrendChart from './TrendChart.vue'
 import CampaignBarChart from './CampaignBarChart.vue'
 import SegmentBreakdownChart from './SegmentBreakdownChart.vue'
+import ConversionActionChart from './ConversionActionChart.vue'
 import { useReportDrawer } from '../../shared/report/useReportDrawer'
 import { useDashboard, PERIOD_OPTIONS } from './useDashboard'
 
@@ -22,6 +23,7 @@ const {
   days,
   performance,
   segmentPerformance,
+  conversionActions,
   dailyReport,
   campaigns,
   totals,
@@ -200,8 +202,9 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
         </div>
       </div>
 
-      <div class="mt-8">
+      <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SegmentBreakdownChart :rows="segmentPerformance" />
+        <ConversionActionChart :rows="conversionActions" />
       </div>
 
       <ReportDrawer :open="!!activeDrawer" :title="drawerTitle()" @close="closeDrawer">

@@ -182,6 +182,10 @@ export default {
     title: 'Performa segmen',
     noData: 'Belum ada data segmen.',
   },
+  conversionActionChart: {
+    title: 'Konversi per Aksi',
+    noData: 'Belum ada data aksi konversi.',
+  },
   trendChart: {
     title: 'Tren',
   },

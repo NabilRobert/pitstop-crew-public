@@ -111,6 +111,16 @@ export interface AdPerformanceRow {
   conversions: number
 }
 
+// v2 Stage 5 — named conversion actions. Account-wide, aggregated over
+// the requested window — no date/campaign breakdown, unlike the other
+// v2 row shapes.
+export interface ConversionActionRow {
+  name: string
+  category: string
+  counting_type: 'ONE_PER_CLICK' | 'MANY_PER_CLICK'
+  conversions: number
+}
+
 export interface CriticIssue {
   quote: string
   reason: string

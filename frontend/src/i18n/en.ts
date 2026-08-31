@@ -182,6 +182,10 @@ export default {
     title: 'Segment performance',
     noData: 'No segment data yet.',
   },
+  conversionActionChart: {
+    title: 'Conversions by Action',
+    noData: 'No conversion action data yet.',
+  },
   trendChart: {
     title: 'Trend',
   },

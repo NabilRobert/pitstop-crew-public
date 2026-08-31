@@ -2,7 +2,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../../shared/api/api'
 import { formatDate } from '../../shared/utils/format'
-import type { Campaign, PerformanceRow, SegmentPerformanceRow, Report, SystemHealth } from '../../shared/api/types'
+import type {
+  Campaign,
+  PerformanceRow,
+  SegmentPerformanceRow,
+  ConversionActionRow,
+  Report,
+  SystemHealth,
+} from '../../shared/api/types'
 
 interface Totals {
   impressions: number
@@ -40,6 +47,9 @@ export function useDashboard() {
   const days = ref<number>(DEFAULT_PERIOD_DAYS)
   const performance = ref<PerformanceRow[]>([])
   const segmentPerformance = ref<SegmentPerformanceRow[]>([])
+  // v2 Stage 5 — named conversion actions. Account-wide, period-scoped
+  // like performance/segmentPerformance — refetched alongside them.
+  const conversionActions = ref<ConversionActionRow[]>([])
   const dailyReport = ref<Report>({ analysis: null, recommendation: null, summary: null })
   const systemHealth = ref<SystemHealth | null>(null)
   // Not period-scoped (campaign identity doesn't change with the date
@@ -128,10 +138,15 @@ export function useDashboard() {
   let requestToken = 0
   async function loadPerformance() {
     const token = ++requestToken
-    const [perf, segPerf] = await Promise.all([api.performance(days.value), api.segmentPerformance(days.value)])
+    const [perf, segPerf, convActions] = await Promise.all([
+      api.performance(days.value),
+      api.segmentPerformance(days.value),
+      api.conversionActionBreakdown(days.value),
+    ])
     if (token !== requestToken) return
     performance.value = perf
     segmentPerformance.value = segPerf
+    conversionActions.value = convActions
   }
 
   watch(days, () => {
@@ -164,6 +179,7 @@ export function useDashboard() {
     days,
     performance,
     segmentPerformance,
+    conversionActions,
     dailyReport,
     systemHealth,
     campaigns,
