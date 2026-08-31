@@ -190,6 +190,17 @@ export default {
     title: 'Konversi per Aksi',
     noData: 'Belum ada data aksi konversi.',
   },
+  recommendationsList: {
+    title: 'Rekomendasi Google',
+    noData: 'Belum ada rekomendasi yang dibuat pada periode ini.',
+    accountWide: 'Seluruh akun',
+    pending: 'Tertunda',
+    dismissed: 'Ditolak',
+    applied: 'Diterapkan',
+    estimatedImpact: 'Perkiraan dampak',
+    impressions: 'tayangan',
+    conversions: 'konversi',
+  },
   trendChart: {
     title: 'Tren',
   },

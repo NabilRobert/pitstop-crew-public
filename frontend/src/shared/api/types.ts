@@ -136,6 +136,22 @@ export interface AssetGroupPerformanceRow {
   ad_strength: AdStrength
 }
 
+// v2 Stage 7 — Google Ads' own Recommendations. campaign/campaign_id are
+// null for account-level recommendations.
+export interface RecommendationRow {
+  id: number
+  generated_date: string
+  campaign_id: number | null
+  campaign: string | null
+  recommendation_type: string
+  title: string
+  description: string
+  impact_impressions_pct: number | null
+  impact_conversions_pct: number | null
+  dismissed: boolean
+  applied: boolean
+}
+
 export interface CriticIssue {
   quote: string
   reason: string

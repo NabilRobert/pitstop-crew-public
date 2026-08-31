@@ -7,6 +7,7 @@ import type {
   PerformanceRow,
   SegmentPerformanceRow,
   ConversionActionRow,
+  RecommendationRow,
   Report,
   SystemHealth,
 } from '../../shared/api/types'
@@ -50,6 +51,12 @@ export function useDashboard() {
   // v2 Stage 5 — named conversion actions. Account-wide, period-scoped
   // like performance/segmentPerformance — refetched alongside them.
   const conversionActions = ref<ConversionActionRow[]>([])
+  // v2 Stage 7 — Google Ads' own Recommendations. Episodic/scripted (see
+  // profile.ts's RECOMMENDATIONS, dated by dayOffset), so period-scoped
+  // like the rest of this window's data — a shorter period can
+  // legitimately show fewer (or none) if their generated_date falls
+  // outside it.
+  const recommendations = ref<RecommendationRow[]>([])
   const dailyReport = ref<Report>({ analysis: null, recommendation: null, summary: null })
   const systemHealth = ref<SystemHealth | null>(null)
   // Not period-scoped (campaign identity doesn't change with the date
@@ -138,15 +145,17 @@ export function useDashboard() {
   let requestToken = 0
   async function loadPerformance() {
     const token = ++requestToken
-    const [perf, segPerf, convActions] = await Promise.all([
+    const [perf, segPerf, convActions, recs] = await Promise.all([
       api.performance(days.value),
       api.segmentPerformance(days.value),
       api.conversionActionBreakdown(days.value),
+      api.recommendations(days.value),
     ])
     if (token !== requestToken) return
     performance.value = perf
     segmentPerformance.value = segPerf
     conversionActions.value = convActions
+    recommendations.value = recs
   }
 
   watch(days, () => {
@@ -180,6 +189,7 @@ export function useDashboard() {
     performance,
     segmentPerformance,
     conversionActions,
+    recommendations,
     dailyReport,
     systemHealth,
     campaigns,

@@ -190,6 +190,17 @@ export default {
     title: 'Conversions by Action',
     noData: 'No conversion action data yet.',
   },
+  recommendationsList: {
+    title: "Google's Recommendations",
+    noData: 'No recommendations generated this window.',
+    accountWide: 'Account-wide',
+    pending: 'Pending',
+    dismissed: 'Dismissed',
+    applied: 'Applied',
+    estimatedImpact: 'Estimated impact',
+    impressions: 'impressions',
+    conversions: 'conversions',
+  },
   trendChart: {
     title: 'Trend',
   },

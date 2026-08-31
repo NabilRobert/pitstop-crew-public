@@ -27,6 +27,7 @@ import type {
   AdPerformanceRow,
   ConversionActionRow,
   AssetGroupPerformanceRow,
+  RecommendationRow,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -92,6 +93,7 @@ export const api = {
     request<ConversionActionRow[]>(`/conversion-actions/performance?days=${days}`),
   assetGroupPerformance: (days = 30) =>
     request<AssetGroupPerformanceRow[]>(`/asset-groups/performance?days=${days}`),
+  recommendations: (days = 30) => request<RecommendationRow[]>(`/recommendations?days=${days}`),
   segmentPerformance: (days = 30) => request<SegmentPerformanceRow[]>(`/segments/performance?days=${days}`),
   settings: () => request<Settings>('/settings'),
   updateSettings: (payload: Partial<Settings>) =>
