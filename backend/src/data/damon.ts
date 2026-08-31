@@ -28,7 +28,7 @@ export async function syncDay(targetDate: string, seed = 0, dataSource = 'demo')
   const overrides = await getOverrides()
   const dayData = generateDay(targetDate, seed, overrides)
   await withTransaction(async (client) => {
-    await upsertDay(client, dayData, new Map(), new Map(), new Map(), new Map(), new Map(), new Map())
+    await upsertDay(client, dayData, new Map(), new Map(), new Map(), new Map(), new Map(), new Map(), new Map())
   })
   return dayData
 }
@@ -62,8 +62,19 @@ export async function syncTrailingWindow(
     const keywordIds = new Map<string, number>()
     const searchTermIds = new Map<string, number>()
     const adIds = new Map<string, number>()
+    const conversionActionIds = new Map<string, number>()
     for (const dayData of dayDatas) {
-      await upsertDay(client, dayData, campaignIds, segmentIds, adGroupIds, keywordIds, searchTermIds, adIds)
+      await upsertDay(
+        client,
+        dayData,
+        campaignIds,
+        segmentIds,
+        adGroupIds,
+        keywordIds,
+        searchTermIds,
+        adIds,
+        conversionActionIds
+      )
     }
   })
   return dayDatas
@@ -154,7 +165,8 @@ async function upsertDay(
   adGroupIds: Map<string, number>,
   keywordIds: Map<string, number>,
   searchTermIds: Map<string, number>,
-  adIds: Map<string, number>
+  adIds: Map<string, number>,
+  conversionActionIds: Map<string, number>
 ): Promise<void> {
   async function campaignIdFor(key: string): Promise<number> {
     if (!campaignIds.has(key)) campaignIds.set(key, await getOrCreateCampaign(client, key))
@@ -182,6 +194,12 @@ async function upsertDay(
   async function adIdFor(adKey: string, adGroupId: number): Promise<number> {
     if (!adIds.has(adKey)) adIds.set(adKey, await getOrCreateAd(client, adKey, adGroupId))
     return adIds.get(adKey)!
+  }
+  async function conversionActionIdFor(conversionActionKey: string): Promise<number> {
+    if (!conversionActionIds.has(conversionActionKey)) {
+      conversionActionIds.set(conversionActionKey, await getOrCreateConversionAction(client, conversionActionKey))
+    }
+    return conversionActionIds.get(conversionActionKey)!
   }
 
   for (const c of dayData.campaigns) {
@@ -324,6 +342,22 @@ async function upsertDay(
       [adId, dayData.date, a.impressions, a.clicks, a.costMicros, a.conversions]
     )
   }
+
+  // v2 Stage 5 — conversion action performance. Account-wide (every
+  // campaign gets all 4 named actions), so campaignIds is used directly
+  // rather than a hierarchy lookup like the ad-group-scoped loops above.
+  for (const ca of dayData.conversionActions) {
+    const campaignId = await campaignIdFor(ca.campaignKey)
+    const conversionActionId = await conversionActionIdFor(ca.conversionActionKey)
+    await client.query(
+      `INSERT INTO conversion_action_performance
+          (campaign_id, conversion_action_id, date, conversions)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT(campaign_id, conversion_action_id, date) DO UPDATE SET
+          conversions = excluded.conversions`,
+      [campaignId, conversionActionId, dayData.date, ca.conversions]
+    )
+  }
 }
 
 async function getOrCreateCampaign(client: PoolClient, campaignKey: string): Promise<number> {
@@ -417,6 +451,25 @@ async function getOrCreateSearchTerm(
     `INSERT INTO search_terms (ad_group_id, keyword_id, text, match_flavor, data_source)
      VALUES ($1, $2, $3, $4, 'demo') RETURNING id`,
     [adGroupId, keywordId, st.text, st.matchFlavor]
+  )
+  return inserted.rows[0].id
+}
+
+// v2 Stage 5 — conversion actions. Account-wide, not scoped to any
+// campaign_id/ad_group_id — matches conversion_actions being a bare
+// name-keyed table (unlike keywords/ads, whose natural key includes
+// their parent ad_group_id).
+async function getOrCreateConversionAction(client: PoolClient, conversionActionKey: string): Promise<number> {
+  const ca = profile.CONVERSION_ACTIONS.find((a) => a.key === conversionActionKey)!
+  const existing = await client.query<{ id: number }>(
+    "SELECT id FROM conversion_actions WHERE name = $1 AND data_source = 'demo'",
+    [ca.name]
+  )
+  if (existing.rows[0]) return existing.rows[0].id
+  const inserted = await client.query<{ id: number }>(
+    `INSERT INTO conversion_actions (name, category, counting_type, data_source, status)
+     VALUES ($1, $2, $3, 'demo', 'enabled') RETURNING id`,
+    [ca.name, ca.category, ca.countingType]
   )
   return inserted.rows[0].id
 }

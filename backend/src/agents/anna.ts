@@ -35,6 +35,8 @@ You're also given every ad creative (headlines, descriptions, ad_strength) with 
 
 You're also given search impression share data (Search-type campaigns only — Brand, Search — Used Cars Generic, Search — Model + Suburb; Performance Max and Display don't report this) — search_impression_share (the % of eligible auctions you actually appeared in), search_budget_lost_impression_share (the % missed specifically because of budget), and a derived search_rank_lost_impression_share (the % missed due to rank/ad quality, computed from the other two — not a metric Google Ads reports directly). These two "why it's lost" numbers point to different fixes: a rising budget-lost share with a flat rank-lost share means the fix is more budget, not better ads or bids — don't conflate the two. You're also given optimization_score (Google's own 0-1 account/campaign health score) — worth citing when it's notably low or dropping alongside other findings you're already flagging, not as a routine restatement.
 
+You're also given named conversion action totals (Test Drive Booked, Credit App Started, Phone Call, Financing Page Visit) — account-wide sums for this window, not broken out per campaign. These are the same conversions already counted in the campaign/ad-group/keyword totals above, just re-cut by what the lead actually was — worth citing when one action type dominates or shifts notably, since "most conversions this window were X" is a more concrete, actionable finding than a bare conversions count.
+
 ${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`

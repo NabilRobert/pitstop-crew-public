@@ -202,6 +202,27 @@ export async function getAdPerformance(days = 30, endDate?: string, adGroupId?: 
   )
 }
 
+// v2 Stage 5 — named conversion actions.
+
+/** Backs a conversion-actions breakdown view — mirrors getSegmentBreakdown's
+ * exact shape (aggregated over the window, one JOIN) since conversion
+ * actions are account-wide like segments, not scoped under a campaign/ad-
+ * group hierarchy the way keywords/ads are. */
+export async function getConversionActionBreakdown(days = 30, endDate?: string) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  return query(
+    `SELECT ca.name, ca.category, ca.counting_type,
+            SUM(cap.conversions) AS conversions
+     FROM conversion_action_performance cap
+     JOIN conversion_actions ca ON ca.id = cap.conversion_action_id
+     WHERE cap.date BETWEEN $1 AND $2
+     GROUP BY ca.name, ca.category, ca.counting_type
+     ORDER BY conversions DESC`,
+    [start, end]
+  )
+}
+
 /** Finds the analysis/recommendation that belong with a given summary —
  * pinned to the exact pipeline run that produced all three when available
  * (pipeline_run_id), falling back to "latest for this report_date" only

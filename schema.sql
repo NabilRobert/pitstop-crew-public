@@ -428,3 +428,35 @@ CREATE INDEX IF NOT EXISTS idx_ad_performance_date ON ad_performance(date);
 ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS search_impression_share REAL;
 ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS search_budget_lost_impression_share REAL;
 ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS optimization_score REAL;
+
+-- v2 Stage 5 — named conversion actions. See docs/v2-backend-plan.md.
+-- First-class table + join-fact table, not folded into segments — these
+-- need richer attributes (category, counting_type) than a bare segment
+-- string, and Tier 1 wants them treated as first-class named entities
+-- the LLM reasons about directly (e.g. "Phone Call conversions are up",
+-- not "a segment called Phone Call"). Account-wide (no ad_group_id/
+-- campaign scoping on conversion_actions itself) — every campaign's
+-- daily conversions total is split across the same 4 named actions; see
+-- profile.ts's CONVERSION_ACTIONS.
+CREATE TABLE IF NOT EXISTS conversion_actions (
+    id                          SERIAL PRIMARY KEY,
+    google_conversion_action_id TEXT,
+    name                        TEXT NOT NULL,
+    category                    TEXT,
+    counting_type               TEXT,
+    status                      TEXT,
+    data_source                 TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (name, data_source)
+);
+
+CREATE TABLE IF NOT EXISTS conversion_action_performance (
+    id                    SERIAL PRIMARY KEY,
+    campaign_id           INTEGER NOT NULL REFERENCES campaigns(id),
+    conversion_action_id  INTEGER NOT NULL REFERENCES conversion_actions(id),
+    date                  DATE NOT NULL,
+    conversions           REAL NOT NULL DEFAULT 0,
+    UNIQUE (campaign_id, conversion_action_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversion_action_performance_date ON conversion_action_performance(date);

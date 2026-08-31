@@ -244,6 +244,12 @@ export interface AdDay {
   conversions: number
 }
 
+export interface ConversionActionDay {
+  campaignKey: string
+  conversionActionKey: string
+  conversions: number
+}
+
 export interface DayData {
   date: string
   state: State
@@ -253,6 +259,7 @@ export interface DayData {
   keywords: KeywordDay[]
   searchTerms: SearchTermDay[]
   ads: AdDay[]
+  conversionActions: ConversionActionDay[]
 }
 
 interface RawSegmentRow {
@@ -280,6 +287,7 @@ export function generateDay(
   const keywordsOut: KeywordDay[] = []
   const searchTermsOut: SearchTermDay[] = []
   const adsOut: AdDay[] = []
+  const conversionActionsOut: ConversionActionDay[] = []
 
   for (const c of profile.CAMPAIGNS) {
     const baseMult = stateMultiplier(state, seed, targetDate, c.key)
@@ -306,6 +314,24 @@ export function generateDay(
       searchBudgetLostImpressionShare: impressionShareResult?.searchBudgetLostImpressionShare ?? null,
       optimizationScore: impressionShareResult?.optimizationScore ?? null,
     })
+
+    // v2 Stage 5 — named conversion actions. Account-wide (every
+    // campaign gets all 4), unlike ad groups/keywords/ads which only
+    // exist under the 3 Search campaigns. Fixed shares, not
+    // noisyConservingSplit — the per-campaign conversions total already
+    // carries its own day-to-day noise; splitting it a second way with
+    // independent per-action noise would just add compounding variance
+    // without a clear story to tell (see docs/v2-*-plan.md decision #8).
+    const conversionActionShares: Record<string, number> = {}
+    for (const ca of profile.CONVERSION_ACTIONS) conversionActionShares[ca.key] = ca.share
+    const conversionActionSplit = splitConservingTotal(conversions, conversionActionShares, '', 1.0)
+    for (const ca of profile.CONVERSION_ACTIONS) {
+      conversionActionsOut.push({
+        campaignKey: c.key,
+        conversionActionKey: ca.key,
+        conversions: Math.round(conversionActionSplit[ca.key] * 100) / 100,
+      })
+    }
 
     // Device breakdown — every campaign.
     const deviceShares: Record<string, number> = {}
@@ -510,6 +536,7 @@ export function generateDay(
     keywords: keywordsOut,
     searchTerms: searchTermsOut,
     ads: adsOut,
+    conversionActions: conversionActionsOut,
   }
 }
 

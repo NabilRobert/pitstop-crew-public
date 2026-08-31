@@ -465,3 +465,26 @@ export const IS_BUDGET_LOST_EROSION_MAX = 0.12
 // erosion above (Google Ads' Optimization Score reflects a broader mix
 // of signals than just impression share).
 export const OPTIMIZATION_SCORE_DECLINE_DROP = 0.15
+
+// v2 Stage 5 — named conversion actions. See docs/v2-*-plan.md. Account-
+// wide, not scoped to any one campaign or ad group — every campaign's
+// daily conversions total is split across these same 4 named actions
+// (unlike ad groups/keywords/ads, which only exist under the 3 Search
+// campaigns). "Phone Call" and "Financing Page Visit" deliberately echo
+// two of Display Remarketing's existing custom segment values ("same
+// funnel, different view") — Display's segment stays untouched, this is
+// a genuinely separate table, not a migration of it.
+export interface ConversionActionProfile {
+  key: string
+  name: string
+  category: string
+  countingType: 'ONE_PER_CLICK' | 'MANY_PER_CLICK'
+  share: number // share of every campaign's daily conversions total
+}
+
+export const CONVERSION_ACTIONS: ConversionActionProfile[] = [
+  { key: 'test_drive_booked', name: 'Test Drive Booked', category: 'SUBMIT_LEAD_FORM', countingType: 'ONE_PER_CLICK', share: 0.3 },
+  { key: 'credit_app_started', name: 'Credit App Started', category: 'SUBMIT_LEAD_FORM', countingType: 'ONE_PER_CLICK', share: 0.2 },
+  { key: 'phone_call', name: 'Phone Call', category: 'PHONE_CALL_LEAD', countingType: 'ONE_PER_CLICK', share: 0.3 },
+  { key: 'financing_page_visit', name: 'Financing Page Visit', category: 'PAGE_VIEW', countingType: 'MANY_PER_CLICK', share: 0.2 },
+]

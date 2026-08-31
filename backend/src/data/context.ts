@@ -264,6 +264,40 @@ export async function buildImpressionShareContext(
   )
 }
 
+// v2 Stage 5 — named conversion actions. Account-wide (conversion_action_
+// performance has no ad-group hierarchy under it, unlike keywords/ads),
+// so this aggregates straight to account totals per named action — only
+// 4 rows, well under any token-budget concern, no topN truncation
+// needed (same "bounded, return everything" reasoning as buildAdContext).
+// No CURRENCY_NOTE here — conversion counts carry no cost_micros figure.
+export async function buildConversionActionContext(
+  endDate: string,
+  days: number,
+  campaignId?: number | null
+): Promise<string> {
+  const startDate = addDays(endDate, -days)
+  const params: unknown[] = [startDate, endDate]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND cap.campaign_id = $${params.length}`
+  }
+  const rows = await query(
+    `SELECT ca.name, ca.category, ca.counting_type, ROUND(SUM(cap.conversions)::numeric, 2) AS total_conversions
+     FROM conversion_action_performance cap
+     JOIN conversion_actions ca ON ca.id = cap.conversion_action_id
+     WHERE cap.date BETWEEN $1 AND $2 ${campaignFilter}
+     GROUP BY ca.name, ca.category, ca.counting_type
+     ORDER BY total_conversions DESC`,
+    params
+  )
+  return (
+    'Named conversion actions are account-wide, not scoped to any single campaign — these totals sum every ' +
+    "campaign's conversions for this window, broken out by which named action they were credited to.\n\n" +
+    JSON.stringify(rows)
+  )
+}
+
 /** Composes buildPerformanceContext + every v2 builder added so far —
  * used by both the daily pipeline (orchestrator.ts) and the Ask feature
  * (ask.ts), so asking "what's my Quality Score on Search-Model?" actually
@@ -277,11 +311,13 @@ export async function buildFullContext(args: BuildPerformanceContextArgs = {}): 
   const searchTermContext = await buildSearchTermContext(endDate, days, args.campaignId)
   const adContext = await buildAdContext(endDate, days, args.campaignId)
   const impressionShareContext = await buildImpressionShareContext(endDate, days, args.campaignId)
+  const conversionActionContext = await buildConversionActionContext(endDate, days, args.campaignId)
   return (
     `${performanceContext}\n\n` +
     `Top ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}\n\n` +
     `Search terms with the most wasted spend this window (aggregated top-N, see note above):\n${searchTermContext}\n\n` +
     `Ad creatives (headlines/descriptions/ad_strength) with their performance this window:\n${adContext}\n\n` +
-    `Search impression share, why it's lost, and Optimization Score this window (see note above on scope):\n${impressionShareContext}`
+    `Search impression share, why it's lost, and Optimization Score this window (see note above on scope):\n${impressionShareContext}\n\n` +
+    `Named conversion actions this window (account-wide totals):\n${conversionActionContext}`
   )
 }
