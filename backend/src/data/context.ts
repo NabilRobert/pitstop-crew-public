@@ -219,6 +219,51 @@ export async function buildAdContext(
   return CURRENCY_NOTE + JSON.stringify(rows)
 }
 
+// v2 Stage 4 — impression share + optimization score. Only the 3
+// Search-type campaigns have these (NULL for PMax/Display — see
+// schema.sql), so this filters to rows where they're actually populated
+// rather than returning misleading NULL rows for every campaign. Bounded
+// row count (3 campaigns x days) same as buildAdContext's "only 16 ads
+// total" reasoning — no top-N truncation needed, every row for the
+// window comes back. Rank-lost is derived here (not stored — see
+// schema.sql) via a CASE, not a bare GREATEST: Postgres's GREATEST(0,
+// NULL) returns 0, not NULL, which would wrongly show rank-lost as 0 for
+// PMax/Display instead of leaving it NULL like the other two fields.
+export async function buildImpressionShareContext(
+  endDate: string,
+  days: number,
+  campaignId?: number | null
+): Promise<string> {
+  const startDate = addDays(endDate, -days)
+  const params: unknown[] = [startDate, endDate]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND cp.campaign_id = $${params.length}`
+  }
+  const rows = await query(
+    `SELECT cp.date, c.name AS campaign, cp.search_impression_share, cp.search_budget_lost_impression_share,
+            CASE WHEN cp.search_impression_share IS NOT NULL
+                 THEN GREATEST(0, 1 - cp.search_impression_share - cp.search_budget_lost_impression_share)
+                 ELSE NULL END AS search_rank_lost_impression_share,
+            cp.optimization_score
+     FROM campaign_performance cp
+     JOIN campaigns c ON c.id = cp.campaign_id
+     WHERE cp.date BETWEEN $1 AND $2 AND cp.search_impression_share IS NOT NULL ${campaignFilter}
+     ORDER BY cp.date, c.name`,
+    params
+  )
+  return (
+    CURRENCY_NOTE +
+    'Impression share only exists for Search-type campaigns (Brand, Search — Used Cars Generic, Search — ' +
+    'Model + Suburb) — Performance Max and Display have no rows here. search_rank_lost_impression_share is ' +
+    'derived (1 - impression share - budget-lost share, clamped at 0), not a directly reported metric: a ' +
+    'rising budget-lost share alongside a flat/unchanged rank-lost share means impressions are being missed ' +
+    'due to budget constraints, not ad quality or bid competitiveness.\n\n' +
+    JSON.stringify(rows)
+  )
+}
+
 /** Composes buildPerformanceContext + every v2 builder added so far —
  * used by both the daily pipeline (orchestrator.ts) and the Ask feature
  * (ask.ts), so asking "what's my Quality Score on Search-Model?" actually
@@ -231,10 +276,12 @@ export async function buildFullContext(args: BuildPerformanceContextArgs = {}): 
   const adGroupKeywordContext = await buildAdGroupKeywordContext(endDate, days, args.campaignId)
   const searchTermContext = await buildSearchTermContext(endDate, days, args.campaignId)
   const adContext = await buildAdContext(endDate, days, args.campaignId)
+  const impressionShareContext = await buildImpressionShareContext(endDate, days, args.campaignId)
   return (
     `${performanceContext}\n\n` +
     `Top ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}\n\n` +
     `Search terms with the most wasted spend this window (aggregated top-N, see note above):\n${searchTermContext}\n\n` +
-    `Ad creatives (headlines/descriptions/ad_strength) with their performance this window:\n${adContext}`
+    `Ad creatives (headlines/descriptions/ad_strength) with their performance this window:\n${adContext}\n\n` +
+    `Search impression share, why it's lost, and Optimization Score this window (see note above on scope):\n${impressionShareContext}`
   )
 }

@@ -33,6 +33,8 @@ You're also given a search-terms section — the actual queries that triggered a
 
 You're also given every ad creative (headlines, descriptions, ad_strength) with its window performance — unlike Quality Score, ad_strength doesn't drift day to day, so don't describe it as changing or trending. It's worth citing when a specific ad is both underperforming (low clicks/conversions relative to its ad group) and rated poor/average — that combination is a concrete signal the creative itself, not just targeting, may need attention.
 
+You're also given search impression share data (Search-type campaigns only — Brand, Search — Used Cars Generic, Search — Model + Suburb; Performance Max and Display don't report this) — search_impression_share (the % of eligible auctions you actually appeared in), search_budget_lost_impression_share (the % missed specifically because of budget), and a derived search_rank_lost_impression_share (the % missed due to rank/ad quality, computed from the other two — not a metric Google Ads reports directly). These two "why it's lost" numbers point to different fixes: a rising budget-lost share with a flat rank-lost share means the fix is more budget, not better ads or bids — don't conflate the two. You're also given optimization_score (Google's own 0-1 account/campaign health score) — worth citing when it's notably low or dropping alongside other findings you're already flagging, not as a routine restatement.
+
 ${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`

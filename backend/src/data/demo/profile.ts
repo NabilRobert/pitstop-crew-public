@@ -415,3 +415,53 @@ export const ADS: AdProfile[] = [
     share: 0.45,
   },
 ]
+
+// v2 Stage 4 — impression share + optimization score. See docs/v2-*-plan.md.
+// Only the 3 Search-type campaigns get these (see schema.sql's comment) —
+// PMax and Display stay NULL for both. Base impression share reflects a
+// realistic competitiveness spread: Brand is near-uncontested (0.80),
+// the two non-branded Search campaigns face real auction competition
+// (0.50/0.35). baseBudgetLostImpressionShare is also highest for
+// search_model even at baseline — consistent with it already being the
+// account's weakest-budgeted campaign before the decline compounds it.
+export interface ImpressionShareProfile {
+  campaignKey: string
+  baseImpressionShare: number
+  baseBudgetLostImpressionShare: number
+  baseOptimizationScore: number // 0-1, mirrors Google Ads' own account/campaign health score
+}
+
+// search_model's baseBudgetLostImpressionShare (0.3) is deliberately set
+// close to its implied baseline rank-lost share (1 - 0.35 - 0.3 = 0.35,
+// before any erosion) rather than far below it — with a lower base
+// (e.g. 0.2, implying a 0.45 baseline rank-lost share) the erosion below
+// only ever narrows the gap without closing it, so budget-lost stays the
+// visibly smaller number in absolute terms even at full erosion and a
+// model asked "which is the bigger factor?" reasonably answers "rank,"
+// undermining the intended "the decline is budget-driven" narrative.
+// Starting the two nearly tied means the erosion below actually flips
+// budget-lost into the dominant factor, making that reading unambiguous.
+export const IMPRESSION_SHARE_CAMPAIGNS: ImpressionShareProfile[] = [
+  { campaignKey: 'brand', baseImpressionShare: 0.8, baseBudgetLostImpressionShare: 0.05, baseOptimizationScore: 0.82 },
+  { campaignKey: 'search_generic', baseImpressionShare: 0.5, baseBudgetLostImpressionShare: 0.15, baseOptimizationScore: 0.68 },
+  { campaignKey: 'search_model', baseImpressionShare: 0.35, baseBudgetLostImpressionShare: 0.3, baseOptimizationScore: 0.6 },
+]
+
+// How much search_model's impression share can erode — and its
+// budget-lost share can grow — by the end of the decline window, tied to
+// the same declineMultiplier driving its performance drop and QS erosion
+// (see generator.ts/keywords above). The two move by the SAME amount, so
+// derived rank-lost share (1 - is - budget_lost) stays roughly constant —
+// telling a coherent, correlatable story: the decline is budget-driven,
+// not a rank/competitiveness problem. Combined with the near-tied
+// baseline above, this erosion is enough to flip budget-lost from
+// roughly even with rank-lost to clearly the larger of the two by the
+// end of the decline (0.3 + 0.12 = 0.42 vs. a ~0.35 rank-lost share that
+// stays flat throughout).
+export const IS_BUDGET_LOST_EROSION_MAX = 0.12
+
+// How much search_model's optimization_score can additionally drop by
+// the end of the decline window — independent of the impression-share
+// erosion above (Google Ads' Optimization Score reflects a broader mix
+// of signals than just impression share).
+export const OPTIMIZATION_SCORE_DECLINE_DROP = 0.15

@@ -187,15 +187,32 @@ async function upsertDay(
   for (const c of dayData.campaigns) {
     const campaignId = await campaignIdFor(c.campaignKey)
     await client.query(
+      // v2 Stage 4 — impression share + optimization score ride as 3
+      // extra nullable columns on this same row (NULL for PMax/Display —
+      // see generator.ts), not a separate table/upsert.
       `INSERT INTO campaign_performance
-          (campaign_id, date, impressions, clicks, cost_micros, conversions)
-       VALUES ($1, $2, $3, $4, $5, $6)
+          (campaign_id, date, impressions, clicks, cost_micros, conversions,
+           search_impression_share, search_budget_lost_impression_share, optimization_score)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT(campaign_id, date) DO UPDATE SET
           impressions = excluded.impressions,
           clicks = excluded.clicks,
           cost_micros = excluded.cost_micros,
-          conversions = excluded.conversions`,
-      [campaignId, dayData.date, c.impressions, c.clicks, c.costMicros, c.conversions]
+          conversions = excluded.conversions,
+          search_impression_share = excluded.search_impression_share,
+          search_budget_lost_impression_share = excluded.search_budget_lost_impression_share,
+          optimization_score = excluded.optimization_score`,
+      [
+        campaignId,
+        dayData.date,
+        c.impressions,
+        c.clicks,
+        c.costMicros,
+        c.conversions,
+        c.searchImpressionShare,
+        c.searchBudgetLostImpressionShare,
+        c.optimizationScore,
+      ]
     )
   }
 

@@ -411,3 +411,20 @@ CREATE TABLE IF NOT EXISTS ad_performance (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ad_performance_date ON ad_performance(date);
+
+-- v2 Stage 4 — impression share + optimization score. See docs/v2-backend-plan.md.
+-- New nullable columns on campaign_performance, not a new table — a
+-- per-day-driftable snapshot like the rest of this table's columns.
+-- Deliberately storing only the 2 independent numbers Google Ads itself
+-- reports; rank-lost is derived at read time as
+-- 1 - search_impression_share - search_budget_lost_impression_share
+-- (clamped >= 0) rather than stored as a 3rd number that could drift out
+-- of sync with the two it's computed from. Populated only for the 3
+-- Search-type campaigns (Brand, Search — Used Cars Generic, Search —
+-- Model + Suburb) — real Google Ads doesn't expose impression share for
+-- PMax at all, and Display uses a different metric family entirely;
+-- leaving those NULL is itself a realistic detail. optimization_score
+-- follows the same scope for consistency (see profile.ts).
+ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS search_impression_share REAL;
+ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS search_budget_lost_impression_share REAL;
+ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS optimization_score REAL;

@@ -116,6 +116,52 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
 
+interface ImpressionShareResult {
+  searchImpressionShare: number
+  searchBudgetLostImpressionShare: number
+  optimizationScore: number
+}
+
+/** v2 Stage 4 — impression share + optimization score. Returns null for
+ * campaigns outside profile.ts's IMPRESSION_SHARE_CAMPAIGNS (PMax,
+ * Display). `declMult` is the same per-campaign decline multiplier
+ * already computed for search_model's cost/QS story — reused here so
+ * impression share erodes and budget-lost share grows by the identical
+ * amount, keeping derived rank-lost share flat: a coherent "the decline
+ * is budget-driven, not a rank/competitiveness problem" finding, not a
+ * second disconnected feature. */
+function computeImpressionShareAndOptScore(
+  campaignKey: string,
+  seed: number,
+  day: string,
+  declMult: number
+): ImpressionShareResult | null {
+  const isProfile = profile.IMPRESSION_SHARE_CAMPAIGNS.find((p) => p.campaignKey === campaignKey)
+  if (!isProfile) return null
+
+  const isNoise = uniform(entityRng(seed, day, campaignKey + ':is-noise'), -0.03, 0.03)
+  const optNoise = uniform(entityRng(seed, day, campaignKey + ':opt-noise'), -0.03, 0.03)
+
+  const erosion =
+    campaignKey === profile.DECLINING_CAMPAIGN ? (1 - declMult) * profile.IS_BUDGET_LOST_EROSION_MAX : 0
+  const optDrop =
+    campaignKey === profile.DECLINING_CAMPAIGN ? (1 - declMult) * profile.OPTIMIZATION_SCORE_DECLINE_DROP : 0
+
+  const searchImpressionShare = clamp(isProfile.baseImpressionShare + isNoise - erosion, 0, 1)
+  const searchBudgetLostImpressionShare = clamp(
+    isProfile.baseBudgetLostImpressionShare + erosion,
+    0,
+    1 - searchImpressionShare
+  )
+  const optimizationScore = clamp(isProfile.baseOptimizationScore + optNoise - optDrop, 0, 1)
+
+  return {
+    searchImpressionShare: Math.round(searchImpressionShare * 10000) / 10000,
+    searchBudgetLostImpressionShare: Math.round(searchBudgetLostImpressionShare * 10000) / 10000,
+    optimizationScore: Math.round(optimizationScore * 10000) / 10000,
+  }
+}
+
 type QsBucket = 'above_average' | 'average' | 'below_average'
 
 /** Qualitative diagnostic sub-scores derived from the numeric Quality
@@ -134,6 +180,13 @@ export interface CampaignDay {
   clicks: number
   costMicros: number
   conversions: number
+  // v2 Stage 4 — impression share + optimization score. Populated only
+  // for the 3 Search-type campaigns (see profile.ts's
+  // IMPRESSION_SHARE_CAMPAIGNS) — null for PMax/Display, matching real
+  // Google Ads' own reporting scope for these metrics.
+  searchImpressionShare: number | null
+  searchBudgetLostImpressionShare: number | null
+  optimizationScore: number | null
 }
 
 export interface SegmentDay {
@@ -242,7 +295,17 @@ export function generateDay(
     const cpcMult = state !== 'volatile' ? (CPC_STATE_MULTIPLIERS[state] ?? 1.0) : baseMult
     const costMicros = Math.round(clicks * profile.BASELINE_CPC_MICROS * cpcMult)
 
-    campaignsOut.push({ campaignKey: c.key, impressions, clicks, costMicros, conversions })
+    const impressionShareResult = computeImpressionShareAndOptScore(c.key, seed, targetDate, declMult)
+    campaignsOut.push({
+      campaignKey: c.key,
+      impressions,
+      clicks,
+      costMicros,
+      conversions,
+      searchImpressionShare: impressionShareResult?.searchImpressionShare ?? null,
+      searchBudgetLostImpressionShare: impressionShareResult?.searchBudgetLostImpressionShare ?? null,
+      optimizationScore: impressionShareResult?.optimizationScore ?? null,
+    })
 
     // Device breakdown — every campaign.
     const deviceShares: Record<string, number> = {}

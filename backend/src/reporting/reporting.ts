@@ -70,12 +70,24 @@ export async function getSegmentBreakdown(days = 30, endDate?: string) {
   )
 }
 
+// v2 Stage 4 — impression share/optimization_score ride as extra SELECT
+// columns here rather than a new function/table (they're just 3
+// nullable columns on this same campaign_performance row — NULL for
+// PMax/Display). search_rank_lost_impression_share is derived via a CASE,
+// not a bare GREATEST: Postgres's GREATEST(0, NULL) returns 0, not NULL,
+// which would wrongly show rank-lost as 0 instead of leaving it NULL for
+// campaigns where impression share isn't reported at all.
 export async function getPerformanceSeries(days = 30, endDate?: string) {
   const end = endDate ?? new Date().toISOString().slice(0, 10)
   const start = addDays(end, -days)
   return query(
     `SELECT cp.date, c.id AS campaign_id, c.name AS campaign,
-            cp.impressions, cp.clicks, cp.cost_micros, cp.conversions
+            cp.impressions, cp.clicks, cp.cost_micros, cp.conversions,
+            cp.search_impression_share, cp.search_budget_lost_impression_share,
+            CASE WHEN cp.search_impression_share IS NOT NULL
+                 THEN GREATEST(0, 1 - cp.search_impression_share - cp.search_budget_lost_impression_share)
+                 ELSE NULL END AS search_rank_lost_impression_share,
+            cp.optimization_score
      FROM campaign_performance cp
      JOIN campaigns c ON c.id = cp.campaign_id
      WHERE cp.date BETWEEN $1 AND $2
