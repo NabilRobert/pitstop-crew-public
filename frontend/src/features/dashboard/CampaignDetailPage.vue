@@ -6,6 +6,7 @@ import KeywordTable from './KeywordTable.vue'
 import SearchTermTable from './SearchTermTable.vue'
 import AdPerformanceTable from './AdPerformanceTable.vue'
 import ImpressionShareChart from './ImpressionShareChart.vue'
+import AssetGroupBarChart from './AssetGroupBarChart.vue'
 import { useCampaignDetail } from './useCampaignDetail'
 
 const props = defineProps({
@@ -14,8 +15,17 @@ const props = defineProps({
 
 const { t } = useI18n()
 
-const { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, adRows, impressionShareRows } =
-  useCampaignDetail(toRef(props, 'id'))
+const {
+  loading,
+  error,
+  campaignName,
+  adGroupRows,
+  keywordRows,
+  searchTermRows,
+  adRows,
+  impressionShareRows,
+  assetGroupRows,
+} = useCampaignDetail(toRef(props, 'id'))
 </script>
 
 <template>
@@ -39,6 +49,10 @@ const { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, 
 
       <div v-if="impressionShareRows.length" class="mb-8">
         <ImpressionShareChart :rows="impressionShareRows" />
+      </div>
+
+      <div v-if="assetGroupRows.length" class="mb-8">
+        <AssetGroupBarChart :rows="assetGroupRows" />
       </div>
 
       <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">

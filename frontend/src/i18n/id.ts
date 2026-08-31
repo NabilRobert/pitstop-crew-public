@@ -151,6 +151,10 @@ export default {
     title: 'Pangsa Tayangan Pencarian',
     optimizationScore: 'Skor Optimasi',
   },
+  assetGroupChart: {
+    title: 'Grup Aset berdasarkan Konversi',
+    noData: 'Belum ada data grup aset.',
+  },
   campaignsList: {
     title: 'Kampanye',
     subtitle: '90 hari terakhir · klik kampanye untuk lihat grup iklan dan kata kunci',

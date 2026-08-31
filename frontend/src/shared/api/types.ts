@@ -121,6 +121,21 @@ export interface ConversionActionRow {
   conversions: number
 }
 
+// v2 Stage 6 — PMax asset groups. Every row is implicitly pmax-only —
+// asset_groups only exist under that campaign.
+export interface AssetGroupPerformanceRow {
+  date: string
+  asset_group_id: number
+  asset_group: string
+  campaign_id: number
+  campaign: string
+  impressions: number
+  clicks: number
+  cost_micros: number
+  conversions: number
+  ad_strength: AdStrength
+}
+
 export interface CriticIssue {
   quote: string
   reason: string

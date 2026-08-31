@@ -8,6 +8,7 @@ import type {
   AdPerformanceRow,
   AdStrength,
   PerformanceRow,
+  AssetGroupPerformanceRow,
 } from '../../shared/api/types'
 
 // Fixed window for this first drill-down slice — the campaign detail page
@@ -56,6 +57,13 @@ export interface AdRow extends Totals {
   descriptions: string[]
   ad_strength: AdStrength
   ad_group: string
+  ctr: number
+}
+
+export interface AssetGroupRow extends Totals {
+  asset_group_id: number
+  asset_group: string
+  ad_strength: AdStrength
   ctr: number
 }
 
@@ -192,6 +200,35 @@ function aggregateAds(rows: AdPerformanceRow[]): AdRow[] {
     .sort((a, b) => b.cost_micros - a.cost_micros)
 }
 
+/** Aggregates per-day asset group rows into one row per group, summing
+ * metrics. ad_strength is static per group (like ads.ad_strength) so any
+ * row's copy is fine to take. */
+function aggregateAssetGroups(rows: AssetGroupPerformanceRow[]): AssetGroupRow[] {
+  const byGroup = new Map<number, AssetGroupRow>()
+  for (const r of rows) {
+    if (!byGroup.has(r.asset_group_id)) {
+      byGroup.set(r.asset_group_id, {
+        asset_group_id: r.asset_group_id,
+        asset_group: r.asset_group,
+        ad_strength: r.ad_strength,
+        impressions: 0,
+        clicks: 0,
+        cost_micros: 0,
+        conversions: 0,
+        ctr: 0,
+      })
+    }
+    const agg = byGroup.get(r.asset_group_id)!
+    agg.impressions += r.impressions
+    agg.clicks += r.clicks
+    agg.cost_micros += r.cost_micros
+    agg.conversions += r.conversions
+  }
+  return Array.from(byGroup.values())
+    .map((a) => ({ ...a, ctr: a.impressions ? (a.clicks / a.impressions) * 100 : 0 }))
+    .sort((a, b) => b.cost_micros - a.cost_micros)
+}
+
 export function useCampaignDetail(campaignId: Ref<string | number>) {
   const loading = ref(true)
   const error = ref<string | null>(null)
@@ -208,22 +245,29 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
   // (search_impression_share is null there), which is what conditionally
   // hides the chart on the page.
   const impressionShareRows = ref<PerformanceRow[]>([])
+  // v2 Stage 6 — PMax asset groups. The endpoint is implicitly pmax-only
+  // (no campaignId filter, unlike ad-group/keyword calls), so this
+  // always fetches all 4 rows and filters client-side by campaign name —
+  // naturally empty (and hides the section) for every non-PMax campaign.
+  const assetGroupRows = ref<AssetGroupRow[]>([])
 
   async function load() {
     loading.value = true
     error.value = null
     try {
       const id = Number(campaignId.value)
-      const [campaigns, adGroupPerf, perf] = await Promise.all([
+      const [campaigns, adGroupPerf, perf, assetGroupPerf] = await Promise.all([
         api.campaigns(),
         api.adGroupPerformance(DAYS, id),
         api.performance(DAYS),
+        api.assetGroupPerformance(DAYS),
       ])
       campaignName.value = campaigns.find((c) => c.id === id)?.name ?? ''
       adGroupRows.value = aggregateAdGroups(adGroupPerf)
       impressionShareRows.value = perf
         .filter((r) => r.campaign === campaignName.value && r.search_impression_share !== null)
         .sort((a, b) => a.date.localeCompare(b.date))
+      assetGroupRows.value = aggregateAssetGroups(assetGroupPerf.filter((r) => r.campaign === campaignName.value))
 
       const adGroupIds = [...new Set(adGroupPerf.map((r) => r.ad_group_id))]
       const [keywordPerfByAdGroup, adPerfByAdGroup] = await Promise.all([
@@ -246,5 +290,15 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
 
   watch(campaignId, load, { immediate: true })
 
-  return { loading, error, campaignName, adGroupRows, keywordRows, searchTermRows, adRows, impressionShareRows }
+  return {
+    loading,
+    error,
+    campaignName,
+    adGroupRows,
+    keywordRows,
+    searchTermRows,
+    adRows,
+    impressionShareRows,
+    assetGroupRows,
+  }
 }

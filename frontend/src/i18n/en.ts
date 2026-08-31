@@ -151,6 +151,10 @@ export default {
     title: 'Search Impression Share',
     optimizationScore: 'Optimization Score',
   },
+  assetGroupChart: {
+    title: 'Asset Groups by Conversions',
+    noData: 'No asset group data yet.',
+  },
   campaignsList: {
     title: 'Campaigns',
     subtitle: 'Last 90 days · click a campaign for ad groups and keywords',
