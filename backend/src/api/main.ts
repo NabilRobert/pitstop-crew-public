@@ -25,6 +25,14 @@ import { router as timeMachineRoutes } from './routes/timeMachine.js'
 import { router as pipelineRoutes } from './routes/pipeline.js'
 import { router as voiceRoutes } from './routes/voice.js'
 import { router as assistantRoutes } from './routes/assistant.js'
+import { router as adGroupsRoutes } from './routes/adGroups.js'
+import { router as keywordsRoutes } from './routes/keywords.js'
+import { router as searchTermsRoutes } from './routes/searchTerms.js'
+import { router as adsRoutes } from './routes/ads.js'
+import { router as conversionActionsRoutes } from './routes/conversionActions.js'
+import { router as assetGroupsRoutes } from './routes/assetGroups.js'
+import { router as recommendationsRoutes } from './routes/recommendations.js'
+import { router as changeEventsRoutes } from './routes/changeEvents.js'
 
 const app = express()
 app.use(express.json())
@@ -57,6 +65,14 @@ app.use(timeMachineRoutes)
 app.use(pipelineRoutes)
 app.use(voiceRoutes)
 app.use(assistantRoutes)
+app.use(adGroupsRoutes)
+app.use(keywordsRoutes)
+app.use(searchTermsRoutes)
+app.use(adsRoutes)
+app.use(conversionActionsRoutes)
+app.use(assetGroupsRoutes)
+app.use(recommendationsRoutes)
+app.use(changeEventsRoutes)
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

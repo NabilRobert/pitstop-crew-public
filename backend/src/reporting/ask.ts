@@ -10,7 +10,7 @@ import * as anna from '../agents/anna.js'
 import * as rico from '../agents/rico.js'
 import * as sammy from '../agents/sammy.js'
 import { getOutput } from './outputs.js'
-import { buildPerformanceContext } from '../data/context.js'
+import { buildFullContext } from '../data/context.js'
 import { getSettings, isValidLanguage } from '../platform/settings.js'
 import { query, queryOne } from '../data/db.js'
 
@@ -97,7 +97,7 @@ export async function ask(outputId: number, conversationId: number, question: st
 
   // db.ts returns DATE columns as raw 'YYYY-MM-DD' strings — see db.ts.
   const endDate = output.report_date ?? new Date().toISOString().slice(0, 10)
-  const supportingData = await buildPerformanceContext({
+  const supportingData = await buildFullContext({
     campaignId: output.campaign_id,
     segmentId: output.segment_id,
     endDate,

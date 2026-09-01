@@ -70,17 +70,213 @@ export async function getSegmentBreakdown(days = 30, endDate?: string) {
   )
 }
 
+// v2 Stage 4 — impression share/optimization_score ride as extra SELECT
+// columns here rather than a new function/table (they're just 3
+// nullable columns on this same campaign_performance row — NULL for
+// PMax/Display). search_rank_lost_impression_share is derived via a CASE,
+// not a bare GREATEST: Postgres's GREATEST(0, NULL) returns 0, not NULL,
+// which would wrongly show rank-lost as 0 instead of leaving it NULL for
+// campaigns where impression share isn't reported at all.
 export async function getPerformanceSeries(days = 30, endDate?: string) {
   const end = endDate ?? new Date().toISOString().slice(0, 10)
   const start = addDays(end, -days)
   return query(
     `SELECT cp.date, c.id AS campaign_id, c.name AS campaign,
-            cp.impressions, cp.clicks, cp.cost_micros, cp.conversions
+            cp.impressions, cp.clicks, cp.cost_micros, cp.conversions,
+            cp.search_impression_share, cp.search_budget_lost_impression_share,
+            CASE WHEN cp.search_impression_share IS NOT NULL
+                 THEN GREATEST(0, 1 - cp.search_impression_share - cp.search_budget_lost_impression_share)
+                 ELSE NULL END AS search_rank_lost_impression_share,
+            cp.optimization_score
      FROM campaign_performance cp
      JOIN campaigns c ON c.id = cp.campaign_id
      WHERE cp.date BETWEEN $1 AND $2
      ORDER BY cp.date, c.name`,
     [start, end]
+  )
+}
+
+// v2 Stage 1 — ad groups + keywords + Quality Score. Same days/endDate,
+// one JOIN, raw rows shape as getSegmentBreakdown/getPerformanceSeries above.
+
+/** Backs the Campaign -> Ad Groups drill-down page. */
+export async function getAdGroupPerformance(days = 30, endDate?: string, campaignId?: number) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  const params: unknown[] = [start, end]
+  let campaignFilter = ''
+  if (campaignId != null) {
+    params.push(campaignId)
+    campaignFilter = `AND ag.campaign_id = $${params.length}`
+  }
+  return query(
+    `SELECT agp.date, ag.id AS ad_group_id, ag.name AS ad_group, c.id AS campaign_id, c.name AS campaign,
+            agp.impressions, agp.clicks, agp.cost_micros, agp.conversions
+     FROM ad_group_performance agp
+     JOIN ad_groups ag ON ag.id = agp.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE agp.date BETWEEN $1 AND $2 ${campaignFilter}
+     ORDER BY agp.date, c.name, ag.name`,
+    params
+  )
+}
+
+/** Backs the Ad Group -> Keywords drill-down page, including per-day
+ * Quality Score + its 3 diagnostic sub-scores. */
+export async function getKeywordPerformance(days = 30, endDate?: string, adGroupId?: number) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  const params: unknown[] = [start, end]
+  let adGroupFilter = ''
+  if (adGroupId != null) {
+    params.push(adGroupId)
+    adGroupFilter = `AND kp.keyword_id IN (SELECT id FROM keywords WHERE ad_group_id = $${params.length})`
+  }
+  return query(
+    `SELECT kp.date, k.id AS keyword_id, k.text, k.match_type, ag.id AS ad_group_id, ag.name AS ad_group,
+            c.id AS campaign_id, c.name AS campaign,
+            kp.impressions, kp.clicks, kp.cost_micros, kp.conversions,
+            kp.quality_score, kp.expected_ctr, kp.ad_relevance, kp.landing_page_experience
+     FROM keyword_performance kp
+     JOIN keywords k ON k.id = kp.keyword_id
+     JOIN ad_groups ag ON ag.id = k.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE kp.date BETWEEN $1 AND $2 ${adGroupFilter}
+     ORDER BY kp.date, c.name, ag.name, k.text`,
+    params
+  )
+}
+
+// v2 Stage 2 — search terms.
+
+/** Backs the Keyword -> Search Terms drill-down page. */
+export async function getSearchTermPerformance(days = 30, endDate?: string, keywordId?: number) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  const params: unknown[] = [start, end]
+  let keywordFilter = ''
+  if (keywordId != null) {
+    params.push(keywordId)
+    keywordFilter = `AND st.keyword_id = $${params.length}`
+  }
+  return query(
+    `SELECT stp.date, st.id AS search_term_id, st.text AS search_term, st.match_flavor,
+            k.id AS keyword_id, k.text AS keyword, ag.id AS ad_group_id, ag.name AS ad_group,
+            c.id AS campaign_id, c.name AS campaign,
+            stp.impressions, stp.clicks, stp.cost_micros, stp.conversions
+     FROM search_term_performance stp
+     JOIN search_terms st ON st.id = stp.search_term_id
+     JOIN ad_groups ag ON ag.id = st.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     LEFT JOIN keywords k ON k.id = st.keyword_id
+     WHERE stp.date BETWEEN $1 AND $2 ${keywordFilter}
+     ORDER BY stp.date, c.name, ag.name, st.text`,
+    params
+  )
+}
+
+// v2 Stage 3 — ads/creatives.
+
+/** Backs the Ad Group -> Ads drill-down page, including each ad's static
+ * headlines/descriptions/ad_strength. */
+export async function getAdPerformance(days = 30, endDate?: string, adGroupId?: number) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  const params: unknown[] = [start, end]
+  let adGroupFilter = ''
+  if (adGroupId != null) {
+    params.push(adGroupId)
+    adGroupFilter = `AND a.ad_group_id = $${params.length}`
+  }
+  return query(
+    `SELECT ap.date, a.id AS ad_id, a.label, a.headlines, a.descriptions, a.final_url, a.ad_strength,
+            ag.id AS ad_group_id, ag.name AS ad_group, c.id AS campaign_id, c.name AS campaign,
+            ap.impressions, ap.clicks, ap.cost_micros, ap.conversions
+     FROM ad_performance ap
+     JOIN ads a ON a.id = ap.ad_id
+     JOIN ad_groups ag ON ag.id = a.ad_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE ap.date BETWEEN $1 AND $2 ${adGroupFilter}
+     ORDER BY ap.date, c.name, ag.name, a.label`,
+    params
+  )
+}
+
+// v2 Stage 5 — named conversion actions.
+
+/** Backs a conversion-actions breakdown view — mirrors getSegmentBreakdown's
+ * exact shape (aggregated over the window, one JOIN) since conversion
+ * actions are account-wide like segments, not scoped under a campaign/ad-
+ * group hierarchy the way keywords/ads are. */
+export async function getConversionActionBreakdown(days = 30, endDate?: string) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  return query(
+    `SELECT ca.name, ca.category, ca.counting_type,
+            SUM(cap.conversions) AS conversions
+     FROM conversion_action_performance cap
+     JOIN conversion_actions ca ON ca.id = cap.conversion_action_id
+     WHERE cap.date BETWEEN $1 AND $2
+     GROUP BY ca.name, ca.category, ca.counting_type
+     ORDER BY conversions DESC`,
+    [start, end]
+  )
+}
+
+// v2 Stage 6 — PMax asset groups.
+
+/** Backs the PMax -> Asset Groups drill-down page, including each group's
+ * ad_strength for the day. Not scoped by campaignId param — every row is
+ * already implicitly pmax-only, since asset_groups only exist there. */
+export async function getAssetGroupPerformance(days = 30, endDate?: string) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  return query(
+    `SELECT agp.date, ag.id AS asset_group_id, ag.name AS asset_group, c.id AS campaign_id, c.name AS campaign,
+            agp.impressions, agp.clicks, agp.cost_micros, agp.conversions, agp.ad_strength
+     FROM asset_group_performance agp
+     JOIN asset_groups ag ON ag.id = agp.asset_group_id
+     JOIN campaigns c ON c.id = ag.campaign_id
+     WHERE agp.date BETWEEN $1 AND $2
+     ORDER BY agp.date, ag.name`,
+    [start, end]
+  )
+}
+
+// v2 Stage 7 — Google Ads' own Recommendations.
+
+/** Backs a Recommendations list view. campaign is null for account-level
+ * recommendations (LEFT JOIN, not INNER). */
+export async function getRecommendations(days = 30, endDate?: string) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = addDays(end, -days)
+  return query(
+    `SELECT r.id, r.generated_date, c.id AS campaign_id, c.name AS campaign, r.recommendation_type,
+            r.title, r.description, r.impact_impressions_pct, r.impact_conversions_pct, r.dismissed, r.applied
+     FROM recommendations r
+     LEFT JOIN campaigns c ON c.id = r.campaign_id
+     WHERE r.generated_date BETWEEN $1 AND $2
+     ORDER BY r.generated_date DESC`,
+    [start, end]
+  )
+}
+
+// v2 Stage 8 — change history.
+
+/** Backs a Change History list view. campaign is null for account-level
+ * changes (LEFT JOIN, not INNER). */
+export async function getChangeEvents(days = 30, endDate?: string) {
+  const end = endDate ?? new Date().toISOString().slice(0, 10)
+  const start = `${addDays(end, -days)}T00:00:00Z`
+  const endDateTime = `${end}T23:59:59Z`
+  return query(
+    `SELECT ce.id, ce.changed_at, c.id AS campaign_id, c.name AS campaign, ce.resource_type,
+            ce.change_operation, ce.field_changed, ce.old_value, ce.new_value, ce.changed_by
+     FROM change_events ce
+     LEFT JOIN campaigns c ON c.id = ce.campaign_id
+     WHERE ce.changed_at BETWEEN $1 AND $2
+     ORDER BY ce.changed_at DESC`,
+    [start, endDateTime]
   )
 }
 

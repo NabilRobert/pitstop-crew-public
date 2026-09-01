@@ -1,5 +1,6 @@
 export const navLinks = [
   { to: '/', labelKey: 'nav.dashboard' },
+  { to: '/campaigns', labelKey: 'nav.campaigns' },
   { to: '/reports', labelKey: 'nav.reports' },
   { to: '/system-health', labelKey: 'nav.systemHealth' },
   { to: '/learning', labelKey: 'nav.learning' },

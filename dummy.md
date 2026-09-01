@@ -16,6 +16,18 @@ Matches how real dealers structure accounts today — a split across Vehicle Ads
 | Performance Max — Vehicle Inventory | Performance Max | Feed-driven, largest spend share (35–45% of budget) |
 | Display Remarketing | Display | Retargets vehicle-detail-page (VDP) viewers who didn't inquire |
 
+## v2 Stage 1 — Ad Groups + Keywords + Quality Score
+
+See [docs/v2-backend-plan.md](docs/v2-backend-plan.md) for the full staged plan this is part of. Only the 3 Search-type campaigns get ad groups — Performance Max has no ad-group level in the real API (asset-group based instead, v2 stage 6), and Display is excluded to bound row count.
+
+| Campaign | Ad Groups (share of campaign) |
+|---|---|
+| Brand | Brand — Dealer Name (0.6), Brand — Location Variants (0.4) |
+| Search — Used Cars Generic | Used Cars Generic (0.55), Used SUVs Generic (0.45) |
+| Search — Model + Suburb | Model — Toyota (0.35), Model — Honda (0.30), Model — Suzuki (0.20), Model — Daihatsu (0.15) |
+
+Each ad group has 3 static keywords (mix of exact/phrase/broad match), each with a base Quality Score of 6-8. **Search — Model + Suburb's keywords erode QS as the existing decline progresses** — `qsToday = clamp(round(baseQS - (1 - declineMultiplier) * 3), 1, 10)` — so "Quality Score dropped alongside the decline" becomes a real, correlatable finding for Anna, not a second disconnected feature. Every other campaign's keywords keep a static QS. The 3 diagnostic sub-scores (expected CTR, ad relevance, landing page experience) are derived from the numeric QS bucket (≥7 above_average, 4-6 average, <4 below_average) rather than simulated independently — a deliberate simplification for synthetic data.
+
 ## Segments (~30 rows across the 8 `segment_type`s in `schema.sql`)
 
 | segment_type | Values |

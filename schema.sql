@@ -287,3 +287,260 @@ CREATE INDEX IF NOT EXISTS idx_ai_outputs_campaign ON ai_outputs(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_ai_outputs_period_agent ON ai_outputs(period, agent_type, report_date);
 CREATE INDEX IF NOT EXISTS idx_ask_log_output ON ask_log(output_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_type_status ON pipeline_runs(run_type, status);
+
+-- v2 Stage 1 — ad groups + keywords + Quality Score. See docs/v2-*-plan.md.
+-- Genuinely new fact tables, not segment-like rows: ad group -> keyword is a
+-- strict containment hierarchy (every keyword belongs to exactly one ad
+-- group), unlike segments/segment_performance's optional orthogonal cuts of
+-- a campaign's totals (device, geography). Matches how the real Google Ads
+-- API also models these as distinct resources, not segments of `campaign`.
+CREATE TABLE IF NOT EXISTS ad_groups (
+    id                 SERIAL PRIMARY KEY,
+    campaign_id        INTEGER NOT NULL REFERENCES campaigns(id),
+    google_ad_group_id TEXT,                 -- NULL for demo ad groups, populated once live-mode covers this level
+    name               TEXT NOT NULL,
+    status             TEXT,
+    data_source        TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS ad_group_performance (
+    id           SERIAL PRIMARY KEY,
+    ad_group_id  INTEGER NOT NULL REFERENCES ad_groups(id),
+    date         DATE NOT NULL,
+    impressions  INTEGER NOT NULL DEFAULT 0,
+    clicks       INTEGER NOT NULL DEFAULT 0,
+    cost_micros  BIGINT NOT NULL DEFAULT 0,
+    conversions  REAL NOT NULL DEFAULT 0,
+    UNIQUE (ad_group_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS keywords (
+    id                 SERIAL PRIMARY KEY,
+    ad_group_id        INTEGER NOT NULL REFERENCES ad_groups(id),
+    google_keyword_id  TEXT,
+    text               TEXT NOT NULL,
+    match_type         TEXT NOT NULL CHECK (match_type IN ('exact', 'phrase', 'broad')),
+    status             TEXT,
+    data_source        TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (ad_group_id, text, match_type)
+);
+
+-- Quality Score (full score + all 3 diagnostic sub-scores) is stored PER DAY
+-- here, not as a static attribute on `keywords` — lets QS visibly drift
+-- across the demo window (see profile.ts's decline-correlated erosion for
+-- search_model's keywords), matching how Google Ads itself recomputes QS
+-- continuously rather than fixing it once.
+CREATE TABLE IF NOT EXISTS keyword_performance (
+    id                       SERIAL PRIMARY KEY,
+    keyword_id               INTEGER NOT NULL REFERENCES keywords(id),
+    date                     DATE NOT NULL,
+    impressions              INTEGER NOT NULL DEFAULT 0,
+    clicks                   INTEGER NOT NULL DEFAULT 0,
+    cost_micros              BIGINT NOT NULL DEFAULT 0,
+    conversions              REAL NOT NULL DEFAULT 0,
+    quality_score            INTEGER CHECK (quality_score BETWEEN 1 AND 10),
+    expected_ctr             TEXT CHECK (expected_ctr IN ('above_average', 'average', 'below_average')),
+    ad_relevance             TEXT CHECK (ad_relevance IN ('above_average', 'average', 'below_average')),
+    landing_page_experience  TEXT CHECK (landing_page_experience IN ('above_average', 'average', 'below_average')),
+    UNIQUE (keyword_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_group_performance_date ON ad_group_performance(date);
+CREATE INDEX IF NOT EXISTS idx_keyword_performance_date ON keyword_performance(date);
+
+-- v2 Stage 2 — search terms. See docs/v2-backend-plan.md. Anchored to
+-- exactly one triggering keyword (keyword_id) — a deliberate simplification
+-- vs. the real API's looser attribution (a search term can technically
+-- surface under more than one keyword's auction).
+CREATE TABLE IF NOT EXISTS search_terms (
+    id             SERIAL PRIMARY KEY,
+    ad_group_id    INTEGER NOT NULL REFERENCES ad_groups(id),
+    keyword_id     INTEGER REFERENCES keywords(id),
+    text           TEXT NOT NULL,
+    match_flavor   TEXT NOT NULL CHECK (match_flavor IN ('close_variant', 'broader')),
+    data_source    TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (ad_group_id, text)
+);
+
+CREATE TABLE IF NOT EXISTS search_term_performance (
+    id               SERIAL PRIMARY KEY,
+    search_term_id   INTEGER NOT NULL REFERENCES search_terms(id),
+    date             DATE NOT NULL,
+    impressions      INTEGER NOT NULL DEFAULT 0,
+    clicks           INTEGER NOT NULL DEFAULT 0,
+    cost_micros      BIGINT NOT NULL DEFAULT 0,
+    conversions      REAL NOT NULL DEFAULT 0,
+    UNIQUE (search_term_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_term_performance_date ON search_term_performance(date);
+
+-- v2 Stage 3 — ads/creatives. See docs/v2-backend-plan.md. ad_strength
+-- lives here on `ads`, not `ad_performance` — unlike Quality Score, it's
+-- treated as a static per-ad attribute (correlated once with the ad's
+-- profile share in profile.ts), not something that drifts day to day.
+CREATE TABLE IF NOT EXISTS ads (
+    id             SERIAL PRIMARY KEY,
+    ad_group_id    INTEGER NOT NULL REFERENCES ad_groups(id),
+    google_ad_id   TEXT,
+    label          TEXT NOT NULL,
+    ad_type        TEXT NOT NULL DEFAULT 'responsive_search_ad',
+    headlines      JSONB NOT NULL,
+    descriptions   JSONB NOT NULL,
+    final_url      TEXT,
+    status         TEXT,
+    ad_strength    TEXT CHECK (ad_strength IN ('poor', 'average', 'good', 'excellent')),
+    data_source    TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (ad_group_id, label)
+);
+
+CREATE TABLE IF NOT EXISTS ad_performance (
+    id           SERIAL PRIMARY KEY,
+    ad_id        INTEGER NOT NULL REFERENCES ads(id),
+    date         DATE NOT NULL,
+    impressions  INTEGER NOT NULL DEFAULT 0,
+    clicks       INTEGER NOT NULL DEFAULT 0,
+    cost_micros  BIGINT NOT NULL DEFAULT 0,
+    conversions  REAL NOT NULL DEFAULT 0,
+    UNIQUE (ad_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_performance_date ON ad_performance(date);
+
+-- v2 Stage 4 — impression share + optimization score. See docs/v2-backend-plan.md.
+-- New nullable columns on campaign_performance, not a new table — a
+-- per-day-driftable snapshot like the rest of this table's columns.
+-- Deliberately storing only the 2 independent numbers Google Ads itself
+-- reports; rank-lost is derived at read time as
+-- 1 - search_impression_share - search_budget_lost_impression_share
+-- (clamped >= 0) rather than stored as a 3rd number that could drift out
+-- of sync with the two it's computed from. Populated only for the 3
+-- Search-type campaigns (Brand, Search — Used Cars Generic, Search —
+-- Model + Suburb) — real Google Ads doesn't expose impression share for
+-- PMax at all, and Display uses a different metric family entirely;
+-- leaving those NULL is itself a realistic detail. optimization_score
+-- follows the same scope for consistency (see profile.ts).
+ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS search_impression_share REAL;
+ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS search_budget_lost_impression_share REAL;
+ALTER TABLE campaign_performance ADD COLUMN IF NOT EXISTS optimization_score REAL;
+
+-- v2 Stage 5 — named conversion actions. See docs/v2-backend-plan.md.
+-- First-class table + join-fact table, not folded into segments — these
+-- need richer attributes (category, counting_type) than a bare segment
+-- string, and Tier 1 wants them treated as first-class named entities
+-- the LLM reasons about directly (e.g. "Phone Call conversions are up",
+-- not "a segment called Phone Call"). Account-wide (no ad_group_id/
+-- campaign scoping on conversion_actions itself) — every campaign's
+-- daily conversions total is split across the same 4 named actions; see
+-- profile.ts's CONVERSION_ACTIONS.
+CREATE TABLE IF NOT EXISTS conversion_actions (
+    id                          SERIAL PRIMARY KEY,
+    google_conversion_action_id TEXT,
+    name                        TEXT NOT NULL,
+    category                    TEXT,
+    counting_type               TEXT,
+    status                      TEXT,
+    data_source                 TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (name, data_source)
+);
+
+CREATE TABLE IF NOT EXISTS conversion_action_performance (
+    id                    SERIAL PRIMARY KEY,
+    campaign_id           INTEGER NOT NULL REFERENCES campaigns(id),
+    conversion_action_id  INTEGER NOT NULL REFERENCES conversion_actions(id),
+    date                  DATE NOT NULL,
+    conversions           REAL NOT NULL DEFAULT 0,
+    UNIQUE (campaign_id, conversion_action_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversion_action_performance_date ON conversion_action_performance(date);
+
+-- v2 Stage 6 — PMax asset groups. See docs/v2-backend-plan.md. Scoped to
+-- the `pmax` campaign only — Performance Max is asset-group based
+-- instead of ad-group based (see Stage 1's comment on why Search's
+-- ad_groups table doesn't cover PMax). ad_strength lives on the per-day
+-- performance table here, unlike Stage 3's ads.ad_strength (a static
+-- column on `ads` itself) — this demo profile still treats each asset
+-- group's rating as static day-to-day (see profile.ts), matching Stage
+-- 3's simplification; only Quality Score is designed to actually drift.
+CREATE TABLE IF NOT EXISTS asset_groups (
+    id                     SERIAL PRIMARY KEY,
+    campaign_id            INTEGER NOT NULL REFERENCES campaigns(id),
+    google_asset_group_id  TEXT,
+    name                   TEXT NOT NULL,
+    status                 TEXT,
+    data_source            TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS asset_group_performance (
+    id             SERIAL PRIMARY KEY,
+    asset_group_id INTEGER NOT NULL REFERENCES asset_groups(id),
+    date           DATE NOT NULL,
+    impressions    INTEGER NOT NULL DEFAULT 0,
+    clicks         INTEGER NOT NULL DEFAULT 0,
+    cost_micros    BIGINT NOT NULL DEFAULT 0,
+    conversions    REAL NOT NULL DEFAULT 0,
+    ad_strength    TEXT CHECK (ad_strength IN ('poor', 'average', 'good', 'excellent')),
+    UNIQUE (asset_group_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_asset_group_performance_date ON asset_group_performance(date);
+
+-- v2 Stage 7 — Google Ads' own Recommendations. See docs/v2-backend-plan.md.
+-- Episodic/scripted, not generated inside the daily Markov loop: a
+-- static, hand-authored list in profile.ts (src/data/demo/scriptedEvents.ts
+-- resolves its dayOffsets to absolute dates), upserted idempotently once
+-- rather than derived fresh from (date, seed) on every call — matches
+-- the existing DECLINE_START_DAY/SEASONAL_SPIKE_START_DAY scripted-moment
+-- pattern. campaign_id NULL means an account-level recommendation.
+CREATE TABLE IF NOT EXISTS recommendations (
+    id                        SERIAL PRIMARY KEY,
+    campaign_id               INTEGER REFERENCES campaigns(id),
+    google_recommendation_id  TEXT,
+    recommendation_type       TEXT NOT NULL,
+    title                     TEXT NOT NULL,
+    description               TEXT,
+    impact_impressions_pct    REAL,
+    impact_conversions_pct    REAL,
+    dismissed                 BOOLEAN NOT NULL DEFAULT false,
+    applied                   BOOLEAN NOT NULL DEFAULT false,
+    generated_date            DATE NOT NULL,
+    data_source               TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, generated_date, recommendation_type, title)
+);
+
+-- v2 Stage 8 — change history. See docs/v2-backend-plan.md. Episodic/
+-- scripted, same pattern as Stage 7's recommendations (static list in
+-- profile.ts, resolved by scriptedEvents.ts, idempotently upserted).
+-- field_changed/old_value/new_value are deliberately flattened text vs.
+-- the real API's full protobuf resource snapshots — far more directly
+-- quotable by Anna, and there's no UI need for a full diff. campaign_id
+-- NULL means an account-level change (e.g. a portfolio bid strategy not
+-- tied to one campaign). One change event lands exactly at
+-- DECLINE_START_DAY on search_model (a budget cut) — see profile.ts.
+CREATE TABLE IF NOT EXISTS change_events (
+    id                      SERIAL PRIMARY KEY,
+    campaign_id             INTEGER REFERENCES campaigns(id),
+    google_change_event_id  TEXT,
+    changed_at              TIMESTAMPTZ NOT NULL,
+    resource_type           TEXT NOT NULL, -- CAMPAIGN, CAMPAIGN_BUDGET, AD_GROUP, AD, KEYWORD, BIDDING_STRATEGY
+    change_operation        TEXT NOT NULL CHECK (change_operation IN ('CREATE', 'UPDATE', 'REMOVE')),
+    field_changed           TEXT,
+    old_value               TEXT,
+    new_value               TEXT,
+    changed_by              TEXT,
+    data_source             TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, changed_at, field_changed)
+);
+
+CREATE INDEX IF NOT EXISTS idx_change_events_changed_at ON change_events(changed_at);

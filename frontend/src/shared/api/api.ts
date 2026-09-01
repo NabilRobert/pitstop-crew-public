@@ -21,6 +21,14 @@ import type {
   AssistantAskResponse,
   AssistantAskEntry,
   AssistantConversation,
+  AdGroupPerformanceRow,
+  KeywordPerformanceRow,
+  SearchTermPerformanceRow,
+  AdPerformanceRow,
+  ConversionActionRow,
+  AssetGroupPerformanceRow,
+  RecommendationRow,
+  ChangeEventRow,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -74,6 +82,20 @@ export const api = {
   systemHealth: () => request<SystemHealth>('/system-health'),
   campaigns: () => request<Campaign[]>('/campaigns'),
   performance: (days = 30) => request<PerformanceRow[]>(`/performance?days=${days}`),
+  adGroupPerformance: (days = 30, campaignId?: number) =>
+    request<AdGroupPerformanceRow[]>(`/ad-groups/performance?days=${days}${campaignId ? `&campaignId=${campaignId}` : ''}`),
+  keywordPerformance: (days = 30, adGroupId?: number) =>
+    request<KeywordPerformanceRow[]>(`/keywords/performance?days=${days}${adGroupId ? `&adGroupId=${adGroupId}` : ''}`),
+  searchTermPerformance: (days = 30, keywordId?: number) =>
+    request<SearchTermPerformanceRow[]>(`/search-terms/performance?days=${days}${keywordId ? `&keywordId=${keywordId}` : ''}`),
+  adPerformance: (days = 30, adGroupId?: number) =>
+    request<AdPerformanceRow[]>(`/ads/performance?days=${days}${adGroupId ? `&adGroupId=${adGroupId}` : ''}`),
+  conversionActionBreakdown: (days = 30) =>
+    request<ConversionActionRow[]>(`/conversion-actions/performance?days=${days}`),
+  assetGroupPerformance: (days = 30) =>
+    request<AssetGroupPerformanceRow[]>(`/asset-groups/performance?days=${days}`),
+  recommendations: (days = 30) => request<RecommendationRow[]>(`/recommendations?days=${days}`),
+  changeEvents: (days = 30) => request<ChangeEventRow[]>(`/change-events?days=${days}`),
   segmentPerformance: (days = 30) => request<SegmentPerformanceRow[]>(`/segments/performance?days=${days}`),
   settings: () => request<Settings>('/settings'),
   updateSettings: (payload: Partial<Settings>) =>

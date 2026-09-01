@@ -12,6 +12,9 @@ import WhyTrailPanel from '../../shared/report/WhyTrailPanel.vue'
 import TrendChart from './TrendChart.vue'
 import CampaignBarChart from './CampaignBarChart.vue'
 import SegmentBreakdownChart from './SegmentBreakdownChart.vue'
+import ConversionActionChart from './ConversionActionChart.vue'
+import RecommendationsList from './RecommendationsList.vue'
+import ChangeEventTimeline from './ChangeEventTimeline.vue'
 import { useReportDrawer } from '../../shared/report/useReportDrawer'
 import { useDashboard, PERIOD_OPTIONS } from './useDashboard'
 
@@ -22,9 +25,15 @@ const {
   days,
   performance,
   segmentPerformance,
+  conversionActions,
+  recommendations,
+  changeEvents,
   dailyReport,
+  campaigns,
   totals,
   ctr,
+  blendedImpressionShare,
+  blendedOptimizationScore,
   campaignRows,
   lastRunLabel,
   latestReportLink,
@@ -78,6 +87,17 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
         <MetricCard :label="t('metrics.clicks')" :value="formatNumber(totals.clicks)" />
         <MetricCard :label="t('metrics.ctr')" :value="formatPercent(ctr)" accent="giallo" />
         <MetricCard :label="t('metrics.cost')" :value="formatMicrosAsIDR(totals.cost_micros)" accent="rosso" />
+        <MetricCard
+          v-if="blendedImpressionShare !== null"
+          :label="t('metrics.impressionShare')"
+          :value="formatPercent(blendedImpressionShare * 100, 0)"
+          accent="verde"
+        />
+        <MetricCard
+          v-if="blendedOptimizationScore !== null"
+          :label="t('metrics.optimizationScore')"
+          :value="formatPercent(blendedOptimizationScore * 100, 0)"
+        />
       </div>
 
       <div class="mb-8">
@@ -158,7 +178,7 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
               </div>
             </div>
 
-            <CampaignTable :rows="campaignRows" />
+            <CampaignTable :rows="campaignRows" :campaigns="campaigns" />
           </div>
         </div>
         <div class="lg:col-span-2">
@@ -186,8 +206,14 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
         </div>
       </div>
 
-      <div class="mt-8">
+      <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SegmentBreakdownChart :rows="segmentPerformance" />
+        <ConversionActionChart :rows="conversionActions" />
+      </div>
+
+      <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <RecommendationsList :rows="recommendations" />
+        <ChangeEventTimeline :rows="changeEvents" />
       </div>
 
       <ReportDrawer :open="!!activeDrawer" :title="drawerTitle()" @close="closeDrawer">
