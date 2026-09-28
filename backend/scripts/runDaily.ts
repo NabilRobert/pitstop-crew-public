@@ -1,15 +1,15 @@
 // Cron entrypoint: `*/15 * * * * node dist/scripts/runDaily.js` (see
 // backend/deploy/crontab.txt). Runs every 15 minutes but only actually
 // fires the pipeline once it's past the configured run time (see
-// backend/src/settings.ts) AND it hasn't already succeeded today — so the
+// backend/src/platform/settings.ts) AND it hasn't already succeeded today — so the
 // crontab line itself no longer encodes the run time, the Settings page
 // does. On Mondays, also runs the weekly rollup + weekly feedback job
 // once past the weekly run time. Emails the report on success, or a
 // failure alert on any exception — per PROJECT.md, failures are
 // surfaced, never silently skipped.
 //
-// Everything here is evaluated in WIB (see ../src/timezone.ts), not the
-// VPS's own OS timezone — the Settings page's run-time fields, "today"'s
+// Everything here is evaluated in WIB (see ../src/platform/timezone.ts), not
+// the VPS's own OS timezone — the Settings page's run-time fields, "today"'s
 // date, and the Monday check all mean Indonesia time regardless of where
 // the server actually lives.
 
@@ -114,11 +114,11 @@ async function main() {
       console.log(`Daily run complete for ${today}`)
     } catch (err) {
       // startRun() inside runDaily() (no existingRunId passed here — this
-      // is the cron path, unlike a manual trigger that resolves its own
-      // runId first and passes it through) can lose the
-      // idx_pipeline_runs_one_running race against a concurrent run.
-      // That's not a real failure — nothing broke, this tick just backs
-      // off — so it shouldn't fire a failure alert.
+      // is the cron path, unlike the manual POST /pipeline/run trigger,
+      // which resolves its own runId first and passes it through) can
+      // lose the idx_pipeline_runs_one_running race against a concurrent
+      // manual trigger. That's not a real failure — nothing broke, this
+      // tick just backs off — so it shouldn't fire a failure alert.
       if (err instanceof PipelineRunInProgressError) {
         console.log(
           'Daily run skipped — another run was already in progress (likely a manual "Generate report now" trigger racing this cron tick)'
@@ -149,16 +149,17 @@ async function main() {
     await deliver('weekly', subject, body)
     console.log(`Weekly run complete for ${today}`)
   } catch (err) {
+    // Same false-alarm case as the daily block above.
     if (err instanceof PipelineRunInProgressError) {
       console.log(
         'Weekly run skipped — another run was already in progress (likely a manual "Generate report now" trigger racing this cron tick)'
       )
-      return
+    } else {
+      const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
+      const { subject, body } = formatFailureAlert('weekly', message)
+      await deliver('weekly', subject, body)
+      throw err
     }
-    const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
-    const { subject, body } = formatFailureAlert('weekly', message)
-    await deliver('weekly', subject, body)
-    throw err
   }
 
   const suggestion = await runWeeklyFeedback(today)
