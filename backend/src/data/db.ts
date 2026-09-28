@@ -58,6 +58,10 @@ function getPool(): pg.Pool {
       connectionTimeoutMillis: 10_000,
       keepAlive: true,
       keepAliveInitialDelayMillis: 30_000,
+      // min keeps sockets open, which would stop the cron and backup scripts
+      // from ever exiting; this lets a script end once it has no work left
+      // (the API server stays up on its own listener).
+      allowExitOnIdle: true,
     })
     // An idle client can error (pooler restart, network drop). Without a
     // listener that is an uncaught exception and kills the process.
