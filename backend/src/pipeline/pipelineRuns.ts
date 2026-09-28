@@ -4,6 +4,7 @@
 import { query, queryOne } from '../data/db.js'
 import { createUsageTracker, priceUsage, type UsageByModel } from '../platform/llmUsage.js'
 import { traceRun } from '../platform/trace.js'
+import { redactSecrets } from '../platform/redact.js'
 
 export const VALID_RUN_TYPES = ['daily', 'weekly', 'weekly_feedback', 'backup'] as const
 export type RunType = (typeof VALID_RUN_TYPES)[number]
@@ -51,9 +52,11 @@ export async function finishRun(
     `UPDATE pipeline_runs
      SET finished_at = $1, status = $2, cost_usd_micros = $3, error_message = $4, llm_usage = $5
      WHERE id = $6`,
+    // error_message is redacted here, at write time: a provider error can echo a
+    // key or connection string, and this column is shown on the run list.
     // Serialized explicitly, same reasoning as ads.headlines in damon.ts —
     // don't rely on pg's implicit object->jsonb coercion.
-    [new Date(), status, costUsdMicros, errorMessage, llmUsage == null ? null : JSON.stringify(llmUsage), runId]
+    [new Date(), status, costUsdMicros, errorMessage == null ? null : redactSecrets(errorMessage), llmUsage == null ? null : JSON.stringify(llmUsage), runId]
   )
 }
 
