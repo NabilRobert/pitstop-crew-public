@@ -27,14 +27,20 @@ export async function sendEmail(to: string, subject: string, body: string): Prom
  * Prints instead of sending when no recipient is configured, matching
  * this project's existing "surfaced, never silently skipped" principle
  * for anything report-related. */
-export async function deliverReport(runType: string, subject: string, body: string, runId?: number | null): Promise<void> {
+export async function deliverReport(
+  runType: string,
+  subject: string,
+  body: string,
+  runId?: number | null
+): Promise<'sent' | 'skipped'> {
   // With a runId the send is recorded on that run's trace (never the
-  // recipient's address, only that one was configured).
+  // recipient's address, only that one was configured). Resolves 'skipped'
+  // when no recipient is configured (the report is printed instead).
   return withRunTrace(runId, () =>
     span(
       'email',
       `Send ${runType} email`,
-      async (s) => {
+      async (s): Promise<'sent' | 'skipped'> => {
         const settings = await getSettings()
         const recipient = settings.report_recipient_email
         if (!recipient) {
@@ -42,10 +48,11 @@ export async function deliverReport(runType: string, subject: string, body: stri
           console.log(subject)
           console.log(body)
           s.set({ status: 'skipped', summary: 'no report recipient configured — printed to the log instead' })
-          return
+          return 'skipped'
         }
         await sendEmail(recipient, subject, body)
         s.set({ summary: `sent (${body.length} chars)` })
+        return 'sent'
       },
       { run_type: runType, subject }
     )

@@ -184,7 +184,16 @@ router.post('/pipeline/run', async (req, res) => {
       try {
         const { subject, body } = await formatReportEmail(result, today, period)
         emitEvent(`Emil: emailing ${period} report…`, 'info', runId)
-        await deliverReport(period, subject, body, runId)
+        const outcome = await deliverReport(period, subject, body, runId)
+        // Tells the frontend the run is really over (its reports table
+        // refreshes on these) — the report itself exists earlier, at "run complete".
+        emitEvent(
+          outcome === 'sent'
+            ? `Emil: ${period} report email sent`
+            : `Emil: no recipient configured — ${period} report not emailed`,
+          'info',
+          runId
+        )
       } catch (err) {
         // The pipeline run itself succeeded — a failed send here shouldn't
         // be reported as a pipeline failure, just its own separate warning.
