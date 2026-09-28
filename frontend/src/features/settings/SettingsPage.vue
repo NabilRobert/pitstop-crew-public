@@ -10,7 +10,6 @@ const {
   saved,
   dailyRunTime,
   weeklyRunTime,
-  gradeForcesRevision,
   reportRecipientEmail,
   reportLanguage,
   autoReportsEnabled,
@@ -90,14 +89,6 @@ const {
             {{ t('settings.reportLanguageHelp') }}
           </p>
         </div>
-
-        <label class="mt-5 flex items-start gap-3 border-t border-border pt-5">
-          <input v-model="gradeForcesRevision" type="checkbox" class="mt-0.5 h-4 w-4 accent-rosso" />
-          <span class="text-sm text-ink-soft">
-            <span class="font-medium text-ink">{{ t('settings.requireRevisionTitle') }}</span><br />
-            {{ t('settings.requireRevisionDesc') }}
-          </span>
-        </label>
 
         <button
           type="button"

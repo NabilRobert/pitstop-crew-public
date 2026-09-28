@@ -206,8 +206,8 @@ const poll = setInterval(async () => {
         </table>
         <p class="text-sm">
           Valid keys: <code>daily_run_time</code>, <code>weekly_run_time</code> (HH:MM),
-          <code>grade_forces_revision</code> ("true"/"false"), <code>report_recipient_email</code>,
-          <code>report_language</code> ("en"/"id"). Unknown keys are silently ignored, invalid values 400.
+          <code>report_recipient_email</code>, <code>auto_reports_enabled</code> ("true"/"false"),
+          <code>report_language</code> ("en"/"id"). Unknown keys are silently ignored, invalid values 400. (<code>grade_forces_revision</code> is still accepted but has no effect — D/F grades always block approval.)
         </p>
       </section>
 

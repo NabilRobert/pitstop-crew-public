@@ -319,9 +319,6 @@ export default {
     reportRecipientEmail: 'Report recipient email',
     emailHelp:
       'Every generated report — scheduled or "Generate report now" — gets emailed here. Leave blank to skip email and just log the report instead.',
-    requireRevisionTitle: 'Require revision on a D/F grade from Ciri',
-    requireRevisionDesc:
-      "Ciri already revises when it flags real issues. This also forces a revision whenever the grade is D or F, even on the rare case Ciri didn't otherwise flag anything — belt and suspenders, capped by the same 2-revision limit.",
     reportLanguage: 'Report language',
     reportLanguageHelp: 'The language the AI agents write generated report content in.',
     reportLanguageEn: 'English',
@@ -544,7 +541,7 @@ export default {
     },
     settings: {
       title: 'Settings + email',
-      body: 'Daily/weekly run times, in WIB (Indonesia Western Time, UTC+7 — pinned in code, so it\'s correct regardless of the server\'s own OS timezone). A report recipient email — every generated report, scheduled or manual, gets emailed there; leave it blank to just log the report instead of sending it. And the optional "require revision on a D/F grade" toggle, which forces an extra revision pass on a bad grade even in the rare case Ciri\'s verdict alone wouldn\'t have triggered one.',
+      body: 'Daily/weekly run times, in WIB (Indonesia Western Time, UTC+7 — pinned in code, so it\'s correct regardless of the server\'s own OS timezone). A report recipient email — every generated report, scheduled or manual, gets emailed there; leave it blank to just log the report instead of sending it.',
     },
     principles: {
       title: 'Design principles',

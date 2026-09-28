@@ -319,9 +319,6 @@ export default {
     reportRecipientEmail: 'Email penerima laporan',
     emailHelp:
       'Setiap laporan yang dibuat — terjadwal maupun lewat "Buat laporan sekarang" — akan dikirim ke email ini. Kosongkan untuk melewati email dan cukup mencatat laporannya saja.',
-    requireRevisionTitle: 'Wajibkan revisi saat nilai dari Ciri D/F',
-    requireRevisionDesc:
-      'Ciri sudah merevisi otomatis saat menemukan masalah nyata. Opsi ini juga memaksa revisi tambahan setiap kali nilainya D atau F, bahkan pada kasus langka saat Ciri tidak menandai apa pun — pengaman ekstra, tetap dibatasi oleh batas 2 revisi yang sama.',
     reportLanguage: 'Bahasa laporan',
     reportLanguageHelp: 'Bahasa yang digunakan agen AI saat menulis konten laporan yang dihasilkan.',
     reportLanguageEn: 'Inggris',
@@ -544,7 +541,7 @@ export default {
     },
     settings: {
       title: 'Pengaturan + email',
-      body: 'Waktu run harian/mingguan, dalam WIB (UTC+7 — dipatok langsung di kode, jadi tetap benar terlepas dari zona waktu OS server itu sendiri). Email penerima laporan — setiap laporan yang dibuat, terjadwal maupun manual, dikirim ke sana; kosongkan untuk sekadar mencatat laporannya tanpa mengirim email. Dan toggle opsional "wajibkan revisi saat nilai D/F", yang memaksa satu putaran revisi tambahan pada nilai buruk bahkan pada kasus langka saat putusan Ciri sendiri tidak akan memicunya.',
+      body: 'Waktu run harian/mingguan, dalam WIB (UTC+7 — dipatok langsung di kode, jadi tetap benar terlepas dari zona waktu OS server itu sendiri). Email penerima laporan — setiap laporan yang dibuat, terjadwal maupun manual, dikirim ke sana; kosongkan untuk sekadar mencatat laporannya tanpa mengirim email.',
     },
     principles: {
       title: 'Prinsip desain',
