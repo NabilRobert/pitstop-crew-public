@@ -3,6 +3,7 @@
 
 import { query, queryOne } from '../data/db.js'
 import { createUsageTracker, priceUsage, type UsageByModel } from '../platform/llmUsage.js'
+import { traceRun } from '../platform/trace.js'
 
 export const VALID_RUN_TYPES = ['daily', 'weekly', 'weekly_feedback', 'backup'] as const
 export type RunType = (typeof VALID_RUN_TYPES)[number]
@@ -83,7 +84,31 @@ export async function trackRun<T>(
   // attributed to this run — see platform/llmUsage.ts.
   const tracker = createUsageTracker()
   try {
-    const result = await tracker.run(() => fn(handle))
+    // The run's trace root (platform/trace.ts): everything fn does nests under
+    // it, and it carries the run's total tokens and cost however fn ends.
+    const result = await tracker.run(() =>
+      traceRun(runId, `${runType} run`, { run_type: runType }, async (root) => {
+        try {
+          return await fn(handle)
+        } finally {
+          let tokensIn = 0
+          let tokensOut = 0
+          let calls = 0
+          for (const u of Object.values(tracker.usage)) {
+            tokensIn += u.input_tokens
+            tokensOut += u.output_tokens
+            calls += u.calls
+          }
+          const { costUsdMicros } = summarizeUsage(tracker.usage)
+          root.set({
+            tokensIn,
+            tokensOut,
+            costUsd: costUsdMicros == null ? null : costUsdMicros / 1e6,
+            summary: `${runType} run: ${calls} LLM call${calls === 1 ? '' : 's'}, ${tokensIn} tokens in / ${tokensOut} out`,
+          })
+        }
+      })
+    )
     const { llmUsage, costUsdMicros } = summarizeUsage(tracker.usage)
     // An explicit handle.costUsdMicros set by fn still wins over the computed one.
     await finishRun(runId, 'success', handle.costUsdMicros ?? costUsdMicros, null, llmUsage)
@@ -92,6 +117,9 @@ export async function trackRun<T>(
     // Calls made before the failure were still billed — keep their usage.
     const { llmUsage, costUsdMicros } = summarizeUsage(tracker.usage)
     await finishRun(runId, 'failure', costUsdMicros, String(err instanceof Error ? err.message : err), llmUsage)
+    // Lets a caller that only has the error (the cron script's failure alert)
+    // attach its follow-up work to this run's trace.
+    if (err && typeof err === 'object') Object.defineProperty(err, 'pipelineRunId', { value: runId, configurable: true })
     throw err
   }
 }

@@ -530,6 +530,32 @@ export async function buildCriticHistoricalContext(endDate: string, days: number
   return facts ? `${summary}\n\n${facts}` : summary
 }
 
+/** How many source rows fed the context for a window — recorded on the
+ * trace's context step so a run shows how much data the agents were given.
+ * Best-effort: returns {} rather than throwing. */
+export async function getContextRowCounts(endDate: string, days: number): Promise<Record<string, number>> {
+  const startDate = addDays(endDate, -days)
+  const tables: [string, string, string][] = [
+    ['campaign_performance', 'campaign_performance', 'date'],
+    ['ad_group_performance', 'ad_group_performance', 'date'],
+    ['keyword_performance', 'keyword_performance', 'date'],
+    ['search_term_performance', 'search_term_performance', 'date'],
+    ['ad_performance', 'ad_performance', 'date'],
+    ['conversion_action_performance', 'conversion_action_performance', 'date'],
+    ['asset_group_performance', 'asset_group_performance', 'date'],
+    ['segment_performance', 'segment_performance', 'date'],
+    ['recommendations', 'recommendations', 'generated_date'],
+    ['change_events', 'change_events', 'changed_at::date'],
+  ]
+  try {
+    const selects = tables.map(([alias, table, col]) => `(SELECT COUNT(*) FROM ${table} WHERE ${col} BETWEEN $1 AND $2)::int AS ${alias}`)
+    const rows = await query<Record<string, number>>(`SELECT ${selects.join(', ')}`, [startDate, endDate])
+    return rows[0] ?? {}
+  } catch {
+    return {}
+  }
+}
+
 /** Composes buildPerformanceContext + every v2 builder added so far —
  * used by both the daily pipeline (orchestrator.ts) and the Ask feature
  * (ask.ts), so asking "what's my Quality Score on Search-Model?" actually

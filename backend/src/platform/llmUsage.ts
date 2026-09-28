@@ -88,6 +88,22 @@ export function getPriceTable(): Record<string, ModelPrice> {
   return table
 }
 
+/** Cost of a single API call in USD, or null when the model has no configured
+ * rate (never 0 for "unknown"). Used for per-call trace events. */
+export function priceCallUsd(model: string, raw: RawUsage | null | undefined): number | null {
+  if (!raw) return null
+  const micros = priceUsage({
+    [model]: {
+      calls: 1,
+      input_tokens: raw.prompt_tokens ?? 0,
+      cached_input_tokens: raw.prompt_tokens_details?.cached_tokens ?? 0,
+      output_tokens: raw.completion_tokens ?? 0,
+      reasoning_tokens: raw.completion_tokens_details?.reasoning_tokens ?? 0,
+    },
+  }).totalUsdMicros
+  return micros === null ? null : micros / 1e6
+}
+
 export interface PricedUsage {
   /** Per-model usage plus that model's cost in USD micros (null = no rate). */
   models: Record<string, ModelUsage & { cost_usd_micros: number | null }>

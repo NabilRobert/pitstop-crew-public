@@ -10,7 +10,8 @@ import { runWithCritic } from '../agents/criticLoop.js'
 import { syncTrailingWindow } from '../data/damon.js'
 import { getOutput } from '../reporting/outputs.js'
 import { DATA_SOURCE } from '../platform/config.js'
-import { buildFullContext, buildCriticHistoricalContext } from '../data/context.js'
+import { buildFullContext, buildCriticHistoricalContext, getContextRowCounts } from '../data/context.js'
+import { span } from '../platform/trace.js'
 import { startRun, trackRun } from './pipelineRuns.js'
 import { emitEvent } from '../platform/eventBus.js'
 import { getSettings } from '../platform/settings.js'
@@ -24,6 +25,9 @@ const ANALYSIS_LOOKBACK_DAYS = 30
 const CRITIC_HISTORY_DAYS = 60
 
 export interface RunResult {
+  /** The pipeline_runs row this result came from — lets the caller attach the
+   * report email to the run's trace. */
+  runId: number
   analysisId: number
   recommendationId: number
   summaryId: number
@@ -42,7 +46,14 @@ export async function runDaily(
     'daily',
     async (handle) => {
       emitEvent('Damon: syncing trailing 7-day window…', 'info', runId)
-      await syncTrailingWindow(targetDate, TRAILING_WINDOW_DAYS, seed, source)
+      await span(
+        'context',
+        'Damon: sync trailing window',
+        async () => {
+          await syncTrailingWindow(targetDate, TRAILING_WINDOW_DAYS, seed, source)
+        },
+        { days: TRAILING_WINDOW_DAYS, data_source: source, target_date: targetDate }
+      )
       emitEvent('Damon: sync complete', 'info', runId)
       const result = await runAgentChain(targetDate, 'daily', ANALYSIS_LOOKBACK_DAYS, handle.runId)
       emitEvent(`Daily pipeline run complete (report_date=${targetDate})`, 'info', runId)
@@ -67,8 +78,33 @@ export async function runWeekly(targetDate: string, existingRunId?: number): Pro
 }
 
 async function runAgentChain(targetDate: string, period: string, days: number, pipelineRunId: number): Promise<RunResult> {
-  const performanceData = await buildFullContext({ endDate: targetDate, days })
-  const historicalContext = await buildCriticHistoricalContext(targetDate, CRITIC_HISTORY_DAYS)
+  const performanceData = await span(
+    'context',
+    'Build analysis context',
+    async (s) => {
+      const text = await buildFullContext({ endDate: targetDate, days })
+      const rows = await getContextRowCounts(targetDate, days)
+      const totalRows = Object.values(rows).reduce((a, b) => a + b, 0)
+      s.set({
+        summary: `${days} days to ${targetDate}: ${totalRows} source rows, ${text.length} chars (~${Math.round(text.length / 4)} tokens)`,
+        meta: { chars: text.length, approx_tokens: Math.round(text.length / 4), rows },
+      })
+      s.payload('context', text)
+      return text
+    },
+    { end_date: targetDate, days }
+  )
+  const historicalContext = await span(
+    'context',
+    'Build critic history context',
+    async (s) => {
+      const text = await buildCriticHistoricalContext(targetDate, CRITIC_HISTORY_DAYS)
+      s.set({ summary: `${CRITIC_HISTORY_DAYS} days: ${text.length} chars (~${Math.round(text.length / 4)} tokens)`, meta: { chars: text.length } })
+      s.payload('context', text)
+      return text
+    },
+    { end_date: targetDate, days: CRITIC_HISTORY_DAYS, critic_only: true }
+  )
   // Fetched once per run, not once per agent/critic call — matches the
   // existing pattern for grade_forces_revision in criticLoop.ts.
   const { report_language: language } = await getSettings()
@@ -114,5 +150,5 @@ async function runAgentChain(targetDate: string, period: string, days: number, p
     pipelineRunId,
   })
 
-  return { analysisId, recommendationId, summaryId }
+  return { runId: pipelineRunId, analysisId, recommendationId, summaryId }
 }

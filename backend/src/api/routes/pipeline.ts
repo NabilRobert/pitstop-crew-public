@@ -132,7 +132,7 @@ router.post('/pipeline/run', async (req, res) => {
       try {
         const { subject, body } = await formatReportEmail(result, today, period)
         emitEvent(`Emil: emailing ${period} report…`, 'info', runId)
-        await deliverReport(period, subject, body)
+        await deliverReport(period, subject, body, runId)
       } catch (err) {
         // The pipeline run itself succeeded — a failed send here shouldn't
         // be reported as a pipeline failure, just its own separate warning.
@@ -143,6 +143,6 @@ router.post('/pipeline/run', async (req, res) => {
       const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
       emitEvent(`Pipeline run failed: ${message}`, 'error', runId)
       const { subject, body } = formatFailureAlert(period, message)
-      await deliverReport(period, subject, body).catch(() => {})
+      await deliverReport(period, subject, body, runId).catch(() => {})
     })
 })

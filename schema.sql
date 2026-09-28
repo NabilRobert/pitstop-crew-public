@@ -560,3 +560,43 @@ CREATE INDEX IF NOT EXISTS idx_change_events_changed_at ON change_events(changed
 -- for it, and the run-level cost_usd_micros is then null too rather than a
 -- partial total. See src/platform/llmUsage.ts.
 ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS llm_usage JSONB;
+
+-- Run Inspector (backend/src/platform/trace.ts). One row per step of a pipeline run:
+-- the run itself, data-context builds, agents, LLM calls, critic reviews,
+-- approval decisions, revisions, the email send, and errors — nested via
+-- parent_id (NULL = the run's root event) and ordered by seq (assigned in start
+-- order, so ascending seq is a depth-first walk of the tree). Listing a run
+-- stays cheap because the bulky text lives in trace_payloads instead.
+CREATE TABLE IF NOT EXISTS trace_events (
+    id             BIGSERIAL PRIMARY KEY,
+    run_id         INTEGER NOT NULL REFERENCES pipeline_runs(id) ON DELETE CASCADE,
+    parent_id      BIGINT REFERENCES trace_events(id) ON DELETE CASCADE,
+    seq            INTEGER NOT NULL,
+    kind           TEXT NOT NULL CHECK (kind IN (
+                       'run', 'context', 'agent', 'llm_call', 'critic_review',
+                       'decision', 'revision', 'email', 'error'
+                   )),
+    name           TEXT NOT NULL,
+    status         TEXT NOT NULL DEFAULT 'ok' CHECK (status IN ('ok', 'error', 'skipped')),
+    started_at     TIMESTAMPTZ NOT NULL,
+    ended_at       TIMESTAMPTZ,           -- NULL while running, or if the process died mid-step
+    duration_ms    INTEGER,
+    model          TEXT,
+    tokens_in      INTEGER,
+    tokens_out     INTEGER,
+    cost_usd       NUMERIC(12, 6),        -- NULL = no price configured (never 0 for "unknown")
+    summary        TEXT,                  -- short, <= ~500 chars
+    meta           JSONB,
+    error_message  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_trace_events_run_seq ON trace_events(run_id, seq);
+
+-- Full prompts, responses and built context. Kept 30 days (pruneTracePayloads,
+-- called from the cron script); the lightweight trace_events rows stay.
+CREATE TABLE IF NOT EXISTS trace_payloads (
+    id        BIGSERIAL PRIMARY KEY,
+    event_id  BIGINT NOT NULL REFERENCES trace_events(id) ON DELETE CASCADE,
+    role      TEXT NOT NULL CHECK (role IN ('prompt', 'response', 'context')),
+    content   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_trace_payloads_event ON trace_payloads(event_id);

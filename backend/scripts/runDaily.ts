@@ -22,6 +22,7 @@ import {
 } from '../src/reporting/reports.js'
 import { runWeeklyFeedback } from '../src/pipeline/weeklyFeedback.js'
 import { deliverReport as deliver } from '../src/platform/emailDelivery.js'
+import { pruneTracePayloads } from '../src/platform/trace.js'
 import { getSettings } from '../src/platform/settings.js'
 import {
   getLastSuccessfulRun,
@@ -62,6 +63,11 @@ async function checkDeadMansSwitch(runType: RunType, alertKey: string): Promise<
   }
 }
 
+/** trackRun tags the errors it re-throws with the run they belong to. */
+function failedRunId(err: unknown): number | undefined {
+  return err && typeof err === 'object' && 'pipelineRunId' in err ? (err as { pipelineRunId: number }).pipelineRunId : undefined
+}
+
 async function alreadyRanToday(runType: RunType, todayWib: string): Promise<boolean> {
   const last = await getLastSuccessfulRun(runType)
   if (!last?.finished_at) return false
@@ -82,6 +88,15 @@ async function main() {
   if (DATA_SOURCE === 'demo') {
     const added = await ensureFutureOverrides(wibDate())
     if (added > 0) console.log(`Time Machine: auto-extended overrides ${added} day(s) into the future`)
+  }
+
+  // Also independent of the toggle: drops trace prompt/response text older than
+  // 30 days (the trace_events rows themselves stay). Must never fail the tick.
+  try {
+    const pruned = await pruneTracePayloads()
+    if (pruned > 0) console.log(`Trace: pruned ${pruned} payload(s) older than 30 days`)
+  } catch (err) {
+    console.error('Trace payload pruning failed:', err instanceof Error ? err.message : err)
   }
 
   const settings = await getSettings()
@@ -110,7 +125,7 @@ async function main() {
     try {
       dailyResult = await runDaily(today)
       const { subject, body } = await formatReportEmail(dailyResult, today, 'daily')
-      await deliver('daily', subject, body)
+      await deliver('daily', subject, body, dailyResult.runId)
       console.log(`Daily run complete for ${today}`)
     } catch (err) {
       // startRun() inside runDaily() (no existingRunId passed here — this
@@ -126,7 +141,7 @@ async function main() {
       } else {
         const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
         const { subject, body } = formatFailureAlert('daily', message)
-        await deliver('daily', subject, body)
+        await deliver('daily', subject, body, failedRunId(err))
         throw err
       }
     }
@@ -146,7 +161,7 @@ async function main() {
   try {
     const weeklyResult = await runWeekly(today)
     const { subject, body } = await formatReportEmail(weeklyResult, today, 'weekly')
-    await deliver('weekly', subject, body)
+    await deliver('weekly', subject, body, weeklyResult.runId)
     console.log(`Weekly run complete for ${today}`)
   } catch (err) {
     // Same false-alarm case as the daily block above.
@@ -157,7 +172,7 @@ async function main() {
     } else {
       const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
       const { subject, body } = formatFailureAlert('weekly', message)
-      await deliver('weekly', subject, body)
+      await deliver('weekly', subject, body, failedRunId(err))
       throw err
     }
   }

@@ -6,6 +6,7 @@ import { buildRevisionInput, type RevisionInput } from './revision.js'
 import { insertOutput, updateStatus } from '../reporting/outputs.js'
 import { getSettings } from '../platform/settings.js'
 import { emitEvent } from '../platform/eventBus.js'
+import { span, event, type Span } from '../platform/trace.js'
 
 export const MAX_REVISIONS = 2
 
@@ -40,7 +41,44 @@ export interface RunWithCriticArgs {
  * the frontend can ask for "today's report" without already knowing its
  * id. Returns the id of the final ai_outputs row (status 'approved' or
  * 'flagged'). */
-export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
+export function runWithCritic(args: RunWithCriticArgs): Promise<number> {
+  const label = AGENT_LABELS[args.agentType] ?? args.agentType
+  return span('agent', `${label} (${args.agentType})`, (agentSpan) => runCriticLoop(args, agentSpan), {
+    agent_type: args.agentType,
+    report_date: args.reportDate,
+    period: args.period,
+  })
+}
+
+const AGENT_LABELS: Record<string, string> = { analysis: 'Anna', recommendation: 'Rico', summary: 'Sammy' }
+
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
+
+/** What the trace records about one critic verdict. */
+function describeReview(v: CriticVerdict) {
+  const count = (sev: string) => v.issues.filter((i) => i.severity === sev).length
+  const high = count('high')
+  const medium = count('medium')
+  const low = count('low')
+  return {
+    status: v.unavailable ? ('error' as const) : ('ok' as const),
+    errorMessage: v.unavailable ? 'critic review unavailable (no parseable response after retries)' : null,
+    summary: v.unavailable
+      ? 'review unavailable'
+      : `grade ${v.grade ?? '?'} · ${v.issues.length === 0 ? 'no issues' : `${high} high, ${medium} medium, ${low} low`}`,
+    meta: {
+      grade: v.grade,
+      has_issues: v.has_issues,
+      unavailable: !!v.unavailable,
+      issue_counts: { high, medium, low },
+      issues: v.issues.map((i) => ({ quote: clip(i.quote, 500), reason: clip(i.reason, 500), severity: i.severity })),
+      feedback: clip(v.feedback, 1000),
+      grade_rationale: clip(v.grade_rationale, 1000),
+    },
+  }
+}
+
+async function runCriticLoop(args: RunWithCriticArgs, agentSpan: Span): Promise<number> {
   const {
     agentType,
     generate,
@@ -78,6 +116,19 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
     pipelineRunId,
   })
 
+  let reviews = 0
+  // Records the outcome on the trace (a 'decision' step + the agent's summary)
+  // and sets the draft's final status.
+  const conclude = async (status: 'approved' | 'flagged', name: string, reason: string, verdict: CriticVerdict): Promise<number> => {
+    await updateStatus(currentId, status)
+    await event('decision', name, { summary: reason, meta: { outcome: status, reason, grade: verdict.grade, review: reviews } })
+    agentSpan.set({
+      summary: `${status} after ${reviews} review${reviews === 1 ? '' : 's'}`,
+      meta: { output_id: currentId, final_status: status, reviews, revisions: reviews - 1 },
+    })
+    return currentId
+  }
+
   // Runs through attempt === MAX_REVISIONS (not just up to it) so the
   // final revision gets critiqued too before the loop gives up — a
   // version that's never critiqued must never be the one left on
@@ -87,9 +138,19 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
   // number of generate() calls is unchanged.
   for (let attempt = 0; attempt <= MAX_REVISIONS; attempt++) {
     emitEvent(`Ciri reviewing ${agentType}…`, 'info', pipelineRunId)
-    // Normalized here too (idempotent) so a raw verdict from any critiqueFn
-    // is fail-safe: missing severity -> high, missing grade -> blocks approval.
-    const verdict = normalizeVerdict(await critiqueFn(agentType, content, supportingData, historicalContext, language))
+    reviews = attempt + 1
+    const verdict = await span(
+      'critic_review',
+      `Ciri reviews ${agentType} (pass ${reviews})`,
+      async (reviewSpan) => {
+        // Normalized here too (idempotent) so a raw verdict from any critiqueFn
+        // is fail-safe: missing severity -> high, missing grade -> blocks approval.
+        const v = normalizeVerdict(await critiqueFn(agentType, content, supportingData, historicalContext, language))
+        reviewSpan.set(describeReview(v))
+        return v
+      },
+      { agent_type: agentType, pass: reviews, draft_id: currentId, draft_chars: content.length }
+    )
     await insertOutput({
       agentType: 'critic',
       // Fall back to the issue reasons rather than '(no issues found)' when
@@ -108,8 +169,7 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
     // to act on, so don't revise and don't approve — leave the draft flagged.
     if (verdict.unavailable) {
       emitEvent(`Ciri: review of ${agentType} unavailable — leaving the draft flagged without revising`, 'warn', pipelineRunId)
-      await updateStatus(currentId, 'flagged')
-      return currentId
+      return conclude('flagged', 'Flag: review unavailable', 'critic review unavailable — draft left flagged without revising', verdict)
     }
 
     // Approval is derived from severities and grade, not the model's
@@ -119,25 +179,40 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
     const decision = decideApproval(verdict, gradeForcesRevision)
     if (decision.approved) {
       emitEvent(`Ciri: ${agentType} approved — ${decision.reason}`, 'info', pipelineRunId)
-      await updateStatus(currentId, 'approved')
-      return currentId
+      return conclude('approved', 'Approve', decision.reason, verdict)
     }
 
     if (attempt === MAX_REVISIONS) {
       emitEvent(`Ciri: ${agentType} still flagged after ${MAX_REVISIONS} revisions (${decision.reason}) — leaving as flagged`, 'warn', pipelineRunId)
-      await updateStatus(currentId, 'flagged')
-      return currentId
+      return conclude('flagged', 'Flag: revision cap reached', `${decision.reason} — still blocked after ${MAX_REVISIONS} revisions`, verdict)
     }
 
     emitEvent(`Ciri: ${agentType} flagged (${decision.reason}) — revising (pass ${attempt + 1}/${MAX_REVISIONS})`, 'warn', pipelineRunId)
-    const revised = await generate(buildRevisionInput(content, verdict))
+    await event('decision', 'Revise', {
+      summary: `${decision.reason} — revising (pass ${attempt + 1}/${MAX_REVISIONS})`,
+      meta: { outcome: 'revise', reason: decision.reason, grade: verdict.grade, review: reviews },
+    })
+    const revised = await span(
+      'revision',
+      `${agentType} revision ${attempt + 1}`,
+      async (revisionSpan) => {
+        const r = await generate(buildRevisionInput(content, verdict))
+        const blank = r.trim() === ''
+        revisionSpan.set({
+          status: blank ? 'skipped' : 'ok',
+          summary: blank ? 'blank revision discarded' : `${r.length} chars (was ${content.length}), addressing ${verdict.issues.length} issue(s)`,
+          meta: { issues_addressed: verdict.issues.length, previous_chars: content.length, new_chars: r.length },
+        })
+        return r
+      },
+      { agent_type: agentType, pass: attempt + 1 }
+    )
     // Never replace a real draft with a blank. The draft being kept was just
     // critiqued (verdict inserted above) and has open issues, so it stays as
     // the flagged final output and we stop revising.
     if (revised.trim() === '') {
       emitEvent(`${agentType}: revision came back empty after retries — keeping the previous draft and stopping`, 'warn', pipelineRunId)
-      await updateStatus(currentId, 'flagged')
-      return currentId
+      return conclude('flagged', 'Flag: blank revision', 'revision came back empty after retries — kept the previous draft', verdict)
     }
     content = revised
     currentId = await insertOutput({
