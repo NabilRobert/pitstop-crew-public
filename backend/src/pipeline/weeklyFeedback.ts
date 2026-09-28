@@ -37,6 +37,7 @@ async function getWeekCritiques(asOf: string): Promise<WeekCritique[]> {
      JOIN ai_outputs reviewed ON reviewed.id = critic.critiques_id
      WHERE critic.agent_type = 'critic'
        AND critic.content != '(no issues found)'
+       AND critic.grade IS NOT NULL
        AND critic.created_at >= $1
      ORDER BY critic.created_at`,
     [start]

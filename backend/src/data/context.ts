@@ -175,8 +175,11 @@ export async function buildSearchTermContext(
   )
   return (
     CURRENCY_NOTE +
-    'These are ranked by "wasted spend" — zero/near-zero-conversion search terms first (highest cost among those), ' +
-    'then worst cost-per-conversion — not by raw spend, since the point of search-term data is spotting negative-keyword candidates.\n\n' +
+    'IMPORTANT — this list is ranked WORST-FIRST by wasted spend: zero/near-zero-conversion terms first (highest cost ' +
+    'among those), then worst cost-per-conversion. It is a negative-keyword-candidate list, not a sample of typical or ' +
+    'top-performing queries — every row was selected for being expensive relative to its results. Do NOT cite it as ' +
+    'evidence of best-performing, top, representative, or high-intent queries, or of overall search efficiency; use the ' +
+    'keyword table above for that.\n\n' +
     JSON.stringify(rows)
   )
 }
@@ -404,6 +407,129 @@ export async function buildChangeEventContext(
   )
 }
 
+// Deterministic "precomputed facts" for cross-table comparisons the models
+// (and especially the critic) have been getting wrong: which campaign is
+// largest by conversions, what counts as a lead-type conversion action, and
+// whether a Search campaign loses more impression share to budget or to
+// rank. Computed by SQL over the same rows the other builders read — never
+// by an LLM. The 30-day-window block goes into the context Anna receives
+// (so the critic, which sees that same context, judges her against exactly
+// what she saw); only the longer-window comparison stays critic-only, in
+// buildHistoricalFacts, matching the existing longer-history design.
+const LEAD_CALL_CATEGORIES = ['SUBMIT_LEAD_FORM', 'PHONE_CALL_LEAD']
+const LOST_SHARE_TIE = 0.005 // rank-lost and budget-lost within this are reported as "about equal"
+
+async function conversionsRankingRows(startDate: string, endDate: string) {
+  return query<{ name: string; conv: number }>(
+    `SELECT c.name, SUM(cp.conversions) AS conv
+     FROM campaign_performance cp JOIN campaigns c ON c.id = cp.campaign_id
+     WHERE cp.date BETWEEN $1 AND $2
+     GROUP BY c.name ORDER BY SUM(cp.conversions) DESC, c.name`,
+    [startDate, endDate]
+  )
+}
+
+const rankingText = (rows: { name: string; conv: number }[]) =>
+  rows.map((r) => `${r.name} ${Number(r.conv).toFixed(2)}`).join(' > ')
+
+function whichLarger(budgetLost: number, rankLost: number): string {
+  if (rankLost - budgetLost > LOST_SHARE_TIE) return 'rank-lost larger'
+  if (budgetLost - rankLost > LOST_SHARE_TIE) return 'budget-lost larger'
+  return 'about equal'
+}
+
+/** ~1k characters. Empty when the context is scoped to one campaign or
+ * segment — cross-campaign rankings mean nothing there. */
+export async function buildFactsContext(
+  endDate: string,
+  days: number,
+  campaignId?: number | null,
+  segmentId?: number | null
+): Promise<string> {
+  if (campaignId != null || segmentId != null) return ''
+  const startDate = addDays(endDate, -days)
+  const lines: string[] = []
+
+  const rankingRows = await conversionsRankingRows(startDate, endDate)
+  if (rankingRows.length) lines.push(`- Conversions by campaign, last ${days} days, ranked: ${rankingText(rankingRows)}.`)
+
+  // Asset groups are parts of one campaign — quote only that campaign's own
+  // total, not a separately rounded asset-group sum that could differ by a cent.
+  const pmax = await query<{ name: string }>(
+    `SELECT DISTINCT c.name FROM asset_groups ag JOIN campaigns c ON c.id = ag.campaign_id`
+  )
+  for (const r of pmax) {
+    const total = rankingRows.find((x) => x.name === r.name)
+    lines.push(
+      `- Asset-group figures are parts of ${r.name}${total ? ` (its campaign total is ${Number(total.conv).toFixed(2)})` : ''}, not separate campaigns to compare against campaign totals.`
+    )
+  }
+
+  const cats = await query<{ category: string; conv: number; names: string }>(
+    `SELECT ca.category, SUM(cap.conversions) AS conv, string_agg(DISTINCT ca.name, ' + ' ORDER BY ca.name) AS names
+     FROM conversion_action_performance cap JOIN conversion_actions ca ON ca.id = cap.conversion_action_id
+     WHERE cap.date BETWEEN $1 AND $2 GROUP BY ca.category ORDER BY SUM(cap.conversions) DESC, ca.category`,
+    [startDate, endDate]
+  )
+  const total = cats.reduce((a, r) => a + Number(r.conv), 0)
+  if (total > 0) {
+    const leadCall = cats.filter((r) => LEAD_CALL_CATEGORIES.includes(r.category)).reduce((a, r) => a + Number(r.conv), 0)
+    lines.push(
+      `- Named conversion actions by category, last ${days} days (total ${total.toFixed(2)}): ` +
+        cats.map((r) => `${r.category} ${Number(r.conv).toFixed(2)} (${Math.round((100 * Number(r.conv)) / total)}%) = ${r.names}`).join('; ') +
+        `. Lead/call categories (${LEAD_CALL_CATEGORIES.join(' + ')}) combined: ${leadCall.toFixed(2)} (${Math.round((100 * leadCall) / total)}%).`
+    )
+  }
+
+  const latest = await query<{ name: string; date: string; imp_share: number; bl: number }>(
+    `SELECT DISTINCT ON (c.name) c.name, cp.date, cp.search_impression_share AS imp_share, cp.search_budget_lost_impression_share AS bl
+     FROM campaign_performance cp JOIN campaigns c ON c.id = cp.campaign_id
+     WHERE cp.date BETWEEN $1 AND $2 AND cp.search_impression_share IS NOT NULL
+     ORDER BY c.name, cp.date DESC`,
+    [startDate, endDate]
+  )
+  const avgs = await query<{ name: string; bl: number; rl: number }>(
+    `SELECT c.name, AVG(cp.search_budget_lost_impression_share) AS bl,
+            AVG(GREATEST(0, 1 - cp.search_impression_share - cp.search_budget_lost_impression_share)) AS rl
+     FROM campaign_performance cp JOIN campaigns c ON c.id = cp.campaign_id
+     WHERE cp.date BETWEEN $1 AND $2 AND cp.search_impression_share IS NOT NULL GROUP BY c.name`,
+    [startDate, endDate]
+  )
+  const avgByName = new Map(avgs.map((a) => [a.name, a]))
+  for (const l of latest) {
+    const bl = Number(l.bl)
+    const rl = Math.max(0, 1 - Number(l.imp_share) - bl)
+    const a = avgByName.get(l.name)
+    lines.push(
+      `- ${l.name}, impression share lost: on ${l.date} budget-lost ${bl.toFixed(4)} vs rank-lost ${rl.toFixed(4)} (${whichLarger(bl, rl)})` +
+        (a ? `; ${days}-day average budget-lost ${Number(a.bl).toFixed(4)} vs rank-lost ${Number(a.rl).toFixed(4)} (${whichLarger(Number(a.bl), Number(a.rl))}).` : '.')
+    )
+  }
+
+  if (lines.length === 0) return ''
+  return (
+    'Precomputed facts — computed by SQL from the same data shown above, not estimated by a model. Where a claim can ' +
+    'be checked against one of these lines, trust the line over your own arithmetic.\n' +
+    lines.join('\n')
+  )
+}
+
+/** Critic-only: the longer-window comparison fact. The writers never see
+ * the 60-day window, so it must not reach them (and isn't in buildFullContext). */
+export async function buildHistoricalFacts(endDate: string, days: number): Promise<string> {
+  const rows = await conversionsRankingRows(addDays(endDate, -days), endDate)
+  if (!rows.length) return ''
+  return `Precomputed fact (SQL, not a model) — conversions by campaign, last ${days} days, ranked: ${rankingText(rows)}.`
+}
+
+/** What the critic gets as its historical context: the per-campaign summary
+ * plus the longer-window fact. */
+export async function buildCriticHistoricalContext(endDate: string, days: number): Promise<string> {
+  const summary = await buildHistoricalSummary(endDate, days)
+  const facts = await buildHistoricalFacts(endDate, days)
+  return facts ? `${summary}\n\n${facts}` : summary
+}
+
 /** Composes buildPerformanceContext + every v2 builder added so far —
  * used by both the daily pipeline (orchestrator.ts) and the Ask feature
  * (ask.ts), so asking "what's my Quality Score on Search-Model?" actually
@@ -421,15 +547,17 @@ export async function buildFullContext(args: BuildPerformanceContextArgs = {}): 
   const assetGroupContext = await buildAssetGroupContext(endDate, days, args.campaignId)
   const recommendationsContext = await buildRecommendationsContext(endDate, days, args.campaignId)
   const changeEventContext = await buildChangeEventContext(endDate, days, args.campaignId)
+  const factsContext = await buildFactsContext(endDate, days, args.campaignId, args.segmentId)
   return (
     `${performanceContext}\n\n` +
     `Top ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}\n\n` +
-    `Search terms with the most wasted spend this window (aggregated top-N, see note above):\n${searchTermContext}\n\n` +
+    `Search terms ranked WORST-FIRST by wasted spend — negative-keyword candidates, NOT top performers (aggregated top-N, see note):\n${searchTermContext}\n\n` +
     `Ad creatives (headlines/descriptions/ad_strength) with their performance this window:\n${adContext}\n\n` +
     `Search impression share, why it's lost, and Optimization Score this window (see note above on scope):\n${impressionShareContext}\n\n` +
     `Named conversion actions this window (account-wide totals):\n${conversionActionContext}\n\n` +
     `Performance Max asset groups (vehicle-category-themed, pmax campaign only) this window:\n${assetGroupContext}\n\n` +
     `Google Ads' own Recommendations generated this window (see note above on scope):\n${recommendationsContext}\n\n` +
-    `Account change history this window (see note above on scope):\n${changeEventContext}`
+    `Account change history this window (see note above on scope):\n${changeEventContext}` +
+    (factsContext ? `\n\n${factsContext}` : '')
   )
 }

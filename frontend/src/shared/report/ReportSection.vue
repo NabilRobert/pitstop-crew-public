@@ -26,7 +26,11 @@ const { t } = useI18n()
       <span class="font-display text-lg font-bold text-ink">{{ title }}</span>
       <div class="flex items-center gap-2">
         <GradeBadge :grade="output?.critique?.grade" :rationale="output?.critique?.grade_rationale" />
-        <StatusPill v-if="output" :status="output.status" />
+        <StatusPill
+          v-if="output"
+          :status="output.status"
+          :notes="output.status === 'approved' && (output.critique?.issues?.length ?? 0) > 0"
+        />
       </div>
     </div>
 

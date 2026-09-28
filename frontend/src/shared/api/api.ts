@@ -5,7 +5,7 @@ import type {
   PerformanceRow,
   SegmentPerformanceRow,
   Settings,
-  FlagRateWeek,
+  GradeTrend,
   LearningSuggestion,
   TriggerRunResponse,
   Report,
@@ -100,7 +100,7 @@ export const api = {
   settings: () => request<Settings>('/settings'),
   updateSettings: (payload: Partial<Settings>) =>
     request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(payload) }),
-  flagRateTrend: (weeks = 8) => request<FlagRateWeek[]>(`/learning/flag-rate?weeks=${weeks}`),
+  gradeTrend: (weeks = 8) => request<GradeTrend>(`/learning/grade-trend?weeks=${weeks}`),
   learningSuggestions: (limit = 20) => request<LearningSuggestion[]>(`/learning/suggestions?limit=${limit}`),
   triggerRun: (period: string) =>
     request<TriggerRunResponse>('/pipeline/run', { method: 'POST', body: JSON.stringify({ period }) }),

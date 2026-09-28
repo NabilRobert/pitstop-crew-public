@@ -187,7 +187,11 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
               {{ t('dashboard.aiReportHeading') }}
             </h2>
             <div class="flex items-center gap-3">
-              <StatusPill v-if="dailyReport.summary" :status="dailyReport.summary.status" />
+              <StatusPill
+                v-if="dailyReport.summary"
+                :status="dailyReport.summary.status"
+                :notes="dailyReport.summary.status === 'approved' && (dailyReport.summary.critique?.issues?.length ?? 0) > 0"
+              />
               <router-link
                 v-if="latestReportLink"
                 :to="latestReportLink"

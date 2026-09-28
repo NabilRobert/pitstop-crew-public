@@ -2,6 +2,7 @@
 
 import { MODEL_FULL, complete } from './llm.js'
 import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, VOICE_ANSWER_GUARDRAIL, languageInstruction } from './prompts.js'
+import { revisionPrompt, type RevisionInput } from './revision.js'
 
 // See anna.ts's MAX_TOKENS comment — reasoning models spend an
 // unpredictable share of the budget on hidden reasoning before any
@@ -24,13 +25,11 @@ export async function summarize(
   analysis: string,
   recommendation: string,
   period: string,
-  criticFeedback?: string | null,
+  revision?: RevisionInput | null,
   language = 'en'
 ): Promise<string> {
   let userPrompt = `Period: ${period}\n\nAnalysis:\n${analysis}\n\nRecommendation:\n${recommendation}`
-  if (criticFeedback) {
-    userPrompt += `\n\nCiri (the Critic agent) reviewed your previous summary and found:\n${criticFeedback}\n\nRevise your summary to address this.`
-  }
+  if (revision) userPrompt += revisionPrompt('summary', revision)
   userPrompt += languageInstruction(language)
   return complete(MODEL_FULL, SYSTEM_PROMPT, userPrompt, SUMMARIZE_MAX_TOKENS)
 }
