@@ -1,7 +1,7 @@
 // Ties an agent's generate function to the Critic, enforcing the max-2-
 // revisions-per-agent-per-run cap from PROJECT.md's cost guardrails.
 
-import { critique as realCritique, type CriticVerdict } from './critic.js'
+import { critique as realCritique, decideApproval, normalizeVerdict, type CriticVerdict } from './critic.js'
 import { buildRevisionInput, type RevisionInput } from './revision.js'
 import { insertOutput, updateStatus } from '../reporting/outputs.js'
 import { getSettings } from '../platform/settings.js'
@@ -87,10 +87,14 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
   // number of generate() calls is unchanged.
   for (let attempt = 0; attempt <= MAX_REVISIONS; attempt++) {
     emitEvent(`Ciri reviewing ${agentType}…`, 'info', pipelineRunId)
-    const verdict = await critiqueFn(agentType, content, supportingData, historicalContext, language)
+    // Normalized here too (idempotent) so a raw verdict from any critiqueFn
+    // is fail-safe: missing severity -> high, missing grade -> blocks approval.
+    const verdict = normalizeVerdict(await critiqueFn(agentType, content, supportingData, historicalContext, language))
     await insertOutput({
       agentType: 'critic',
-      content: verdict.feedback || '(no issues found)',
+      // Fall back to the issue reasons rather than '(no issues found)' when
+      // there are issues but the model left its feedback paragraph empty.
+      content: verdict.feedback || (verdict.issues.length ? verdict.issues.map((i) => i.reason).join(' ') : '(no issues found)'),
       critiquesId: currentId,
       reportDate,
       period,
@@ -100,20 +104,32 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
       issues: verdict.issues,
     })
 
-    const forcedByGrade = gradeForcesRevision && ['D', 'F'].includes(verdict.grade)
-    if (!verdict.has_issues && !forcedByGrade) {
-      emitEvent(`Ciri: ${agentType} approved — grade ${verdict.grade}`, 'info', pipelineRunId)
+    // No review could be produced (blank/unparseable after retries): nothing
+    // to act on, so don't revise and don't approve — leave the draft flagged.
+    if (verdict.unavailable) {
+      emitEvent(`Ciri: review of ${agentType} unavailable — leaving the draft flagged without revising`, 'warn', pipelineRunId)
+      await updateStatus(currentId, 'flagged')
+      return currentId
+    }
+
+    // Approval is derived from severities and grade, not the model's
+    // has_issues boolean — see critic.ts decideApproval. Medium/low issues
+    // don't block: the output is approved with notes, and every issue is
+    // still stored and shown.
+    const decision = decideApproval(verdict, gradeForcesRevision)
+    if (decision.approved) {
+      emitEvent(`Ciri: ${agentType} approved — ${decision.reason}`, 'info', pipelineRunId)
       await updateStatus(currentId, 'approved')
       return currentId
     }
 
     if (attempt === MAX_REVISIONS) {
-      emitEvent(`Ciri: ${agentType} still flagged after ${MAX_REVISIONS} revisions — leaving as flagged`, 'warn', pipelineRunId)
+      emitEvent(`Ciri: ${agentType} still flagged after ${MAX_REVISIONS} revisions (${decision.reason}) — leaving as flagged`, 'warn', pipelineRunId)
       await updateStatus(currentId, 'flagged')
       return currentId
     }
 
-    emitEvent(`Ciri: ${agentType} flagged (grade ${verdict.grade}) — revising (pass ${attempt + 1}/${MAX_REVISIONS})`, 'warn', pipelineRunId)
+    emitEvent(`Ciri: ${agentType} flagged (${decision.reason}) — revising (pass ${attempt + 1}/${MAX_REVISIONS})`, 'warn', pipelineRunId)
     const revised = await generate(buildRevisionInput(content, verdict))
     // Never replace a real draft with a blank. The draft being kept was just
     // critiqued (verdict inserted above) and has open issues, so it stays as

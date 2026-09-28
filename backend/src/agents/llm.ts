@@ -76,23 +76,58 @@ export async function complete(
   return ''
 }
 
+/** Thrown by completeJson when neither attempt produced parseable JSON.
+ * Callers that can degrade gracefully (the critic) catch this; anything
+ * else still fails loudly, as before. */
+export class LlmJsonError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'LlmJsonError'
+  }
+}
+
+export type ReasoningEffort = 'low' | 'medium' | 'high'
+
+/** Recovers from an empty or truncated response instead of letting
+ * JSON.parse throw and kill the run: one retry with a raised cap (the same
+ * ceiling complete() uses), then LlmJsonError. A response cut off at the
+ * cap is invalid JSON, so it lands here too. Usage is recorded for every
+ * billed attempt. `reasoningEffort` is passed through when set. */
 export async function completeJson<T = any>(
   model: string,
   systemPrompt: string,
   userPrompt: string,
   maxTokens?: number,
-  overrideClient?: OpenAI
+  overrideClient?: OpenAI,
+  opts: { reasoningEffort?: ReasoningEffort } = {}
 ): Promise<T> {
   const c = overrideClient ?? getClient()
-  const response = await c.chat.completions.create({
-    model,
-    response_format: { type: 'json_object' },
-    max_completion_tokens: maxTokens,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-  })
-  recordUsage(model, response.usage)
-  return JSON.parse(response.choices[0].message.content ?? '{}') as T
+  const messages = [
+    { role: 'system' as const, content: systemPrompt },
+    { role: 'user' as const, content: userPrompt },
+  ]
+  let lastFinish: string | null | undefined
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const cap = attempt === 0 ? maxTokens : (raisedCap(maxTokens) ?? maxTokens)
+    const response = await c.chat.completions.create({
+      model,
+      response_format: { type: 'json_object' },
+      max_completion_tokens: cap,
+      messages,
+      ...(opts.reasoningEffort ? { reasoning_effort: opts.reasoningEffort } : {}),
+    })
+    recordUsage(model, response.usage)
+    const choice = response.choices[0]
+    lastFinish = choice.finish_reason
+    const content = choice.message.content ?? ''
+    if (content.trim() !== '') {
+      try {
+        return JSON.parse(content) as T
+      } catch {
+        // truncated or malformed — fall through to the retry
+      }
+    }
+    console.warn(`completeJson(${model}): empty/unparseable output on attempt ${attempt + 1} (finish_reason=${choice.finish_reason}, cap=${cap})`)
+  }
+  throw new LlmJsonError(`${model} returned no parseable JSON after 2 attempts (last finish_reason=${lastFinish})`)
 }

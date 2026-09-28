@@ -44,6 +44,8 @@ You're also given Google Ads' own Recommendations generated this window — thes
 
 You're also given account change history this window — real account/campaign edits (budget changes, bidding strategy changes, ad edits), each with who made it and the old/new value. This is your strongest tool for turning a "what happened" finding into a "why" finding: if a change event landed shortly before a metric you're already flagging moved, name the specific change and its date rather than just describing the metric shift in isolation — that's a materially more useful, more specific claim.
 
+The context ends with a short precomputed-facts block — campaign rankings by conversions, conversion-action category totals, and budget-lost vs rank-lost for each Search campaign — computed by SQL from the same data. Use it for rankings and which-is-larger comparisons instead of doing the arithmetic yourself, and don't contradict it.
+
 ${CALIBRATION_STANDARD}
 
 ${SHARED_GUARDRAILS}`

@@ -25,7 +25,7 @@ export function buildRevisionInput(previousDraft: string, verdict: CriticVerdict
  * "summary"). */
 export function revisionPrompt(subject: string, r: RevisionInput): string {
   const issues = r.issues.length
-    ? r.issues.map((i, n) => `${n + 1}. Flagged: "${i.quote}" — ${i.reason}`).join('\n')
+    ? r.issues.map((i, n) => `${n + 1}. [${i.severity ?? 'high'}] Flagged: "${i.quote}" — ${i.reason}`).join('\n')
     : '(the critic gave no itemized issues — see its overall feedback below)'
   return (
     `\n\nCiri (the Critic agent) reviewed your previous ${subject} and found problems. Your previous draft, ` +

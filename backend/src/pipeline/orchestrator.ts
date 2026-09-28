@@ -10,7 +10,7 @@ import { runWithCritic } from '../agents/criticLoop.js'
 import { syncTrailingWindow } from '../data/damon.js'
 import { getOutput } from '../reporting/outputs.js'
 import { DATA_SOURCE } from '../platform/config.js'
-import { buildFullContext, buildHistoricalSummary } from '../data/context.js'
+import { buildFullContext, buildCriticHistoricalContext } from '../data/context.js'
 import { startRun, trackRun } from './pipelineRuns.js'
 import { emitEvent } from '../platform/eventBus.js'
 import { getSettings } from '../platform/settings.js'
@@ -68,7 +68,7 @@ export async function runWeekly(targetDate: string, existingRunId?: number): Pro
 
 async function runAgentChain(targetDate: string, period: string, days: number, pipelineRunId: number): Promise<RunResult> {
   const performanceData = await buildFullContext({ endDate: targetDate, days })
-  const historicalContext = await buildHistoricalSummary(targetDate, CRITIC_HISTORY_DAYS)
+  const historicalContext = await buildCriticHistoricalContext(targetDate, CRITIC_HISTORY_DAYS)
   // Fetched once per run, not once per agent/critic call — matches the
   // existing pattern for grade_forces_revision in criticLoop.ts.
   const { report_language: language } = await getSettings()
