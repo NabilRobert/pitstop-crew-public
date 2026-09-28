@@ -2,6 +2,7 @@
 // the dead-man's-switch heartbeat check (docs/PROJECT.md → Automation).
 
 import { query, queryOne } from '../data/db.js'
+import { createUsageTracker, priceUsage, type UsageByModel } from '../platform/llmUsage.js'
 
 export const VALID_RUN_TYPES = ['daily', 'weekly', 'weekly_feedback', 'backup'] as const
 export type RunType = (typeof VALID_RUN_TYPES)[number]
@@ -42,14 +43,26 @@ export async function finishRun(
   runId: number,
   status: 'success' | 'failure' | 'partial' = 'success',
   costUsdMicros: number | null = null,
-  errorMessage: string | null = null
+  errorMessage: string | null = null,
+  llmUsage: unknown = null
 ): Promise<void> {
   await query(
     `UPDATE pipeline_runs
-     SET finished_at = $1, status = $2, cost_usd_micros = $3, error_message = $4
-     WHERE id = $5`,
-    [new Date(), status, costUsdMicros, errorMessage, runId]
+     SET finished_at = $1, status = $2, cost_usd_micros = $3, error_message = $4, llm_usage = $5
+     WHERE id = $6`,
+    // Serialized explicitly, same reasoning as ads.headlines in damon.ts —
+    // don't rely on pg's implicit object->jsonb coercion.
+    [new Date(), status, costUsdMicros, errorMessage, llmUsage == null ? null : JSON.stringify(llmUsage), runId]
   )
+}
+
+/** Turns a tracker's raw usage into what finishRun stores: per-model token
+ * counts (+ per-model cost where a rate exists) and the run total. Both are
+ * null when the run made no LLM calls (e.g. backup). */
+function summarizeUsage(usage: UsageByModel): { llmUsage: unknown; costUsdMicros: number | null } {
+  if (Object.keys(usage).length === 0) return { llmUsage: null, costUsdMicros: null }
+  const priced = priceUsage(usage)
+  return { llmUsage: priced.models, costUsdMicros: priced.totalUsdMicros }
 }
 
 /** Usage:
@@ -66,12 +79,19 @@ export async function trackRun<T>(
 ): Promise<T> {
   const runId = existingRunId ?? (await startRun(runType))
   const handle = { costUsdMicros: null as number | null, runId }
+  // Every complete()/completeJson() call made inside fn (however deep) is
+  // attributed to this run — see platform/llmUsage.ts.
+  const tracker = createUsageTracker()
   try {
-    const result = await fn(handle)
-    await finishRun(runId, 'success', handle.costUsdMicros)
+    const result = await tracker.run(() => fn(handle))
+    const { llmUsage, costUsdMicros } = summarizeUsage(tracker.usage)
+    // An explicit handle.costUsdMicros set by fn still wins over the computed one.
+    await finishRun(runId, 'success', handle.costUsdMicros ?? costUsdMicros, null, llmUsage)
     return result
   } catch (err) {
-    await finishRun(runId, 'failure', null, String(err instanceof Error ? err.message : err))
+    // Calls made before the failure were still billed — keep their usage.
+    const { llmUsage, costUsdMicros } = summarizeUsage(tracker.usage)
+    await finishRun(runId, 'failure', costUsdMicros, String(err instanceof Error ? err.message : err), llmUsage)
     throw err
   }
 }

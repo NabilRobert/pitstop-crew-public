@@ -544,3 +544,14 @@ CREATE TABLE IF NOT EXISTS change_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_change_events_changed_at ON change_events(changed_at);
+
+-- Per-run LLM usage. cost_usd_micros (declared with pipeline_runs above) was
+-- never populated — llm.ts discarded response.usage. Now every run records
+-- per-model token counts here, keyed by the model name passed to the API:
+--   {"gpt-5.4": {"calls": 15, "input_tokens": ..., "cached_input_tokens": ...,
+--                "output_tokens": ..., "reasoning_tokens": ..., "cost_usd_micros": 123 | null}}
+-- output_tokens already includes reasoning_tokens (providers bill them as
+-- output). cost_usd_micros is null per model when LLM_PRICES_JSON has no rate
+-- for it, and the run-level cost_usd_micros is then null too rather than a
+-- partial total. See src/platform/llmUsage.ts.
+ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS llm_usage JSONB;
