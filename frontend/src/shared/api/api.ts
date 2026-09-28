@@ -6,6 +6,8 @@ import type {
   SegmentPerformanceRow,
   Settings,
   GradeTrend,
+  RunTrace,
+  EventPayloads,
   LearningSuggestion,
   TriggerRunResponse,
   Report,
@@ -101,6 +103,8 @@ export const api = {
   updateSettings: (payload: Partial<Settings>) =>
     request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(payload) }),
   gradeTrend: (weeks = 8) => request<GradeTrend>(`/learning/grade-trend?weeks=${weeks}`),
+  runTrace: (id: number | string) => request<RunTrace>(`/pipeline/runs/${id}/trace`),
+  eventPayloads: (id: number) => request<EventPayloads>(`/trace/events/${id}/payloads`),
   learningSuggestions: (limit = 20) => request<LearningSuggestion[]>(`/learning/suggestions?limit=${limit}`),
   triggerRun: (period: string) =>
     request<TriggerRunResponse>('/pipeline/run', { method: 'POST', body: JSON.stringify({ period }) }),

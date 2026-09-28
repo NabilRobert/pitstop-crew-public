@@ -6,6 +6,7 @@ import ReportsListPage from '../../features/reports/ReportsListPage.vue'
 import ReportDetailPage from '../../features/reports/ReportDetailPage.vue'
 import SystemHealthPage from '../../features/system-health/SystemHealthPage.vue'
 import { isDemo } from '../../shared/composables/auth'
+import RunInspectorPage from '../../features/run-inspector/RunInspectorPage.vue'
 import TimeMachinePage from '../../features/time-machine/TimeMachinePage.vue'
 import SettingsPage from '../../features/settings/SettingsPage.vue'
 import LearningPage from '../../features/learning/LearningPage.vue'
@@ -20,6 +21,7 @@ const routes = [
   { path: '/reports', name: 'reports', component: ReportsListPage },
   { path: '/reports/:period/:id', name: 'report-detail', component: ReportDetailPage, props: true },
   { path: '/system-health', name: 'system-health', component: SystemHealthPage },
+  { path: '/runs/:id', name: 'run-inspector', component: RunInspectorPage, props: true },
   { path: '/time-machine', name: 'time-machine', component: TimeMachinePage },
   { path: '/settings', name: 'settings', component: SettingsPage },
   { path: '/learning', name: 'learning', component: LearningPage },
