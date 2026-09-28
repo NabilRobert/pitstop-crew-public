@@ -576,7 +576,7 @@ export default {
     },
     console: {
       title: 'Console + Generate report now',
-      body: 'The console panel (collapsible, bottom of every page) streams real backend activity live — every agent starting, every Ciri review and grade, as it happens — instead of the pipeline being a black box between "you clicked a button" and "a report appeared." The Reports page\'s Generate report now button triggers a real run on demand (bypassing the scheduled-time check, since an explicit manual trigger should always actually run) and opens the console automatically so you can watch it. The report list refreshes itself the moment that run actually finishes — not on a timer, on the real completion event, since a full run with revisions can take several minutes.',
+      body: 'The console panel (collapsible, bottom of every page) streams real backend activity live — every agent starting, every Ciri review and grade, as it happens — instead of the pipeline being a black box between "you clicked a button" and "a report appeared." The Reports page\'s Generate report now button triggers a real run on demand (bypassing the scheduled-time check, since an explicit manual trigger should always actually run) and opens the console automatically so you can watch it. The report list refreshes itself the moment that run actually finishes — not on a timer, on the real completion event, since how long a run takes varies (about a minute typically, longer when the critic asks for revisions) — and once more after the report email has been sent.',
     },
     settings: {
       title: 'Settings + email',

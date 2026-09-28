@@ -8,6 +8,7 @@ An AI performance dashboard for Google Ads. A small team of LLM agents reads the
 <!-- SCREENSHOT: dashboard overview -->
 <!-- SCREENSHOT: report with the "Why this?" trail open -->
 <!-- SCREENSHOT: Learning page grade-trend chart -->
+<!-- SCREENSHOT: Run Inspector with a model call's prompt and response open -->
 
 ## The problem
 
@@ -20,6 +21,7 @@ Google Ads' own Recommendations tab is structurally biased toward spending more:
 - **A "why" trail** on every report section: the full draft → critique → revision history, so the critic loop is visible rather than just a status pill.
 - **Ask.** Rico and Sammy can be queried on demand, answered against the same data the report used.
 - **A weekly feedback job** that reads recurring patterns in Ciri's critiques and drafts a prompt patch. It is never applied automatically; a person reviews it.
+- **A Run Inspector.** Every step of a run is recorded as a nested trace: the data it read, each agent, every model call with its full prompt and response, each critic review, and the approve / revise / flag decision that followed. It shows a timeline per step and per-call tokens and cost, and refreshes live while a run is in flight. Secrets are redacted before anything is stored, and prompt text is kept for 30 days.
 - **Operations.** Scheduled runs, failure alerts by email, a dead-man's-switch for when the schedule itself doesn't fire, a live console of what the pipeline is doing, and a System Health page.
 - **Coverage.** Campaigns, ad groups, keywords with Quality Score, search terms, ads, impression share and why it's lost, named conversion actions, Performance Max asset groups, Google's own recommendations, change history, and demographic segments. This is a deliberate subset of the API, chosen so each piece feeds the agents something they can reason about.
 
@@ -39,7 +41,7 @@ Google Ads' own Recommendations tab is structurally biased toward spending more:
 
 **The flag-rate chart couldn't move.** The original Learning page charted "share of outputs Ciri flagged". It sat near 33% regardless of quality, because it counted every draft and revision, so the arithmetic of a critic that blocks the first draft and passes the second pins the ratio. It looked like a metric and measured the loop's shape. I replaced it with a chart over final outputs only, banded into approved clean / approved with notes / flagged / no review, plus two overlapping quality lines (grade C or worse, high-severity issue). It marks the deploy dates of the changes that break comparability, and carries a written caveat: approval got easier to earn under the severity rule, so more approvals is not by itself proof the reports got better.
 
-**Cost was invisible until it hurt.** The pipeline was quietly making about 18 model calls per run. I added per-run usage tracking, which showed where the calls went, and cut it to roughly 6–7 calls per run by fixing the revision loop and the grading inputs. I also turned scheduled reports off while I worked, because unattended runs on the expensive tier add up. Cost figures use placeholder per-token rates unless real ones are configured, so treat the dollar numbers as estimates.
+**Cost was invisible until it hurt.** The pipeline was quietly making about 18 model calls per run. I added per-run usage tracking, which showed where the calls went, and cut it to about 6 calls per run by fixing the revision loop and the grading inputs. A typical run now finishes in about a minute and uses roughly 48,000 input and 8,000 output tokens, which is on the order of 14 US cents at OpenAI's list prices. That is an estimate from list prices, not my gateway's invoice. I also turned scheduled reports off while I worked, because unattended runs on the expensive tier add up.
 
 **A silent pipeline is worse than a broken one.** Scheduled runs had stopped for days before I noticed. The cause turned out to be my own switch, but the takeaway stands: the dead-man's-switch and health page exist because "nothing happened" is the failure mode that alerts don't catch.
 
@@ -53,7 +55,6 @@ Google Ads' own Recommendations tab is structurally biased toward spending more:
 ## What I'd do next
 
 - Get Basic Access approved and run one real account through the same pipeline.
-- Log every step the agents take as a structured trace, so a run can be inspected end to end rather than only through the live console.
 - Track what happens to a recommendation after it's shown (acted on, ignored, outcome), so the critic can be checked against results and not only against itself.
 - Alerts to Slack/Discord, and thresholds so a report is only pushed when something moved.
 
