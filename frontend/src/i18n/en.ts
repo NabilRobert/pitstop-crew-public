@@ -24,6 +24,8 @@ export default {
     tagline: 'Google Ads AI Performance Dashboard',
     demoMode: 'Demo Mode',
     demoModeTooltip: 'Showing synthetic demo data, not a live Google Ads account',
+    readOnly: 'Read-only',
+    readOnlyTooltip: 'Demo account: view only, no changes or model calls',
     liveData: 'Live Data',
     switchLanguage: 'Switch language',
     switchTheme: 'Switch color theme',

@@ -75,9 +75,9 @@ async function requestAudio(path: string, body: unknown): Promise<Blob> {
 
 export const api = {
   login: (username: string, password: string) =>
-    request<{ token: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+    request<{ token: string; role: 'owner' | 'demo' }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => request<{ ok: true }>('/auth/logout', { method: 'POST' }),
-  verifyAuth: () => request<{ ok: true }>('/auth/verify'),
+  verifyAuth: () => request<{ ok: true; role: 'owner' | 'demo' }>('/auth/verify'),
   config: () => request<AppConfig>('/config'),
   systemHealth: () => request<SystemHealth>('/system-health'),
   campaigns: () => request<Campaign[]>('/campaigns'),

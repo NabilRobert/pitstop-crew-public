@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { theme, setTheme } from '../shared/composables/theme.js'
-import { navLinks } from './navLinks.js'
 import { useTopBar } from './useTopBar.js'
 
 const { t } = useI18n()
-const { dataSource, isActive, currentLocale, switchLocale, logout } = useTopBar()
+const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visibleNavLinks } = useTopBar()
 </script>
 
 <template>
@@ -23,7 +22,7 @@ const { dataSource, isActive, currentLocale, switchLocale, logout } = useTopBar(
 
       <nav class="flex items-center gap-5">
         <router-link
-          v-for="link in navLinks"
+          v-for="link in visibleNavLinks"
           :key="link.to"
           :to="link.to"
           class="font-mono text-[11px] font-bold uppercase tracking-wide transition-colors hover:text-ink"
@@ -32,7 +31,7 @@ const { dataSource, isActive, currentLocale, switchLocale, logout } = useTopBar(
           {{ t(link.labelKey) }}
         </router-link>
         <router-link
-          v-if="dataSource === 'demo'"
+          v-if="dataSource === 'demo' && !isDemo"
           to="/time-machine"
           class="font-mono text-[11px] font-bold uppercase tracking-wide transition-colors hover:text-ink"
           :class="isActive('/time-machine') ? 'text-rosso' : 'text-ink-soft'"
@@ -88,6 +87,13 @@ const { dataSource, isActive, currentLocale, switchLocale, logout } = useTopBar(
             {{ t('topBar.themeBlueprintShort') }}
           </button>
         </div>
+        <span
+          v-if="isDemo"
+          class="rounded-full border border-border px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft"
+          :title="t('topBar.readOnlyTooltip')"
+        >
+          {{ t('topBar.readOnly') }}
+        </span>
         <span
           v-if="dataSource === 'demo'"
           class="flex items-center gap-1.5 rounded-full border border-flag-caution/40 bg-flag-caution-soft px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-flag-caution"

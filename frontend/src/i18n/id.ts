@@ -24,6 +24,8 @@ export default {
     tagline: 'Dasbor Performa Google Ads Bertenaga AI',
     demoMode: 'Mode Demo',
     demoModeTooltip: 'Menampilkan data demo sintetis, bukan akun Google Ads yang aktif',
+    readOnly: 'Hanya baca',
+    readOnlyTooltip: 'Akun demo: hanya lihat, tanpa perubahan atau panggilan model',
     liveData: 'Data Live',
     switchLanguage: 'Ganti bahasa',
     switchTheme: 'Ganti tema warna',
