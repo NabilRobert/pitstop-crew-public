@@ -150,31 +150,45 @@ export async function getRunById(id: number) {
   return queryOne('SELECT * FROM pipeline_runs WHERE id = $1', [id])
 }
 
-/** Called once at process boot (see src/api/main.ts and scripts/runDaily.ts).
- * A row is left status='running' forever if the process holding it crashes
- * or is killed mid-run (no finally-block runs in that case) — and since the
- * partial unique index allows only one 'running' row at a time, an orphan
- * like that would otherwise permanently wedge every future run behind a 409
- * that can never clear itself. Marks any such row 'failure' with an
- * explanatory message so the index frees up and system-health/getRecentRuns
- * reporting reflects reality instead of a silently-stuck run.
+/** Minutes a row may stay status='running' before it is treated as orphaned. A
+ * real run takes a few minutes; this is far above that and still frees the
+ * one-running-run index within half an hour of a genuine crash. */
+const ORPHAN_AFTER_MINUTES = 30
+
+/** Called at process boot (src/api/main.ts) and on every cron tick
+ * (scripts/runDaily.ts). A row is left status='running' forever if the
+ * process holding it crashes or is killed mid-run (no finally-block runs in
+ * that case) — and since the partial unique index allows only one 'running'
+ * row at a time, an orphan like that would otherwise permanently wedge every
+ * future run behind a 409 that can never clear itself.
  *
- * This is best-effort cleanup, not a distributed lock — it can't distinguish
- * "the previous process actually crashed" from "this run is still genuinely
- * in flight in another still-alive process." In practice that's a
- * negligible risk: both the API server and the cron script run this at
- * their own boot, and a live run holds its row for minutes, not the seconds
- * between reconcile-at-boot and lock-acquisition. Safe to call on every
- * boot even when nothing is orphaned (affects 0 rows). */
+ * Only rows that started more than ORPHAN_AFTER_MINUTES ago are failed. The
+ * cron tick and the API server are separate processes and neither can tell
+ * "the other process crashed" from "its run is still in flight", so a newer
+ * running row is left alone (and logged) — otherwise a manual "Generate report
+ * now" that a cron tick happens to land in the middle of would be marked failed
+ * while still running. Cost: after a crash or restart mid-run, the orphan blocks
+ * new runs until it is 30 minutes old. Says what it did in the log. Returns the
+ * number of rows it failed. */
 export async function reconcileOrphanedRuns(): Promise<number> {
-  const rows = await query<{ id: number }>(
+  const failed = await query<{ id: number; run_type: string; minutes: number }>(
     `UPDATE pipeline_runs
      SET status = 'failure',
          finished_at = $1,
-         error_message = 'Orphaned run reconciled at process startup — process likely crashed or was restarted mid-run'
-     WHERE status = 'running'
-     RETURNING id`,
-    [new Date()]
+         error_message = 'Orphaned run reconciled — still marked running more than ' || $2::int || ' minutes after it started; the process holding it likely crashed or was restarted mid-run'
+     WHERE status = 'running' AND started_at < NOW() - ($2::int * INTERVAL '1 minute')
+     RETURNING id, run_type, ROUND(EXTRACT(EPOCH FROM (NOW() - started_at)) / 60)::int AS minutes`,
+    [new Date(), ORPHAN_AFTER_MINUTES]
   )
-  return rows.length
+  for (const r of failed) {
+    console.log(`reconcileOrphanedRuns: marked ${r.run_type} run #${r.id} failed (running for ${r.minutes} min, limit ${ORPHAN_AFTER_MINUTES})`)
+  }
+  const live = await query<{ id: number; run_type: string; minutes: number }>(
+    `SELECT id, run_type, ROUND(EXTRACT(EPOCH FROM (NOW() - started_at)) / 60)::int AS minutes
+     FROM pipeline_runs WHERE status = 'running'`
+  )
+  for (const r of live) {
+    console.log(`reconcileOrphanedRuns: left ${r.run_type} run #${r.id} alone (running for ${r.minutes} min, under the ${ORPHAN_AFTER_MINUTES}-min limit)`)
+  }
+  return failed.length
 }
