@@ -6,6 +6,7 @@ import { deliverReport } from '../../platform/emailDelivery.js'
 import { emitEvent, getRecentEvents, subscribe, type ConsoleEvent } from '../../platform/eventBus.js'
 import { wibDate } from '../../platform/timezone.js'
 import { safeEventText } from '../../platform/redact.js'
+import * as inspector from '../../reporting/runInspector.js'
 import { asyncHandler } from '../asyncHandler.js'
 
 export const router = Router()
@@ -21,6 +22,57 @@ router.get(
       last_successful_daily_run: demo ? demoRun(lastDaily) : lastDaily,
       recent_runs: demo ? recentRuns.map(demoRun) : recentRuns,
     })
+  })
+)
+
+/** Run Inspector — the newest runs with status, duration, total cost and LLM
+ * call count. Read-only, so demo tokens can use it (error text is redacted). */
+router.get(
+  '/pipeline/runs',
+  asyncHandler(async (req, res) => {
+    const limit = req.query.limit === undefined ? 20 : Number(req.query.limit)
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      res.status(400).json({ detail: 'limit must be an integer from 1 to 100' })
+      return
+    }
+    res.json(await inspector.listRuns(limit, res.locals.role === 'demo'))
+  })
+)
+
+/** A run's trace as a flat list (parent_id + seq give the tree), without any
+ * prompt/response text — fetch that per step from /trace/events/:id/payloads. */
+router.get(
+  '/pipeline/runs/:id/trace',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ detail: 'id must be an integer' })
+      return
+    }
+    const trace = await inspector.getRunTrace(id, res.locals.role === 'demo')
+    if (!trace) {
+      res.status(404).json({ detail: `No pipeline run with id ${id}` })
+      return
+    }
+    res.json(trace)
+  })
+)
+
+/** The stored prompt / response / context text of one trace step. */
+router.get(
+  '/trace/events/:id/payloads',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ detail: 'id must be an integer' })
+      return
+    }
+    const result = await inspector.getEventPayloads(id)
+    if (!result) {
+      res.status(404).json({ detail: `No trace event with id ${id}` })
+      return
+    }
+    res.json(result)
   })
 )
 
