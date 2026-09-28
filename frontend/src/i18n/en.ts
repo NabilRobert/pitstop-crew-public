@@ -55,6 +55,7 @@ export default {
   },
   runStatusPill: {
     approved: 'Ciri-approved',
+    approvedWithNotes: 'Ciri-approved · with notes',
     flagged: 'Flagged by Ciri',
     revised: 'Revised',
     draft: 'Draft',
@@ -397,6 +398,9 @@ export default {
         desc: "Multiple fabricated/unsupported claims, or the core conclusion itself isn't supported by the data.",
       },
     },
+    approvalRuleTitle: 'What "approved" means.',
+    approvalRuleBody:
+      'Approval is not the same as a perfect grade. Each issue Ciri raises has a severity: high (a claim the data doesn\'t support, a fabricated figure, or a directive), medium (overconfident wording or a missing figure) or low (stylistic). A report is approved when it has no high-severity issue and grades A, B or C; a D or F is always sent back for revision. An approved report can still carry medium or low notes — they stay visible with the grade and highlighted in the text, and the report is marked "with notes" so an approval never hides them.',
     weeklySuggestionsTitle: 'Weekly suggestion history',
     noSuggestions: 'No suggestions yet — these are drafted weekly from recurring patterns Ciri found, when there are any.',
     weekOf: 'Week of {date}',

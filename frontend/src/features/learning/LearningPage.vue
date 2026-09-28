@@ -44,6 +44,9 @@ const { loading, error, flagRate, suggestions, chartData, chartOptions } = useLe
           <p><span class="font-bold text-flag-critical">{{ t('learning.grades.d.label') }}</span> {{ t('learning.grades.d.desc') }}</p>
           <p><span class="font-bold text-flag-critical">{{ t('learning.grades.f.label') }}</span> {{ t('learning.grades.f.desc') }}</p>
         </div>
+        <p class="mt-4 border-t border-border pt-4 text-sm text-ink-soft">
+          <span class="font-bold text-ink">{{ t('learning.approvalRuleTitle') }}</span> {{ t('learning.approvalRuleBody') }}
+        </p>
       </div>
 
       <h2 class="mb-3 mt-8 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">

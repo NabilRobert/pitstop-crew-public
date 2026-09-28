@@ -4,6 +4,10 @@ import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
   status: { type: String, required: true }, // 'approved' | 'flagged' | 'draft' | 'revised'
+  // An approved output can still carry medium/low-severity critic notes —
+  // approval only means "no high-severity issue and grade A-C", not "no
+  // issues". Marking it keeps an approval from hiding those notes.
+  notes: { type: Boolean, default: false },
 })
 
 const { t } = useI18n()
@@ -11,7 +15,11 @@ const { t } = useI18n()
 const config = computed(() => {
   switch (props.status) {
     case 'approved':
-      return { label: t('runStatusPill.approved'), color: 'flag-good', dot: true }
+      return {
+        label: props.notes ? t('runStatusPill.approvedWithNotes') : t('runStatusPill.approved'),
+        color: 'flag-good',
+        dot: true,
+      }
     case 'flagged':
       return { label: t('runStatusPill.flagged'), color: 'flag-caution', dot: true }
     case 'revised':

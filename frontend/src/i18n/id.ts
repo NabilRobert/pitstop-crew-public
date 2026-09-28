@@ -55,6 +55,7 @@ export default {
   },
   runStatusPill: {
     approved: 'Disetujui Ciri',
+    approvedWithNotes: 'Disetujui Ciri · dengan catatan',
     flagged: 'Ditandai Ciri',
     revised: 'Direvisi',
     draft: 'Draf',
@@ -397,6 +398,9 @@ export default {
         desc: 'Berisi banyak klaim yang dikarang/tidak didukung data, atau kesimpulan intinya sendiri tidak didukung oleh data.',
       },
     },
+    approvalRuleTitle: 'Arti "disetujui".',
+    approvalRuleBody:
+      'Persetujuan tidak sama dengan nilai sempurna. Setiap masalah yang diangkat Ciri punya tingkat keparahan: tinggi (klaim yang tidak didukung data, angka rekaan, atau perintah langsung), sedang (bahasa terlalu yakin atau angka pendukung yang hilang) atau rendah (soal gaya). Laporan disetujui bila tidak ada masalah berkeparahan tinggi dan nilainya A, B atau C; nilai D atau F selalu dikembalikan untuk direvisi. Laporan yang disetujui masih bisa membawa catatan sedang atau rendah — catatan itu tetap terlihat bersama nilainya dan disorot di dalam teks, dan laporan diberi tanda "dengan catatan" agar persetujuan tidak menyembunyikannya.',
     weeklySuggestionsTitle: 'Riwayat saran mingguan',
     noSuggestions: 'Belum ada saran — saran disusun tiap minggu dari pola berulang yang ditemukan Ciri, kalau memang ada.',
     weekOf: 'Minggu {date}',
