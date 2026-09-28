@@ -371,9 +371,30 @@ export default {
     title: 'Pembelajaran',
     description:
       'Ciri, agen kritikus, tidak melatih ulang model apa pun — LLM berbasis API bersifat stateless. Yang berkembang adalah sistemnya: pola berulang dalam kritik Ciri diumpankan kembali ke instruksi para agen lewat saran mingguan di bawah ini. Ini pola yang sudah dipublikasikan (feedback loop bergaya Reflexion), bukan mekanisme baru.',
-    flagRateTitle: 'Tingkat penandaan Ciri, 8 minggu terakhir',
-    flagRateDesc:
-      'Persentase laporan yang ditandai Ciri sebelum disetujui. Tren menurun adalah pertanda baik — tapi angka mendekati 0% dalam jendela data yang singkat atau tipis belum tentu kabar baik dengan sendirinya; itu bisa juga berarti Ciri memang belum menemukan banyak hal untuk dikritik. Baca ini bersama riwayat saran di bawah, jangan secara terpisah.',
+    gradeTrend: {
+      title: 'Putusan Ciri atas laporan final, {weeks} minggu terakhir',
+      agents: { analysis: 'Anna', recommendation: 'Rico', summary: 'Sammy' },
+      views: { outcomes: 'Hasil', quality: 'Kualitas' },
+      desc: {
+        outcomes:
+          'Bagaimana keluaran final tiap minggu berakhir, sebagai persentase dari keluaran agen tersebut. Hanya versi final tiap laporan yang dihitung — draf dan revisi yang kemudian diganti tidak dihitung, jadi laporan yang butuh tiga putaran dihitung sekali.',
+        quality:
+          'Dari keluaran yang dinilai Ciri, persentase yang berakhir di nilai C atau lebih rendah, dan persentase yang masih memiliki masalah berkeparahan tinggi. Minggu tanpa penilaian ditampilkan sebagai celah, bukan nol.',
+      },
+      bands: {
+        approvedClean: 'Disetujui, tanpa catatan',
+        approvedWithNotes: 'Disetujui dengan catatan',
+        flagged: 'Ditandai',
+        noReview: 'Tanpa tinjauan',
+      },
+      lines: { cOrWorse: 'Nilai C atau lebih rendah', highSeverity: 'Masalah berkeparahan tinggi' },
+      events: {
+        phase1: 'Rico dan Sammy mulai dinilai terhadap masukan mereka sendiri.',
+        severity_approval: 'Persetujuan berbasis keparahan dan blok fakta terhitung mulai berlaku.',
+      },
+      caveat:
+        'Kedua perubahan berlaku pada hari yang sama, jadi minggu yang memuatnya mencampur logika lama dan baru sehingga perbandingan sebelum/sesudah hanya kasar. Perhatikan juga bahwa persetujuan lebih mudah didapat di bawah aturan baru — naiknya "disetujui" belum tentu bukti laporan makin baik; baca bersama nilai dan riwayat saran.',
+    },
     noReportsYet: 'Belum ada laporan.',
     gradingCriteriaTitle: 'Kriteria penilaian',
     grades: {
@@ -511,7 +532,7 @@ export default {
     },
     learning: {
       title: 'Halaman Pembelajaran',
-      body: 'Dua sinyal ditampilkan bersama, secara sengaja — tren tingkat penandaan saja bisa menyesatkan (angka mendekati 0% bisa berarti perbaikan nyata, atau bisa juga berarti Ciri memang belum menemukan banyak hal untuk dikerjakan dalam jendela data yang singkat). Dipadukan dengan riwayat saran mingguan yang sesungguhnya (apa yang benar-benar dihasilkan dari pola berulang Ciri), keduanya saling menguatkan alih-alih dibaca sendiri-sendiri. Rubrik penilaian A–F lengkap juga didokumentasikan di sini, sama persis dengan instruksi yang sebenarnya diberikan ke Ciri.',
+      body: 'Dua sinyal ditampilkan bersama, secara sengaja — tren hasil mingguan per agen (disetujui tanpa catatan, disetujui dengan catatan, ditandai, tanpa tinjauan; hanya keluaran final) saja bisa menyesatkan, karena persetujuan lebih mudah didapat di bawah aturan berbasis keparahan dan naiknya persetujuan bukan bukti laporan makin baik. Dipadukan dengan riwayat saran mingguan yang sesungguhnya (apa yang benar-benar dihasilkan dari pola berulang Ciri), keduanya saling menguatkan alih-alih dibaca sendiri-sendiri. Rubrik penilaian A–F lengkap juga didokumentasikan di sini, sama persis dengan instruksi yang sebenarnya diberikan ke Ciri.',
     },
     health: {
       title: 'Kondisi Sistem',

@@ -371,9 +371,30 @@ export default {
     title: 'Learning',
     description:
       "Ciri, the critic agent, doesn't retrain any model — API-based LLMs are stateless. What improves is the system: recurring patterns in Ciri's critiques get fed back into the agents' prompts, via the weekly suggestion below. This is a published pattern (Reflexion-style feedback loops), not a novel mechanism.",
-    flagRateTitle: "Ciri's flag rate, last 8 weeks",
-    flagRateDesc:
-      "Share of reports Ciri flagged before approval. A downward trend is a good sign — but a rate near 0% over a short or thin-data window isn't automatically good news on its own; it can also mean Ciri isn't finding much to work with yet. Read this alongside the suggestion history below, not in isolation.",
+    gradeTrend: {
+      title: "Ciri's verdicts on final reports, last {weeks} weeks",
+      agents: { analysis: 'Anna', recommendation: 'Rico', summary: 'Sammy' },
+      views: { outcomes: 'Outcomes', quality: 'Quality' },
+      desc: {
+        outcomes:
+          "How each week's final outputs ended up, as a share of that agent's outputs. Only the final version of each report is counted — drafts and revisions that were later replaced are not, so a report that took three passes counts once.",
+        quality:
+          'Of the outputs that Ciri graded, the share that ended at grade C or worse, and the share that still had a high-severity issue. Weeks with nothing graded show a gap, not zero.',
+      },
+      bands: {
+        approvedClean: 'Approved, no notes',
+        approvedWithNotes: 'Approved with notes',
+        flagged: 'Flagged',
+        noReview: 'No review',
+      },
+      lines: { cOrWorse: 'Grade C or worse', highSeverity: 'High-severity issue' },
+      events: {
+        phase1: 'Rico and Sammy started being graded against their own inputs.',
+        severity_approval: 'Severity-based approval and the precomputed facts block went live.',
+      },
+      caveat:
+        "Both changes went live on the same day, so the week containing them mixes old and new logic and the before/after comparison is rough. Also note that approval got easier to earn under the new rule — a rise in \"approved\" is not by itself proof the reports got better; read it with the grades and the suggestion history.",
+    },
     noReportsYet: 'No reports yet.',
     gradingCriteriaTitle: 'Grading criteria',
     grades: {
@@ -511,7 +532,7 @@ export default {
     },
     learning: {
       title: 'Learning page',
-      body: "Two signals shown together, deliberately — a flag-rate trend alone can be misleading (a rate near 0% could mean genuine improvement, or it could mean Ciri just isn't finding much to work with in a short window). Paired with the actual weekly suggestion history (what Ciri's recurring patterns actually led to), the two corroborate each other instead of either one being read in isolation. The full A–F grading rubric is also documented here, word-for-word what Ciri is actually instructed to grade against.",
+      body: "Two signals shown together, deliberately — a weekly outcomes trend per agent (approved clean, approved with notes, flagged, no review; final outputs only) alone can be misleading, since approval got easier to earn under the severity-based rule and a rise in approvals isn't proof of better reports. Paired with the actual weekly suggestion history (what Ciri's recurring patterns actually led to), the two corroborate each other instead of either one being read in isolation. The full A–F grading rubric is also documented here, word-for-word what Ciri is actually instructed to grade against.",
     },
     health: {
       title: 'System Health',

@@ -292,10 +292,32 @@ export interface TriggerRunResponse {
   runId: number
 }
 
-export interface FlagRateWeek {
-  week: string
+export type TrendAgent = 'analysis' | 'recommendation' | 'summary'
+
+export interface GradeTrendCounts {
+  outputs: number
+  approved_clean: number
+  approved_with_notes: number
   flagged: number
-  total: number
+  no_review: number
+  c_or_worse: number
+  high_severity: number
+}
+
+export interface GradeTrendWeek {
+  week: string
+  agents: Record<TrendAgent, GradeTrendCounts>
+}
+
+export interface GradeTrendEvent {
+  date: string
+  key: string
+  label: string
+}
+
+export interface GradeTrend {
+  weeks: GradeTrendWeek[]
+  events: GradeTrendEvent[]
 }
 
 export interface LearningSuggestion {

@@ -77,7 +77,7 @@ export const SETTINGS_ENDPOINTS: EndpointDef[] = [
 ]
 
 export const LEARNING_ENDPOINTS: EndpointDef[] = [
-  { method: 'GET', path: '/learning/flag-rate?weeks=8', desc: 'Trend of how often the critic flags issues.' },
+  { method: 'GET', path: '/learning/grade-trend?weeks=8', desc: 'Weekly critic outcomes per agent (approved clean / with notes / flagged / no review) on final outputs, plus deploy events.' },
   { method: 'GET', path: '/learning/suggestions?limit=20', desc: 'History of suggested prompt patches.' },
 ]
 

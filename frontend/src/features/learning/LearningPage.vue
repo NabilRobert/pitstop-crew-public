@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Line } from 'vue-chartjs'
 import { formatDate } from '../../shared/utils/format'
 import { renderMarkdown } from '../../shared/utils/markdown'
+import GradeTrendChart from './GradeTrendChart.vue'
 import { useLearning } from './useLearning'
 
 const { t } = useI18n()
-const { loading, error, flagRate, suggestions, chartData, chartOptions } = useLearning()
+const { loading, error, gradeTrend, suggestions } = useLearning()
 </script>
 
 <template>
@@ -22,18 +22,7 @@ const { loading, error, flagRate, suggestions, chartData, chartOptions } = useLe
     </div>
 
     <template v-else>
-      <div class="rounded-lg border border-border bg-surface p-5">
-        <h2 class="mb-1 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
-          {{ t('learning.flagRateTitle') }}
-        </h2>
-        <p class="mb-4 text-xs text-ink-faint">
-          {{ t('learning.flagRateDesc') }}
-        </p>
-        <div class="h-56">
-          <Line v-if="flagRate.length" :data="chartData" :options="chartOptions" />
-          <div v-else class="flex h-full items-center justify-center text-ink-faint">{{ t('learning.noReportsYet') }}</div>
-        </div>
-      </div>
+      <GradeTrendChart v-if="gradeTrend" :trend="gradeTrend" />
 
       <div class="mt-8 rounded-lg border border-border bg-surface p-5">
         <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{{ t('learning.gradingCriteriaTitle') }}</h2>
