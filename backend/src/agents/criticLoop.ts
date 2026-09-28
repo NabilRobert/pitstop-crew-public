@@ -59,6 +59,14 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
   const gradeForcesRevision = settings.grade_forces_revision === 'true'
 
   let content = await generate(null)
+  // A blank first draft (generate() already retried, including with a raised
+  // cap) has nothing to fall back on and would otherwise be stored and then
+  // graded F — fail the run loudly instead. Same for Rico/Sammy, which would
+  // otherwise be fed a blank analysis.
+  if (content.trim() === '') {
+    emitEvent(`${agentType} returned an empty draft after retries — failing the run rather than storing a blank`, 'error', pipelineRunId)
+    throw new Error(`runWithCritic: ${agentType} returned an empty draft after retries`)
+  }
   let currentId = await insertOutput({
     agentType,
     content,
@@ -106,7 +114,16 @@ export async function runWithCritic(args: RunWithCriticArgs): Promise<number> {
     }
 
     emitEvent(`Ciri: ${agentType} flagged (grade ${verdict.grade}) — revising (pass ${attempt + 1}/${MAX_REVISIONS})`, 'warn', pipelineRunId)
-    content = await generate(buildRevisionInput(content, verdict))
+    const revised = await generate(buildRevisionInput(content, verdict))
+    // Never replace a real draft with a blank. The draft being kept was just
+    // critiqued (verdict inserted above) and has open issues, so it stays as
+    // the flagged final output and we stop revising.
+    if (revised.trim() === '') {
+      emitEvent(`${agentType}: revision came back empty after retries — keeping the previous draft and stopping`, 'warn', pipelineRunId)
+      await updateStatus(currentId, 'flagged')
+      return currentId
+    }
+    content = revised
     currentId = await insertOutput({
       agentType,
       content,
