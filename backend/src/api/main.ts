@@ -1,10 +1,9 @@
-// REST API — what the Vue frontend calls. Gated by a single-account login
-// (see platform/auth.ts) — /health, /config, and /auth/* are the only
-// public routes; everything else requires a valid session token via
-// authMiddleware. CORS locked to FRONTEND_ORIGINS (one or more, from
-// FRONTEND_ORIGIN). Error responses use {detail: "..."} to match the
-// FastAPI version's shape, so the frontend's error handling (which reads
-// body.detail) didn't need to change for this port.
+// REST API — what the Vue frontend calls. Every route except /health, /config
+// and /auth/login needs a session token (owner, or the optional read-only demo
+// account — see platform/auth.ts and authMiddleware.ts). CORS locked to
+// FRONTEND_ORIGINS (one or more, from FRONTEND_ORIGIN). Error responses use
+// {detail: "..."} to match the FastAPI version's shape, so the frontend's
+// error handling (which reads body.detail) didn't need to change for this port.
 //
 // Routes live in routes/, one file per resource area — this file is just
 // setup, mounting, and the two trivial routes not worth their own file.
@@ -14,7 +13,7 @@ import cors from 'cors'
 
 import { DATA_SOURCE, FRONTEND_ORIGINS } from '../platform/config.js'
 import { reconcileOrphanedRuns } from '../pipeline/pipelineRuns.js'
-import { authMiddleware } from './authMiddleware.js'
+import { authMiddleware, demoReadOnly } from './authMiddleware.js'
 import { router as authRoutes } from './routes/auth.js'
 import { router as settingsRoutes } from './routes/settings.js'
 import { router as learningRoutes } from './routes/learning.js'
@@ -35,6 +34,11 @@ import { router as recommendationsRoutes } from './routes/recommendations.js'
 import { router as changeEventsRoutes } from './routes/changeEvents.js'
 
 const app = express()
+// Caddy is the only proxy in front of the API (and the API only listens on
+// loopback, below), so the one hop it adds is trusted: req.ip is then the real
+// client, which the login lockout is keyed on. Without this every visitor
+// shares the proxy's address and five bad logins by anyone lock out everyone.
+app.set('trust proxy', 1)
 app.use(express.json())
 app.use(
   cors({
@@ -55,6 +59,7 @@ app.get('/config', (_req, res) => {
 
 app.use(authRoutes)
 app.use(authMiddleware)
+app.use(demoReadOnly)
 
 app.use(settingsRoutes)
 app.use(learningRoutes)
@@ -90,6 +95,8 @@ reconcileOrphanedRuns()
   .catch((err) => console.error('Failed to reconcile orphaned pipeline runs at startup:', err))
 
 const port = Number(process.env.PORT) || 8000
-app.listen(port, () => {
-  console.log(`Google Ads AI Performance Dashboard API listening on :${port}`)
+// Loopback only: Caddy proxies to it, and a direct connection from outside
+// would bypass Caddy and could spoof X-Forwarded-For past 'trust proxy'.
+app.listen(port, '127.0.0.1', () => {
+  console.log(`Google Ads AI Performance Dashboard API listening on 127.0.0.1:${port}`)
 })

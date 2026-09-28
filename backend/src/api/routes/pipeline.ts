@@ -5,6 +5,7 @@ import { formatReportEmail, formatFailureAlert } from '../../reporting/reports.j
 import { deliverReport } from '../../platform/emailDelivery.js'
 import { emitEvent, getRecentEvents, subscribe, type ConsoleEvent } from '../../platform/eventBus.js'
 import { wibDate } from '../../platform/timezone.js'
+import { safeEventText } from '../../platform/redact.js'
 import { asyncHandler } from '../asyncHandler.js'
 
 export const router = Router()
@@ -15,7 +16,11 @@ router.get(
   asyncHandler(async (_req, res) => {
     const lastDaily = await pipelineRuns.getLastSuccessfulRun('daily')
     const recentRuns = await pipelineRuns.getRecentRuns(undefined, 20)
-    res.json({ last_successful_daily_run: lastDaily, recent_runs: recentRuns })
+    const demo = res.locals.role === 'demo'
+    res.json({
+      last_successful_daily_run: demo ? demoRun(lastDaily) : lastDaily,
+      recent_runs: demo ? recentRuns.map(demoRun) : recentRuns,
+    })
   })
 )
 
@@ -35,9 +40,16 @@ router.get(
       res.status(404).json({ detail: `No pipeline run with id ${id}` })
       return
     }
-    res.json(run)
+    res.json(res.locals.role === 'demo' ? demoRun(run) : run)
   })
 )
+
+/** A run's error_message can carry a stack trace or connection details; a demo
+ * viewer gets one redacted line. */
+function demoRun<T extends { error_message?: string | null }>(run: T): T {
+  if (!run || !run.error_message) return run
+  return { ...run, error_message: safeEventText(run.error_message) }
+}
 
 const HEARTBEAT_INTERVAL_MS = 20_000 // comfortably under Caddy's default proxy idle timeout
 
@@ -54,13 +66,20 @@ router.get('/console/stream', (req, res) => {
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
   })
+  res.flushHeaders()
 
   const runIdFilter = req.query.runId !== undefined ? Number(req.query.runId) : undefined
   const lastEventIdHeader = req.get('Last-Event-ID')
   const resumeAfterSeq = lastEventIdHeader !== undefined ? Number(lastEventIdHeader) : undefined
 
   const matches = (event: ConsoleEvent) => runIdFilter === undefined || event.runId === runIdFilter
-  const write = (event: ConsoleEvent) => res.write(`id: ${event.seq}\ndata: ${JSON.stringify(event)}\n\n`)
+  // A demo viewer gets event text only: one redacted line, never a stack trace,
+  // connection string or env value (errors are emitted as "message\n\nstack").
+  const demo = res.locals.role === 'demo'
+  const write = (event: ConsoleEvent) => {
+    const out = demo ? { ...event, message: safeEventText(event.message) } : event
+    res.write(`id: ${event.seq}\ndata: ${JSON.stringify(out)}\n\n`)
+  }
 
   for (const event of getRecentEvents()) {
     if (!matches(event)) continue
