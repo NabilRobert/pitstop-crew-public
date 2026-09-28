@@ -44,7 +44,25 @@ let pool: pg.Pool | null = null
 
 function getPool(): pg.Pool {
   if (!DATABASE_URL) throw new Error('PITSTOP_DB_STRING not set — add it to .env')
-  if (!pool) pool = new pg.Pool({ connectionString: DATABASE_URL })
+  if (!pool) {
+    // pg's defaults (max 10, idleTimeoutMillis 10s, no connect timeout) closed
+    // every connection after 10s idle, so the first request after a quiet
+    // spell paid a fresh TCP+auth handshake to the remote PgBouncer (measured
+    // 14-36ms vs ~2ms per query on a warm connection). min keeps two open;
+    // keepAlive probes stop the pooler or a NAT from silently dropping them.
+    pool = new pg.Pool({
+      connectionString: DATABASE_URL,
+      max: 10,
+      min: 2,
+      idleTimeoutMillis: 60_000,
+      connectionTimeoutMillis: 10_000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 30_000,
+    })
+    // An idle client can error (pooler restart, network drop). Without a
+    // listener that is an uncaught exception and kills the process.
+    pool.on('error', (err) => console.error('pg pool: idle client error:', err.message))
+  }
   return pool
 }
 

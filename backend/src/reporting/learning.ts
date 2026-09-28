@@ -66,18 +66,23 @@ export async function getGradeTrend(weeks = 8): Promise<{ weeks: GradeTrendWeek[
      ),
      agents(agent_type) AS (VALUES ('analysis'), ('recommendation'), ('summary')),
      finals AS (
-       SELECT date_trunc('week', o.report_date)::date AS week, o.agent_type, o.status, c.grade,
-              CASE WHEN jsonb_typeof(c.issues) = 'array' THEN c.issues ELSE '[]'::jsonb END AS issues
+       SELECT date_trunc('week', o.report_date)::date AS week, o.agent_type, o.status,
+              CASE WHEN own.id IS NOT NULL THEN own.grade ELSE fb.grade END AS grade,
+              CASE WHEN jsonb_typeof(CASE WHEN own.id IS NOT NULL THEN own.issues ELSE fb.issues END) = 'array'
+                   THEN (CASE WHEN own.id IS NOT NULL THEN own.issues ELSE fb.issues END) ELSE '[]'::jsonb END AS issues
        FROM ai_outputs o
        LEFT JOIN LATERAL (
-         SELECT k.grade, k.issues FROM ai_outputs k
-         WHERE k.agent_type = 'critic'
-           AND (k.critiques_id = o.id
-                OR (k.critiques_id = o.revises_id
-                    AND NOT EXISTS (SELECT 1 FROM ai_outputs k2 WHERE k2.agent_type = 'critic' AND k2.critiques_id = o.id)))
+         SELECT k.id, k.grade, k.issues FROM ai_outputs k
+         WHERE k.agent_type = 'critic' AND k.critiques_id = o.id
          ORDER BY k.created_at DESC, k.id DESC
          LIMIT 1
-       ) c ON true
+       ) own ON true
+       LEFT JOIN LATERAL (
+         SELECT k.grade, k.issues FROM ai_outputs k
+         WHERE own.id IS NULL AND k.agent_type = 'critic' AND k.critiques_id = o.revises_id
+         ORDER BY k.created_at DESC, k.id DESC
+         LIMIT 1
+       ) fb ON true
        WHERE o.agent_type IN ('analysis', 'recommendation', 'summary')
          AND o.status IN ('approved', 'flagged')
          AND o.report_date IS NOT NULL

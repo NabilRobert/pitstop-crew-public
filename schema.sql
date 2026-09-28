@@ -267,6 +267,11 @@ ALTER TABLE pipeline_runs ADD CONSTRAINT pipeline_runs_run_type_check
 ALTER TABLE ai_outputs ADD COLUMN IF NOT EXISTS pipeline_run_id INTEGER REFERENCES pipeline_runs(id);
 CREATE INDEX IF NOT EXISTS idx_ai_outputs_pipeline_run ON ai_outputs(pipeline_run_id);
 
+-- "The critic row(s) for this output" (getLatestCritique, attachCritique, the
+-- Learning grade trend) filters on critiques_id and takes the newest by
+-- created_at; without this it seq-scans the whole table once per lookup.
+CREATE INDEX IF NOT EXISTS idx_ai_outputs_critiques ON ai_outputs(critiques_id, created_at DESC);
+
 -- App-wide config, key/value. Currently just the pipeline's daily/weekly
 -- run times (HH:MM, server-local) — see backend/src/settings.ts and the
 -- Settings page. runDaily.ts polls these instead of the run time being
