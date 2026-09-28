@@ -2,6 +2,7 @@
 
 import { MODEL_MINI, MODEL_FULL, complete } from './llm.js'
 import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, VOICE_ANSWER_GUARDRAIL, languageInstruction } from './prompts.js'
+import { revisionPrompt, type RevisionInput } from './revision.js'
 
 // gpt-5-mini is a reasoning model, and confirmed live to be far heavier
 // on hidden reasoning_tokens than gpt-5.4 (the other agents' model) —
@@ -29,7 +30,7 @@ Be concise. Report the 3-4 most important findings, not an exhaustive campaign-b
 
 The context you're given also includes ad group and keyword data (only for the 3 Search-type campaigns — Brand, Search — Used Cars Generic, Search — Model + Suburb; Performance Max and Display don't have this level) — each keyword's totals for the window, its Quality Score, and its 3 diagnostic sub-scores (expected CTR, ad relevance, landing page experience). This is a top-N aggregate by spend, not every keyword, so don't assume a keyword's absence means it doesn't exist — only that it wasn't among the highest spenders this window. Quality Score is worth citing when it's notably low, dropping, or clearly explains a cost/CTR pattern you're already flagging at the campaign level — not as a routine restatement of every keyword's score.
 
-You're also given a search-terms section — the actual queries that triggered a keyword's ads, ranked by "wasted spend" (zero/near-zero-conversion terms first, then worst cost-per-conversion), not by raw spend. This is specifically for spotting negative-keyword candidates: a search term burning real cost with nothing to show for it is worth naming directly (with its number) if it stands out, since that's a concrete, actionable finding — not every search term in the list needs a mention.
+You're also given a search-terms section — the actual queries that triggered a keyword's ads, ranked WORST-FIRST by "wasted spend" (zero/near-zero-conversion terms first, then worst cost-per-conversion), not by raw spend. This is specifically for spotting negative-keyword candidates: a search term burning real cost with nothing to show for it is worth naming directly (with its number) if it stands out, since that's a concrete, actionable finding — not every search term in the list needs a mention. Because every row was selected for being expensive relative to its results, this list must never be used as evidence of best-performing, top, representative, or high-intent queries, or of overall search efficiency — for that, use the keyword table, which is ranked by spend and includes conversions.
 
 You're also given every ad creative (headlines, descriptions, ad_strength) with its window performance — unlike Quality Score, ad_strength doesn't drift day to day, so don't describe it as changing or trending. It's worth citing when a specific ad is both underperforming (low clicks/conversions relative to its ad group) and rated poor/average — that combination is a concrete signal the creative itself, not just targeting, may need attention.
 
@@ -49,13 +50,11 @@ ${SHARED_GUARDRAILS}`
 
 export async function analyze(
   performanceData: string,
-  criticFeedback?: string | null,
+  revision?: RevisionInput | null,
   language = 'en'
 ): Promise<string> {
   let userPrompt = performanceData
-  if (criticFeedback) {
-    userPrompt += `\n\nCiri (the Critic agent) reviewed your previous analysis and found:\n${criticFeedback}\n\nRevise your analysis to address this.`
-  }
+  if (revision) userPrompt += revisionPrompt('analysis', revision)
   userPrompt += languageInstruction(language)
   return complete(MODEL_MINI, SYSTEM_PROMPT, userPrompt, MAX_TOKENS)
 }

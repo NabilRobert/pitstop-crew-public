@@ -175,8 +175,11 @@ export async function buildSearchTermContext(
   )
   return (
     CURRENCY_NOTE +
-    'These are ranked by "wasted spend" — zero/near-zero-conversion search terms first (highest cost among those), ' +
-    'then worst cost-per-conversion — not by raw spend, since the point of search-term data is spotting negative-keyword candidates.\n\n' +
+    'IMPORTANT — this list is ranked WORST-FIRST by wasted spend: zero/near-zero-conversion terms first (highest cost ' +
+    'among those), then worst cost-per-conversion. It is a negative-keyword-candidate list, not a sample of typical or ' +
+    'top-performing queries — every row was selected for being expensive relative to its results. Do NOT cite it as ' +
+    'evidence of best-performing, top, representative, or high-intent queries, or of overall search efficiency; use the ' +
+    'keyword table above for that.\n\n' +
     JSON.stringify(rows)
   )
 }
@@ -424,7 +427,7 @@ export async function buildFullContext(args: BuildPerformanceContextArgs = {}): 
   return (
     `${performanceContext}\n\n` +
     `Top ad groups/keywords by spend this window (aggregated — not every row; see individual counts above for full totals):\n${adGroupKeywordContext}\n\n` +
-    `Search terms with the most wasted spend this window (aggregated top-N, see note above):\n${searchTermContext}\n\n` +
+    `Search terms ranked WORST-FIRST by wasted spend — negative-keyword candidates, NOT top performers (aggregated top-N, see note):\n${searchTermContext}\n\n` +
     `Ad creatives (headlines/descriptions/ad_strength) with their performance this window:\n${adContext}\n\n` +
     `Search impression share, why it's lost, and Optimization Score this window (see note above on scope):\n${impressionShareContext}\n\n` +
     `Named conversion actions this window (account-wide totals):\n${conversionActionContext}\n\n` +

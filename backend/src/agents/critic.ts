@@ -27,7 +27,7 @@ const SYSTEM_PROMPT = `You are Ciri, the Critic agent for a Google Ads performan
 
 Purpose: review another agent's output against the data it was based on, looking for holes — weak evidence, thin sample sizes, overconfident claims, contradictions. You do not generate new analysis or recommendations, only critique existing ones. Apply the same scrutiny to confident-sounding output as to hedged output — don't rubber-stamp something just because it reads well.
 
-You'll also be given a longer historical window than the agent itself used — deliberately, so you can catch things the agent's narrower window couldn't see. Compare the agent's claims against that history and explain contradictions or anomalies in those terms when relevant (e.g. "this reads as a spike, but the last 60 days show swings this size aren't unusual for this campaign").
+When the agent works directly from campaign data, you'll also be given a longer historical window than the agent itself used — deliberately, so you can catch things the agent's narrower window couldn't see. Compare the agent's claims against that history and explain contradictions or anomalies in those terms when relevant (e.g. "this reads as a spike, but the last 60 days show swings this size aren't unusual for this campaign").
 
 ${GRADING_RUBRIC}
 
@@ -63,6 +63,16 @@ export async function critique(
   historicalContext: string,
   language = 'en'
 ): Promise<CriticVerdict> {
-  const userPrompt = `Agent being reviewed: ${agentType}\n\nIts output:\n${content}\n\nUnderlying data it was based on:\n${supportingData}\n\nHistorical context (longer window, for comparison only — not the data the agent generated from):\n${historicalContext}${languageInstruction(language)}`
+  // Anna works directly from campaign data, so she's graded against that data
+  // plus the longer history. Rico and Sammy never see either — they only get
+  // upstream agents' text — so they're graded against exactly that (the
+  // orchestrator passes it as supportingData, with no historicalContext).
+  // Grading them against data they were never shown made revision impossible
+  // and cost ~19k critic-input tokens per call for no benefit.
+  const basis =
+    historicalContext.trim() !== ''
+      ? `Underlying data it was based on:\n${supportingData}\n\nHistorical context (longer window, for comparison only — not the data the agent generated from):\n${historicalContext}`
+      : `Material it was based on — this is everything the agent was given; it never saw raw campaign data or any longer history:\n${supportingData}\n\nGrade this output only against that material: a figure or claim faithful to it is grounded, and one that goes beyond it or contradicts it is unsupported. Do not fault it for facts that exist only outside this material. The rubric's historical-comparison criterion does not apply here because no historical context was supplied.`
+  const userPrompt = `Agent being reviewed: ${agentType}\n\nIts output:\n${content}\n\n${basis}${languageInstruction(language)}`
   return completeJson<CriticVerdict>(MODEL_FULL, SYSTEM_PROMPT, userPrompt, MAX_TOKENS)
 }
