@@ -152,7 +152,16 @@ export async function critique(
     historicalContext.trim() !== ''
       ? `Underlying data it was based on:\n${supportingData}\n\nHistorical context (longer window, for comparison only — not the data the agent generated from):\n${historicalContext}`
       : `Material it was based on — this is everything the agent was given; it never saw raw campaign data or any longer history:\n${supportingData}\n\nGrade this output only against that material: a figure or claim faithful to it is grounded, and one that goes beyond it or contradicts it is unsupported. Do not fault it for facts that exist only outside this material. The rubric's historical-comparison criterion does not apply here because no historical context was supplied.`
-  const userPrompt = `Agent being reviewed: ${agentType}\n\nIts output:\n${content}\n\n${basis}${languageInstruction(language)}`
+  // basis (the underlying data, ~15-20k tokens for Anna) comes before content
+  // (the draft being reviewed), not after — basis is byte-identical between a
+  // revision's pass-1 and pass-2 critique within the same run (only content
+  // changes), and most providers' prompt caching only covers the matching
+  // PREFIX of a request. Putting the large stable block first and the small
+  // varying draft last is what actually makes that repeat cacheable; the
+  // old content-then-basis order meant nothing after the first few tokens
+  // could ever hit a cache. Also just a more natural reading order — the
+  // data to check against, then the claim being checked.
+  const userPrompt = `Agent being reviewed: ${agentType}\n\n${basis}\n\nIts output to review:\n${content}${languageInstruction(language)}`
   // Anna's critic verifies cross-table numbers and gets medium reasoning
   // effort (measured: catches real contradictions the default effort
   // missed). Rico's and Sammy's critics check faithfulness against ~2k
