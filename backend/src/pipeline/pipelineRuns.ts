@@ -53,11 +53,12 @@ async function checkSpendCeiling(): Promise<void> {
   const { monthly_cost_cap_usd } = await getSettings()
   if (monthly_cost_cap_usd === '') return // disabled
   const capUsd = Number(monthly_cost_cap_usd)
-  const rows = await query<{ total_micros: string | null }>(
+  const rows = await query<{ total_micros: number | null }>(
     `SELECT COALESCE(SUM(cost_usd_micros), 0) AS total_micros FROM pipeline_runs WHERE started_at >= date_trunc('month', now())`
   )
-  // pg returns BIGINT sums as a string to avoid silent precision loss.
-  const monthToDateUsd = Number(rows[0]?.total_micros ?? 0) / 1e6
+  // OID 20 (BIGINT) is globally parsed to Number in data/db.ts, not left as
+  // a string — this SELECT's result is already a number.
+  const monthToDateUsd = (rows[0]?.total_micros ?? 0) / 1e6
   if (exceedsSpendCeiling(monthToDateUsd, capUsd)) {
     throw new SpendCeilingExceededError(capUsd, monthToDateUsd)
   }
@@ -69,8 +70,11 @@ export async function startRun(runType: RunType): Promise<number> {
   }
   // Checked before the insert, not after — the same single choke point
   // already shared by both the cron script and the manual trigger, so one
-  // check covers both paths with no duplicated logic.
-  await checkSpendCeiling()
+  // check covers both paths with no duplicated logic. Backups don't call
+  // any model (they're a pg_dump), cost nothing, and aren't what the cap is
+  // protecting against — exempting them means a maxed-out cap can't also
+  // silently stop backups from running for the rest of the month.
+  if (runType !== 'backup') await checkSpendCeiling()
   try {
     const rows = await query<{ id: number }>(
       "INSERT INTO pipeline_runs (run_type, started_at, status) VALUES ($1, $2, 'running') RETURNING id",
