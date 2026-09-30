@@ -5,6 +5,8 @@ import CampaignDetailPage from '../../features/dashboard/CampaignDetailPage.vue'
 import ReportsListPage from '../../features/reports/ReportsListPage.vue'
 import ReportDetailPage from '../../features/reports/ReportDetailPage.vue'
 import SystemHealthPage from '../../features/system-health/SystemHealthPage.vue'
+import { isDemo } from '../../shared/composables/auth'
+import RunInspectorPage from '../../features/run-inspector/RunInspectorPage.vue'
 import TimeMachinePage from '../../features/time-machine/TimeMachinePage.vue'
 import SettingsPage from '../../features/settings/SettingsPage.vue'
 import LearningPage from '../../features/learning/LearningPage.vue'
@@ -19,6 +21,7 @@ const routes = [
   { path: '/reports', name: 'reports', component: ReportsListPage },
   { path: '/reports/:period/:id', name: 'report-detail', component: ReportDetailPage, props: true },
   { path: '/system-health', name: 'system-health', component: SystemHealthPage },
+  { path: '/runs/:id', name: 'run-inspector', component: RunInspectorPage, props: true },
   { path: '/time-machine', name: 'time-machine', component: TimeMachinePage },
   { path: '/settings', name: 'settings', component: SettingsPage },
   { path: '/learning', name: 'learning', component: LearningPage },
@@ -27,7 +30,16 @@ const routes = [
   { path: '/aska', name: 'aska', component: AskaPage },
 ]
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes,
 })
+
+// Pages that only make sense with write access (or show the owner's private
+// chats). The API refuses a demo token on all of them anyway.
+const DEMO_HIDDEN = ['/settings', '/aska', '/time-machine']
+router.beforeEach((to) => {
+  if (isDemo.value && DEMO_HIDDEN.some((p) => to.path.startsWith(p))) return '/'
+})
+
+export default router

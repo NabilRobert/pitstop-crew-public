@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import { formatDate } from '../../shared/utils/format'
 import StatusPill from '../../shared/components/StatusPill.vue'
+import { isDemo } from '../../shared/composables/auth'
 import { useReportsList, STRIP_COLOR } from './useReportsList'
 
 const { t } = useI18n()
@@ -67,6 +68,7 @@ const {
           </button>
         </div>
         <button
+          v-if="!isDemo"
           type="button"
           class="rounded-md bg-rosso px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco disabled:cursor-not-allowed disabled:opacity-50"
           :disabled="generating"

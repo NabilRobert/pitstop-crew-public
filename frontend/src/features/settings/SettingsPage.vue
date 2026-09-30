@@ -10,10 +10,10 @@ const {
   saved,
   dailyRunTime,
   weeklyRunTime,
-  gradeForcesRevision,
   reportRecipientEmail,
   reportLanguage,
   autoReportsEnabled,
+  monthlyCostCapUsd,
   save,
 } = useSettings()
 </script>
@@ -91,13 +91,21 @@ const {
           </p>
         </div>
 
-        <label class="mt-5 flex items-start gap-3 border-t border-border pt-5">
-          <input v-model="gradeForcesRevision" type="checkbox" class="mt-0.5 h-4 w-4 accent-rosso" />
-          <span class="text-sm text-ink-soft">
-            <span class="font-medium text-ink">{{ t('settings.requireRevisionTitle') }}</span><br />
-            {{ t('settings.requireRevisionDesc') }}
-          </span>
-        </label>
+        <div class="mt-5 border-t border-border pt-5">
+          <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint">
+            {{ t('settings.monthlyCostCap') }}
+          </label>
+          <input
+            v-model="monthlyCostCapUsd"
+            type="text"
+            inputmode="decimal"
+            placeholder="20"
+            class="w-full max-w-sm rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+          />
+          <p class="mt-1 text-xs text-ink-faint">
+            {{ t('settings.monthlyCostCapHelp') }}
+          </p>
+        </div>
 
         <button
           type="button"

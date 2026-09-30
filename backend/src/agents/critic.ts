@@ -97,6 +97,24 @@ export function normalizeVerdict(raw: Partial<CriticVerdict> | null | undefined)
   }
 }
 
+/** The rubric requires every issues[].quote to be an exact, verbatim
+ * substring of the reviewed content — but that requirement is only ever a
+ * prompt instruction, never checked. The frontend (markdown.ts) already
+ * fails soft on a non-matching quote (it just skips highlighting that one
+ * issue), so this isn't a crash-prevention fix — it's an observability one:
+ * without it, there's no way to know if or how often the critic is
+ * hallucinating quotes instead of copying them. Deliberately does not
+ * mutate the verdict or drop the issue — a bad quote doesn't mean the
+ * underlying finding (reason, severity) is wrong, only that its highlight
+ * anchor won't match. An empty quote is never flagged: that's the model
+ * choosing not to quote, per its own instructions (see critic.md), not a
+ * failure to quote. Called from criticLoop.ts right after normalizeVerdict;
+ * kept separate (and pure) rather than folded into normalizeVerdict so that
+ * function stays a simple, side-effect-free fail-safe. */
+export function findUnverifiedQuotes(issues: CriticIssue[], content: string): CriticIssue[] {
+  return issues.filter((i) => i.quote !== '' && !content.includes(i.quote))
+}
+
 export interface ApprovalDecision {
   approved: boolean
   /** Short human-readable why, for the console event. */
@@ -152,7 +170,24 @@ export async function critique(
     historicalContext.trim() !== ''
       ? `Underlying data it was based on:\n${supportingData}\n\nHistorical context (longer window, for comparison only — not the data the agent generated from):\n${historicalContext}`
       : `Material it was based on — this is everything the agent was given; it never saw raw campaign data or any longer history:\n${supportingData}\n\nGrade this output only against that material: a figure or claim faithful to it is grounded, and one that goes beyond it or contradicts it is unsupported. Do not fault it for facts that exist only outside this material. The rubric's historical-comparison criterion does not apply here because no historical context was supplied.`
-  const userPrompt = `Agent being reviewed: ${agentType}\n\nIts output:\n${content}\n\n${basis}${languageInstruction(language)}`
+  // basis (the underlying data, ~15-20k tokens for Anna) comes before content
+  // (the draft being reviewed), not after — basis is byte-identical between a
+  // revision's pass-1 and pass-2 critique within the same run (only content
+  // changes), and most providers' prompt caching only covers the matching
+  // PREFIX of a request. Confirmed live on the first real pass-2 case after
+  // this order shipped (run 133): pass 1 was 20,264 input tokens / $0.0951,
+  // pass 2 was 20,371 input tokens with 19,328 (95%) cached, at $0.0543 —
+  // 43% cheaper. Sumopod does pass gpt-5.4 prompt caching through. (An
+  // earlier "doesn't work" read of this came from inspecting a same-prefix
+  // pair in run 130 — which predates this reorder entirely, so that data
+  // never actually tested the fix; it was stale pre-fix data misread as
+  // evidence about the fix. Note it's not fully explained why: even the old
+  // order shared an identical ~1,300-token system prompt across both
+  // passes, above OpenAI's usual 1,024-token caching minimum, and that
+  // still came back 0 cached tokens too. Lesson either way: verify a
+  // live-provider optimization against a case that actually ran the new
+  // code, not historical data from before it shipped.)
+  const userPrompt = `Agent being reviewed: ${agentType}\n\n${basis}\n\nIts output to review:\n${content}${languageInstruction(language)}`
   // Anna's critic verifies cross-table numbers and gets medium reasoning
   // effort (measured: catches real contradictions the default effort
   // missed). Rico's and Sammy's critics check faithfulness against ~2k

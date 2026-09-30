@@ -5,6 +5,8 @@ import { formatReportEmail, formatFailureAlert } from '../../reporting/reports.j
 import { deliverReport } from '../../platform/emailDelivery.js'
 import { emitEvent, getRecentEvents, subscribe, type ConsoleEvent } from '../../platform/eventBus.js'
 import { wibDate } from '../../platform/timezone.js'
+import { safeEventText } from '../../platform/redact.js'
+import * as inspector from '../../reporting/runInspector.js'
 import { asyncHandler } from '../asyncHandler.js'
 
 export const router = Router()
@@ -15,7 +17,62 @@ router.get(
   asyncHandler(async (_req, res) => {
     const lastDaily = await pipelineRuns.getLastSuccessfulRun('daily')
     const recentRuns = await pipelineRuns.getRecentRuns(undefined, 20)
-    res.json({ last_successful_daily_run: lastDaily, recent_runs: recentRuns })
+    const demo = res.locals.role === 'demo'
+    res.json({
+      last_successful_daily_run: demo ? demoRun(lastDaily) : lastDaily,
+      recent_runs: demo ? recentRuns.map(demoRun) : recentRuns,
+    })
+  })
+)
+
+/** Run Inspector — the newest runs with status, duration, total cost and LLM
+ * call count. Read-only, so demo tokens can use it (error text is redacted). */
+router.get(
+  '/pipeline/runs',
+  asyncHandler(async (req, res) => {
+    const limit = req.query.limit === undefined ? 20 : Number(req.query.limit)
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      res.status(400).json({ detail: 'limit must be an integer from 1 to 100' })
+      return
+    }
+    res.json(await inspector.listRuns(limit, res.locals.role === 'demo'))
+  })
+)
+
+/** A run's trace as a flat list (parent_id + seq give the tree), without any
+ * prompt/response text — fetch that per step from /trace/events/:id/payloads. */
+router.get(
+  '/pipeline/runs/:id/trace',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ detail: 'id must be an integer' })
+      return
+    }
+    const trace = await inspector.getRunTrace(id, res.locals.role === 'demo')
+    if (!trace) {
+      res.status(404).json({ detail: `No pipeline run with id ${id}` })
+      return
+    }
+    res.json(trace)
+  })
+)
+
+/** The stored prompt / response / context text of one trace step. */
+router.get(
+  '/trace/events/:id/payloads',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ detail: 'id must be an integer' })
+      return
+    }
+    const result = await inspector.getEventPayloads(id)
+    if (!result) {
+      res.status(404).json({ detail: `No trace event with id ${id}` })
+      return
+    }
+    res.json(result)
   })
 )
 
@@ -35,9 +92,16 @@ router.get(
       res.status(404).json({ detail: `No pipeline run with id ${id}` })
       return
     }
-    res.json(run)
+    res.json(res.locals.role === 'demo' ? demoRun(run) : run)
   })
 )
+
+/** A run's error_message can carry a stack trace or connection details; a demo
+ * viewer gets one redacted line. */
+function demoRun<T extends { error_message?: string | null }>(run: T): T {
+  if (!run || !run.error_message) return run
+  return { ...run, error_message: safeEventText(run.error_message) }
+}
 
 const HEARTBEAT_INTERVAL_MS = 20_000 // comfortably under Caddy's default proxy idle timeout
 
@@ -54,13 +118,20 @@ router.get('/console/stream', (req, res) => {
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
   })
+  res.flushHeaders()
 
   const runIdFilter = req.query.runId !== undefined ? Number(req.query.runId) : undefined
   const lastEventIdHeader = req.get('Last-Event-ID')
   const resumeAfterSeq = lastEventIdHeader !== undefined ? Number(lastEventIdHeader) : undefined
 
   const matches = (event: ConsoleEvent) => runIdFilter === undefined || event.runId === runIdFilter
-  const write = (event: ConsoleEvent) => res.write(`id: ${event.seq}\ndata: ${JSON.stringify(event)}\n\n`)
+  // A demo viewer gets event text only: one redacted line, never a stack trace,
+  // connection string or env value (errors are emitted as "message\n\nstack").
+  const demo = res.locals.role === 'demo'
+  const write = (event: ConsoleEvent) => {
+    const out = demo ? { ...event, message: safeEventText(event.message) } : event
+    res.write(`id: ${event.seq}\ndata: ${JSON.stringify(out)}\n\n`)
+  }
 
   for (const event of getRecentEvents()) {
     if (!matches(event)) continue
@@ -100,6 +171,10 @@ router.post('/pipeline/run', async (req, res) => {
       res.status(409).json({ detail: err.message })
       return
     }
+    if (err instanceof pipelineRuns.SpendCeilingExceededError) {
+      res.status(429).json({ detail: err.message })
+      return
+    }
     // Not asyncHandler-wrapped, so nothing else catches this — must
     // respond here rather than rethrow into the void.
     res.status(500).json({ detail: err instanceof Error ? err.message : String(err) })
@@ -113,7 +188,16 @@ router.post('/pipeline/run', async (req, res) => {
       try {
         const { subject, body } = await formatReportEmail(result, today, period)
         emitEvent(`Emil: emailing ${period} report…`, 'info', runId)
-        await deliverReport(period, subject, body)
+        const outcome = await deliverReport(period, subject, body, runId)
+        // Tells the frontend the run is really over (its reports table
+        // refreshes on these) — the report itself exists earlier, at "run complete".
+        emitEvent(
+          outcome === 'sent'
+            ? `Emil: ${period} report email sent`
+            : `Emil: no recipient configured — ${period} report not emailed`,
+          'info',
+          runId
+        )
       } catch (err) {
         // The pipeline run itself succeeded — a failed send here shouldn't
         // be reported as a pipeline failure, just its own separate warning.
@@ -124,6 +208,6 @@ router.post('/pipeline/run', async (req, res) => {
       const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
       emitEvent(`Pipeline run failed: ${message}`, 'error', runId)
       const { subject, body } = formatFailureAlert(period, message)
-      await deliverReport(period, subject, body).catch(() => {})
+      await deliverReport(period, subject, body, runId).catch(() => {})
     })
 })

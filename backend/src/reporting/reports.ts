@@ -50,6 +50,16 @@ export function formatDeadMansSwitchAlert(
   return { subject, body }
 }
 
+/** Deliberately not "[ALERT] ... failed" like the failure formatters above —
+ * hitting the monthly spend cap (Settings page, monthly_cost_cap_usd) is the
+ * safety mechanism doing its job, not an outage. Still worth an email: a
+ * silently-stopped pipeline defeats half the point of having the cap. */
+export function formatSpendCeilingAlert(runType: string, capUsd: number, monthToDateUsd: number): { subject: string; body: string } {
+  const subject = `Pitstop — ${runType} run skipped (monthly spend cap reached)`
+  const body = `The ${runType} run was skipped because the monthly spend cap of $${capUsd.toFixed(2)} has been reached (month to date: $${monthToDateUsd.toFixed(2)}).\n\nThis is the safety limit working as intended, not a failure — no report was generated for this run. Raise the cap from the Settings page if you want reports to resume before the next calendar month.`
+  return { subject, body }
+}
+
 export function formatWeeklyFeedbackEmail(suggestion: string): { subject: string; body: string } {
   const subject = 'Google Ads Dashboard — Weekly Prompt Suggestion'
   const body = `Ciri found a recurring pattern this week. Suggested prompt patch below — review and apply manually if it looks right. This is never auto-applied.\n\n${suggestion}`

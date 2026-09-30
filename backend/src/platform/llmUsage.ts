@@ -77,8 +77,13 @@ export function getPriceTable(): Record<string, ModelPrice> {
   if (raw) {
     try {
       for (const [model, price] of Object.entries(JSON.parse(raw) as Record<string, unknown>)) {
-        if (isModelPrice(price)) table[model] = price
-        else console.warn(`LLM_PRICES_JSON: ignoring malformed entry for "${model}"`)
+        if (!isModelPrice(price)) console.warn(`LLM_PRICES_JSON: ignoring malformed entry for "${model}"`)
+        // A zero (or negative) input AND output rate is a placeholder, not a
+        // price: leave the model unpriced so its cost stays null instead of a
+        // recorded "$0.00".
+        else if (price.input <= 0 && price.output <= 0) {
+          console.warn(`LLM_PRICES_JSON: "${model}" has input and output rates of 0 or less — treating it as unpriced`)
+        } else table[model] = price
       }
     } catch {
       console.warn('LLM_PRICES_JSON is not valid JSON — treating every model as unpriced')
@@ -86,6 +91,22 @@ export function getPriceTable(): Record<string, ModelPrice> {
   }
   cachedPrices = table
   return table
+}
+
+/** Cost of a single API call in USD, or null when the model has no configured
+ * rate (never 0 for "unknown"). Used for per-call trace events. */
+export function priceCallUsd(model: string, raw: RawUsage | null | undefined): number | null {
+  if (!raw) return null
+  const micros = priceUsage({
+    [model]: {
+      calls: 1,
+      input_tokens: raw.prompt_tokens ?? 0,
+      cached_input_tokens: raw.prompt_tokens_details?.cached_tokens ?? 0,
+      output_tokens: raw.completion_tokens ?? 0,
+      reasoning_tokens: raw.completion_tokens_details?.reasoning_tokens ?? 0,
+    },
+  }).totalUsdMicros
+  return micros === null ? null : micros / 1e6
 }
 
 export interface PricedUsage {

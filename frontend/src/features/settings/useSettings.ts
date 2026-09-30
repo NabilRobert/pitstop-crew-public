@@ -9,20 +9,23 @@ export function useSettings() {
 
   const dailyRunTime = ref('06:00')
   const weeklyRunTime = ref('06:00')
-  const gradeForcesRevision = ref(false)
   const reportRecipientEmail = ref('')
   const reportLanguage = ref('en')
   const autoReportsEnabled = ref(true)
+  // String, not number — empty string means "disabled", same "empty = off"
+  // convention as reportRecipientEmail, so it must round-trip through the
+  // input as-is rather than being coerced to 0.
+  const monthlyCostCapUsd = ref('')
 
   onMounted(async () => {
     try {
       const settings = await api.settings()
       dailyRunTime.value = settings.daily_run_time
       weeklyRunTime.value = settings.weekly_run_time
-      gradeForcesRevision.value = settings.grade_forces_revision === 'true'
       reportRecipientEmail.value = settings.report_recipient_email
       reportLanguage.value = settings.report_language
       autoReportsEnabled.value = settings.auto_reports_enabled === 'true'
+      monthlyCostCapUsd.value = settings.monthly_cost_cap_usd
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -38,17 +41,17 @@ export function useSettings() {
       const settings = await api.updateSettings({
         daily_run_time: dailyRunTime.value,
         weekly_run_time: weeklyRunTime.value,
-        grade_forces_revision: String(gradeForcesRevision.value),
         report_recipient_email: reportRecipientEmail.value.trim(),
         report_language: reportLanguage.value,
         auto_reports_enabled: String(autoReportsEnabled.value),
+        monthly_cost_cap_usd: monthlyCostCapUsd.value.trim(),
       })
       dailyRunTime.value = settings.daily_run_time
       weeklyRunTime.value = settings.weekly_run_time
-      gradeForcesRevision.value = settings.grade_forces_revision === 'true'
       reportRecipientEmail.value = settings.report_recipient_email
       reportLanguage.value = settings.report_language
       autoReportsEnabled.value = settings.auto_reports_enabled === 'true'
+      monthlyCostCapUsd.value = settings.monthly_cost_cap_usd
       saved.value = true
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -64,10 +67,10 @@ export function useSettings() {
     saved,
     dailyRunTime,
     weeklyRunTime,
-    gradeForcesRevision,
     reportRecipientEmail,
     reportLanguage,
     autoReportsEnabled,
+    monthlyCostCapUsd,
     save,
   }
 }

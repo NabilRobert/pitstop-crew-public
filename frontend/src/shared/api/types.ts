@@ -283,6 +283,8 @@ export interface Settings {
   report_recipient_email: string
   report_language: string
   auto_reports_enabled: string
+  /** Empty string = disabled (no cap). Otherwise a positive number, as a string. */
+  monthly_cost_cap_usd: string
 }
 
 export interface TriggerRunResponse {
@@ -342,4 +344,60 @@ export interface ConsoleEvent {
 
 export interface AppConfig {
   data_source: 'demo' | 'live'
+}
+
+export interface RunListItem {
+  id: number
+  run_type: string
+  status: 'running' | 'success' | 'failure' | 'partial'
+  started_at: string
+  finished_at: string | null
+  duration_ms: number | null
+  cost_usd: number | null
+  llm_calls: number | null
+  tokens_in: number | null
+  tokens_out: number | null
+  trace_event_count: number
+  error_message: string | null
+}
+
+export type TraceKind = 'run' | 'context' | 'agent' | 'llm_call' | 'critic_review' | 'decision' | 'revision' | 'email' | 'error'
+
+export interface TraceEvent {
+  id: number
+  parent_id: number | null
+  seq: number
+  kind: TraceKind
+  name: string
+  status: 'ok' | 'error' | 'skipped'
+  started_at: string
+  ended_at: string | null
+  duration_ms: number | null
+  model: string | null
+  tokens_in: number | null
+  tokens_out: number | null
+  cost_usd: number | null
+  summary: string | null
+  meta: Record<string, unknown> | null
+  error_message: string | null
+  payload_count: number
+}
+
+export interface RunTrace {
+  run: RunListItem
+  events: TraceEvent[]
+}
+
+export interface TracePayload {
+  id: number
+  role: 'prompt' | 'response' | 'context'
+  chars: number
+  content: string
+}
+
+export interface EventPayloads {
+  event_id: number
+  expired: boolean
+  retention_days: number
+  payloads: TracePayload[]
 }

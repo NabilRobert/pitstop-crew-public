@@ -6,6 +6,8 @@ import type {
   SegmentPerformanceRow,
   Settings,
   GradeTrend,
+  RunTrace,
+  EventPayloads,
   LearningSuggestion,
   TriggerRunResponse,
   Report,
@@ -75,9 +77,9 @@ async function requestAudio(path: string, body: unknown): Promise<Blob> {
 
 export const api = {
   login: (username: string, password: string) =>
-    request<{ token: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+    request<{ token: string; role: 'owner' | 'demo' }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => request<{ ok: true }>('/auth/logout', { method: 'POST' }),
-  verifyAuth: () => request<{ ok: true }>('/auth/verify'),
+  verifyAuth: () => request<{ ok: true; role: 'owner' | 'demo' }>('/auth/verify'),
   config: () => request<AppConfig>('/config'),
   systemHealth: () => request<SystemHealth>('/system-health'),
   campaigns: () => request<Campaign[]>('/campaigns'),
@@ -101,6 +103,8 @@ export const api = {
   updateSettings: (payload: Partial<Settings>) =>
     request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(payload) }),
   gradeTrend: (weeks = 8) => request<GradeTrend>(`/learning/grade-trend?weeks=${weeks}`),
+  runTrace: (id: number | string) => request<RunTrace>(`/pipeline/runs/${id}/trace`),
+  eventPayloads: (id: number) => request<EventPayloads>(`/trace/events/${id}/payloads`),
   learningSuggestions: (limit = 20) => request<LearningSuggestion[]>(`/learning/suggestions?limit=${limit}`),
   triggerRun: (period: string) =>
     request<TriggerRunResponse>('/pipeline/run', { method: 'POST', body: JSON.stringify({ period }) }),

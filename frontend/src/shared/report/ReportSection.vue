@@ -4,6 +4,7 @@ import StatusPill from '../components/StatusPill.vue'
 import GradeBadge from './GradeBadge.vue'
 import { renderReportContent } from '../utils/markdown'
 import type { AiOutputWithCritique } from '../api/types'
+import { isDemo } from '../composables/auth'
 
 withDefaults(
   defineProps<{
@@ -43,7 +44,7 @@ const { t } = useI18n()
         class="agent-prose flex-1 overflow-y-auto px-5 py-5"
         v-html="renderReportContent(output.content, output.critique?.issues ?? [])"
       />
-      <div v-if="askable || hasWhyTrail" class="flex gap-4 border-t border-border px-5 py-3">
+      <div v-if="(askable && !isDemo) || hasWhyTrail" class="flex gap-4 border-t border-border px-5 py-3">
         <button
           v-if="hasWhyTrail"
           type="button"
@@ -53,7 +54,7 @@ const { t } = useI18n()
           {{ t('reportSection.whyThis') }}
         </button>
         <button
-          v-if="askable"
+          v-if="askable && !isDemo"
           type="button"
           class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-ink"
           @click="$emit('ask')"
