@@ -70,6 +70,24 @@ function failedRunId(err: unknown): number | undefined {
   return err && typeof err === 'object' && 'pipelineRunId' in err ? (err as { pipelineRunId: number }).pipelineRunId : undefined
 }
 
+/** Sends the spend-cap-skipped email at most once per calendar month per
+ * runType — without this, every 15-minute tick after daily_run_time hits
+ * the same cap again (a cap hit never counts as "already ran today", so
+ * alreadyRanToday() stays false and the cron keeps retrying), which would
+ * be 70-90 emails a day until the cap is raised or the month rolls over.
+ * Unlike checkDeadMansSwitch's true/false dedupe flag, this stores the
+ * month itself (todayWib.slice(0, 7), e.g. "2026-09") — re-arming for next
+ * month happens for free, since next month's string just won't match. */
+async function alertSpendCeilingOnce(runType: 'daily' | 'weekly', err: SpendCeilingExceededError, todayWib: string): Promise<void> {
+  const alertKey = `spend_cap_alert_sent_${runType}`
+  const thisMonth = todayWib.slice(0, 7)
+  console.log(`${runType[0].toUpperCase()}${runType.slice(1)} run skipped — ${err.message}`)
+  if ((await getAlertState(alertKey)) === thisMonth) return // already emailed this month
+  const { subject, body } = formatSpendCeilingAlert(runType, err.capUsd, err.monthToDateUsd)
+  await deliver(runType, subject, body)
+  await setAlertState(alertKey, thisMonth)
+}
+
 async function alreadyRanToday(runType: RunType, todayWib: string): Promise<boolean> {
   const last = await getLastSuccessfulRun(runType)
   if (!last?.finished_at) return false
@@ -144,10 +162,11 @@ async function main() {
         // Unlike the race above, this is worth a named, visible event — the
         // safety mechanism firing is exactly what should be noticed, not
         // silently swallowed (a silently-stopped pipeline defeats half the
-        // point of having the cap).
-        console.log(`Daily run skipped — ${err.message}`)
-        const { subject, body } = formatSpendCeilingAlert('daily', err.capUsd, err.monthToDateUsd)
-        await deliver('daily', subject, body)
+        // point of having the cap). Deduped to once per month — see
+        // alertSpendCeilingOnce — since a cap hit never counts as "already
+        // ran today", so every 15-minute tick past daily_run_time would
+        // otherwise hit the cap and email again.
+        await alertSpendCeilingOnce('daily', err, today)
       } else {
         const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
         const { subject, body } = formatFailureAlert('daily', message)
@@ -180,9 +199,13 @@ async function main() {
         'Weekly run skipped — another run was already in progress (likely a manual "Generate report now" trigger racing this cron tick)'
       )
     } else if (err instanceof SpendCeilingExceededError) {
-      console.log(`Weekly run skipped — ${err.message}`)
-      const { subject, body } = formatSpendCeilingAlert('weekly', err.capUsd, err.monthToDateUsd)
-      await deliver('weekly', subject, body)
+      await alertSpendCeilingOnce('weekly', err, today)
+      // weekly_feedback below runs through the same startRun() choke point
+      // and would hit this same cap immediately — nothing else catches
+      // that throw, so without this the tick would end in an unhandled
+      // rejection. Skipping it here for this tick is correct: there's
+      // nothing new to learn from a week where the report itself didn't run.
+      return
     } else {
       const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
       const { subject, body } = formatFailureAlert('weekly', message)
