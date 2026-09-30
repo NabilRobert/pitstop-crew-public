@@ -8,7 +8,8 @@ An AI performance dashboard for Google Ads. A small team of LLM agents reads the
 ![Dashboard overview](images/dashboard-overview.webp)
 ![Report with the "Why this?" trail open](images/why-this-trail.webp)
 ![Learning page — Ciri's verdicts by week](images/learning-grade-trend.webp)
-<!-- SCREENSHOT: Run Inspector with a model call's prompt and response open -->
+![Run Inspector — a run's full trace and cost](images/run-inspector-overview.webp)
+![Run Inspector — a model call's full prompt and response](images/run-inspector-model-call.webp)
 
 ## The problem
 
