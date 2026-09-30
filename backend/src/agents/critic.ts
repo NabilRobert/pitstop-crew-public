@@ -97,6 +97,24 @@ export function normalizeVerdict(raw: Partial<CriticVerdict> | null | undefined)
   }
 }
 
+/** The rubric requires every issues[].quote to be an exact, verbatim
+ * substring of the reviewed content — but that requirement is only ever a
+ * prompt instruction, never checked. The frontend (markdown.ts) already
+ * fails soft on a non-matching quote (it just skips highlighting that one
+ * issue), so this isn't a crash-prevention fix — it's an observability one:
+ * without it, there's no way to know if or how often the critic is
+ * hallucinating quotes instead of copying them. Deliberately does not
+ * mutate the verdict or drop the issue — a bad quote doesn't mean the
+ * underlying finding (reason, severity) is wrong, only that its highlight
+ * anchor won't match. An empty quote is never flagged: that's the model
+ * choosing not to quote, per its own instructions (see critic.md), not a
+ * failure to quote. Called from criticLoop.ts right after normalizeVerdict;
+ * kept separate (and pure) rather than folded into normalizeVerdict so that
+ * function stays a simple, side-effect-free fail-safe. */
+export function findUnverifiedQuotes(issues: CriticIssue[], content: string): CriticIssue[] {
+  return issues.filter((i) => i.quote !== '' && !content.includes(i.quote))
+}
+
 export interface ApprovalDecision {
   approved: boolean
   /** Short human-readable why, for the console event. */

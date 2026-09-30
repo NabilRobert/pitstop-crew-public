@@ -1,7 +1,7 @@
 // Ties an agent's generate function to the Critic, enforcing the max-2-
 // revisions-per-agent-per-run cap from PROJECT.md's cost guardrails.
 
-import { critique as realCritique, decideApproval, normalizeVerdict, type CriticVerdict } from './critic.js'
+import { critique as realCritique, decideApproval, normalizeVerdict, findUnverifiedQuotes, type CriticVerdict } from './critic.js'
 import { buildRevisionInput, type RevisionInput } from './revision.js'
 import { insertOutput, updateStatus } from '../reporting/outputs.js'
 import { getSettings } from '../platform/settings.js'
@@ -146,6 +146,18 @@ async function runCriticLoop(args: RunWithCriticArgs, agentSpan: Span): Promise<
         // Normalized here too (idempotent) so a raw verdict from any critiqueFn
         // is fail-safe: missing severity -> high, missing grade -> blocks approval.
         const v = normalizeVerdict(await critiqueFn(agentType, content, supportingData, historicalContext, language))
+        // Purely observational: the rubric requires every quote to be a
+        // verbatim substring, but that's only ever a prompt instruction. The
+        // frontend already fails soft on a non-matching quote (skips that
+        // one highlight, doesn't break rendering), so this doesn't change
+        // grading or drop the issue — it just makes a silent quality signal
+        // visible in the logs instead of invisible.
+        const unverified = findUnverifiedQuotes(v.issues, content)
+        if (unverified.length > 0) {
+          console.warn(
+            `criticLoop: Ciri's review of ${agentType} (pass ${reviews}) has ${unverified.length} issue(s) whose quote isn't a verbatim substring of the reviewed content`
+          )
+        }
         reviewSpan.set(describeReview(v))
         return v
       },
