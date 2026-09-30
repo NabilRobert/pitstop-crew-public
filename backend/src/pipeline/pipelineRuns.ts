@@ -5,6 +5,7 @@ import { query, queryOne } from '../data/db.js'
 import { createUsageTracker, priceUsage, type UsageByModel } from '../platform/llmUsage.js'
 import { traceRun } from '../platform/trace.js'
 import { redactSecrets } from '../platform/redact.js'
+import { getSettings } from '../platform/settings.js'
 
 export const VALID_RUN_TYPES = ['daily', 'weekly', 'weekly_feedback', 'backup'] as const
 export type RunType = (typeof VALID_RUN_TYPES)[number]
@@ -20,10 +21,56 @@ export class PipelineRunInProgressError extends Error {
   }
 }
 
+/** Pure — testable in isolation. `capUsd: null` means the cap is disabled
+ * (never exceeds); everything else is a plain `>=` comparison. Separated
+ * from the DB-querying checkSpendCeiling() below so the actual decision
+ * logic doesn't need a live database to test. */
+export function exceedsSpendCeiling(monthToDateCostUsd: number, capUsd: number | null): boolean {
+  return capUsd !== null && monthToDateCostUsd >= capUsd
+}
+
+/** Thrown by startRun() when the monthly spend ceiling (Settings page,
+ * monthly_cost_cap_usd) has been reached — mirrors PipelineRunInProgressError's
+ * shape. Carries the numbers so a caller can build its own message without a
+ * second query. */
+export class SpendCeilingExceededError extends Error {
+  constructor(
+    public readonly capUsd: number,
+    public readonly monthToDateUsd: number
+  ) {
+    super(`Monthly spend cap of $${capUsd.toFixed(2)} reached (month to date: $${monthToDateUsd.toFixed(2)})`)
+    this.name = 'SpendCeilingExceededError'
+  }
+}
+
+/** Sums cost_usd_micros for every run started this calendar month (server
+ * time — same convention as every other date-based check here) and compares
+ * against the configured cap. A run with no recorded cost (no price
+ * configured for the model it used) contributes 0 via SUM's normal NULL
+ * handling — this can't protect against spend that genuinely has no price
+ * configured, only against spend that's actually being tracked. */
+async function checkSpendCeiling(): Promise<void> {
+  const { monthly_cost_cap_usd } = await getSettings()
+  if (monthly_cost_cap_usd === '') return // disabled
+  const capUsd = Number(monthly_cost_cap_usd)
+  const rows = await query<{ total_micros: string | null }>(
+    `SELECT COALESCE(SUM(cost_usd_micros), 0) AS total_micros FROM pipeline_runs WHERE started_at >= date_trunc('month', now())`
+  )
+  // pg returns BIGINT sums as a string to avoid silent precision loss.
+  const monthToDateUsd = Number(rows[0]?.total_micros ?? 0) / 1e6
+  if (exceedsSpendCeiling(monthToDateUsd, capUsd)) {
+    throw new SpendCeilingExceededError(capUsd, monthToDateUsd)
+  }
+}
+
 export async function startRun(runType: RunType): Promise<number> {
   if (!VALID_RUN_TYPES.includes(runType)) {
     throw new Error(`run_type must be one of ${VALID_RUN_TYPES.join(', ')}, got ${runType}`)
   }
+  // Checked before the insert, not after — the same single choke point
+  // already shared by both the cron script and the manual trigger, so one
+  // check covers both paths with no duplicated logic.
+  await checkSpendCeiling()
   try {
     const rows = await query<{ id: number }>(
       "INSERT INTO pipeline_runs (run_type, started_at, status) VALUES ($1, $2, 'running') RETURNING id",

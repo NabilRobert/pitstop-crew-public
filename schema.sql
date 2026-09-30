@@ -600,3 +600,10 @@ CREATE TABLE IF NOT EXISTS trace_payloads (
     content   TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_trace_payloads_event ON trace_payloads(event_id);
+
+-- Monthly spend ceiling (backend/src/pipeline/pipelineRuns.ts's startRun,
+-- Settings page). Empty value = disabled. Default is a generous margin
+-- (see backend/src/platform/settings.ts), not a tight limit — protects
+-- against a scheduling bug or a stuck loop triggering runs back-to-back,
+-- which nothing else in code prevents (only the per-run max-2-revisions cap).
+INSERT INTO app_settings (key, value) VALUES ('monthly_cost_cap_usd', '20') ON CONFLICT (key) DO NOTHING;

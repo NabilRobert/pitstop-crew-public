@@ -19,6 +19,7 @@ import {
   formatFailureAlert,
   formatWeeklyFeedbackEmail,
   formatDeadMansSwitchAlert,
+  formatSpendCeilingAlert,
 } from '../src/reporting/reports.js'
 import { runWeeklyFeedback } from '../src/pipeline/weeklyFeedback.js'
 import { deliverReport as deliver } from '../src/platform/emailDelivery.js'
@@ -28,6 +29,7 @@ import {
   getLastSuccessfulRun,
   reconcileOrphanedRuns,
   PipelineRunInProgressError,
+  SpendCeilingExceededError,
   type RunType,
 } from '../src/pipeline/pipelineRuns.js'
 import { getAlertState, setAlertState } from '../src/platform/alertState.js'
@@ -138,6 +140,14 @@ async function main() {
         console.log(
           'Daily run skipped — another run was already in progress (likely a manual "Generate report now" trigger racing this cron tick)'
         )
+      } else if (err instanceof SpendCeilingExceededError) {
+        // Unlike the race above, this is worth a named, visible event — the
+        // safety mechanism firing is exactly what should be noticed, not
+        // silently swallowed (a silently-stopped pipeline defeats half the
+        // point of having the cap).
+        console.log(`Daily run skipped — ${err.message}`)
+        const { subject, body } = formatSpendCeilingAlert('daily', err.capUsd, err.monthToDateUsd)
+        await deliver('daily', subject, body)
       } else {
         const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
         const { subject, body } = formatFailureAlert('daily', message)
@@ -169,6 +179,10 @@ async function main() {
       console.log(
         'Weekly run skipped — another run was already in progress (likely a manual "Generate report now" trigger racing this cron tick)'
       )
+    } else if (err instanceof SpendCeilingExceededError) {
+      console.log(`Weekly run skipped — ${err.message}`)
+      const { subject, body } = formatSpendCeilingAlert('weekly', err.capUsd, err.monthToDateUsd)
+      await deliver('weekly', subject, body)
     } else {
       const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
       const { subject, body } = formatFailureAlert('weekly', message)

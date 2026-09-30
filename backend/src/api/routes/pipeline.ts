@@ -171,6 +171,10 @@ router.post('/pipeline/run', async (req, res) => {
       res.status(409).json({ detail: err.message })
       return
     }
+    if (err instanceof pipelineRuns.SpendCeilingExceededError) {
+      res.status(429).json({ detail: err.message })
+      return
+    }
     // Not asyncHandler-wrapped, so nothing else catches this — must
     // respond here rather than rethrow into the void.
     res.status(500).json({ detail: err instanceof Error ? err.message : String(err) })
