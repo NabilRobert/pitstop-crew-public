@@ -6,6 +6,7 @@ export const navLinks = [
   { to: '/learning', labelKey: 'nav.learning' },
   { to: '/settings', labelKey: 'nav.settings' },
   { to: '/how-it-works', labelKey: 'nav.howItWorks' },
+  { to: '/engineering-notes', labelKey: 'nav.engineeringNotes' },
   { to: '/api-reference', labelKey: 'nav.apiReference' },
   { to: '/aska', labelKey: 'nav.aska' },
 ]

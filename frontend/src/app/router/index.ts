@@ -11,6 +11,7 @@ import TimeMachinePage from '../../features/time-machine/TimeMachinePage.vue'
 import SettingsPage from '../../features/settings/SettingsPage.vue'
 import LearningPage from '../../features/learning/LearningPage.vue'
 import HowItWorksPage from '../../features/how-it-works/HowItWorksPage.vue'
+import EngineeringNotesPage from '../../features/engineering-notes/EngineeringNotesPage.vue'
 import ApiReferencePage from '../../features/api-reference/ApiReferencePage.vue'
 import AskaPage from '../../features/aska/AskaPage.vue'
 
@@ -26,6 +27,7 @@ const routes = [
   { path: '/settings', name: 'settings', component: SettingsPage },
   { path: '/learning', name: 'learning', component: LearningPage },
   { path: '/how-it-works', name: 'how-it-works', component: HowItWorksPage },
+  { path: '/engineering-notes', name: 'engineering-notes', component: EngineeringNotesPage },
   { path: '/api-reference', name: 'api-reference', component: ApiReferencePage },
   { path: '/aska', name: 'aska', component: AskaPage },
 ]
