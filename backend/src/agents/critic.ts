@@ -156,11 +156,16 @@ export async function critique(
   // (the draft being reviewed), not after — basis is byte-identical between a
   // revision's pass-1 and pass-2 critique within the same run (only content
   // changes), and most providers' prompt caching only covers the matching
-  // PREFIX of a request. Putting the large stable block first and the small
-  // varying draft last is what actually makes that repeat cacheable; the
-  // old content-then-basis order meant nothing after the first few tokens
-  // could ever hit a cache. Also just a more natural reading order — the
-  // data to check against, then the claim being checked.
+  // PREFIX of a request. This was meant to make that repeat cacheable and
+  // cut cost on the expensive pass-2 re-grade — measured live, it doesn't:
+  // gpt-5.4 through Sumopod has never shown a nonzero cached_tokens across
+  // 26 calls in 5 runs, including a same-prefix pair 42s apart that should
+  // have cached ~1.3k tokens and didn't. gpt-5-mini caching does come
+  // through Sumopod (confirmed nonzero on Anna's own draft/revision calls),
+  // so this looks like a gpt-5.4-tier gap in Sumopod's caching, not a dead
+  // feature everywhere. Keeping this order anyway — no cost benefit, but no
+  // cost either, and it's a more natural reading order: the data to check
+  // against, then the claim being checked.
   const userPrompt = `Agent being reviewed: ${agentType}\n\n${basis}\n\nIts output to review:\n${content}${languageInstruction(language)}`
   // Anna's critic verifies cross-table numbers and gets medium reasoning
   // effort (measured: catches real contradictions the default effort
