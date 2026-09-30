@@ -13,7 +13,13 @@
 import { describe, it, expect } from 'vitest'
 import { redactSecrets, safeEventText } from './redact.js'
 
-process.env.TEST_API_KEY = 'sk-fakekeyfortestingonly12345'
+// Deliberately not shaped like a real key prefix (no "sk-") — an earlier
+// version of this fixture used one and got partially masked somewhere in
+// transit between two Claude sessions relaying this file by paste, which
+// silently made its assertion vacuous (checking for a substring the masked
+// fixture never contained). A plain word-based value has no such format to
+// trip over.
+process.env.TEST_API_KEY = 'testFixtureValueNotARealSecret12345'
 process.env.TEST_DB_STRING = 'postgres://user:hunter2@db.example.internal:6432/app'
 // Short (below the generic 8-char minimum), and deliberately not a substring
 // of any other fixture value in this file — literal redaction runs before
@@ -56,13 +62,13 @@ describe('redactSecrets — pattern-based (no env dependency)', () => {
 describe('redactSecrets — literal env-var values', () => {
   it('redacts the exact value of a *_KEY env var wherever it appears', () => {
     const out = redactSecrets(`upstream 500, key was ${process.env.TEST_API_KEY}`)
-    expect(out).not.toContain('fakekeyfortestingonly')
+    expect(out).not.toContain('NotARealSecret')
     expect(out).toContain('[redacted]')
   })
 
   it('redacts a short password value (below the generic 8-char minimum)', () => {
     const out = redactSecrets(`login failed for password ${process.env.TEST_PASSWORD}`)
-    expect(out).not.toContain('abcd')
+    expect(out).not.toContain('zqx9')
   })
 
   it('redacts a connection string env var by its literal value and its hostname', () => {

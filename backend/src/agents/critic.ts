@@ -174,16 +174,16 @@ export async function critique(
   // (the draft being reviewed), not after — basis is byte-identical between a
   // revision's pass-1 and pass-2 critique within the same run (only content
   // changes), and most providers' prompt caching only covers the matching
-  // PREFIX of a request. This was meant to make that repeat cacheable and
-  // cut cost on the expensive pass-2 re-grade — measured live, it doesn't:
-  // gpt-5.4 through Sumopod has never shown a nonzero cached_tokens across
-  // 26 calls in 5 runs, including a same-prefix pair 42s apart that should
-  // have cached ~1.3k tokens and didn't. gpt-5-mini caching does come
-  // through Sumopod (confirmed nonzero on Anna's own draft/revision calls),
-  // so this looks like a gpt-5.4-tier gap in Sumopod's caching, not a dead
-  // feature everywhere. Keeping this order anyway — no cost benefit, but no
-  // cost either, and it's a more natural reading order: the data to check
-  // against, then the claim being checked.
+  // PREFIX of a request. Confirmed live on the first real pass-2 case after
+  // this order shipped (run 133): pass 1 was 20,264 input tokens / $0.0951,
+  // pass 2 was 20,371 input tokens with 19,328 (95%) cached, at $0.0543 —
+  // 43% cheaper. Sumopod does pass gpt-5.4 prompt caching through. (An
+  // earlier "doesn't work" read of this came from inspecting a same-prefix
+  // pair in run 130 — which predates this reorder entirely, so of course it
+  // showed 0 cached tokens; that was stale pre-fix data misread as evidence
+  // about the fix. Lesson: verify a live-provider optimization against a
+  // case that actually ran the new code, not historical data from before it
+  // shipped.)
   const userPrompt = `Agent being reviewed: ${agentType}\n\n${basis}\n\nIts output to review:\n${content}${languageInstruction(language)}`
   // Anna's critic verifies cross-table numbers and gets medium reasoning
   // effort (measured: catches real contradictions the default effort
