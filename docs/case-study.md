@@ -5,8 +5,8 @@ An AI performance dashboard for Google Ads. A small team of LLM agents reads the
 **Live demo:** https://gads.my.id (demo mode — see "What is and isn't real" below)
 **Code:** this repo. Design rationale is in [`PROJECT.md`](../PROJECT.md), per-agent specs in [`agents/`](../agents/).
 
-<!-- SCREENSHOT: dashboard overview -->
-<!-- SCREENSHOT: report with the "Why this?" trail open -->
+![Dashboard overview](images/dashboard-overview.webp)
+![Report with the "Why this?" trail open](images/why-this-trail.webp)
 <!-- SCREENSHOT: Learning page grade-trend chart -->
 <!-- SCREENSHOT: Run Inspector with a model call's prompt and response open -->
 
