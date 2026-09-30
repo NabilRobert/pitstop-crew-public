@@ -179,11 +179,14 @@ export async function critique(
   // pass 2 was 20,371 input tokens with 19,328 (95%) cached, at $0.0543 —
   // 43% cheaper. Sumopod does pass gpt-5.4 prompt caching through. (An
   // earlier "doesn't work" read of this came from inspecting a same-prefix
-  // pair in run 130 — which predates this reorder entirely, so of course it
-  // showed 0 cached tokens; that was stale pre-fix data misread as evidence
-  // about the fix. Lesson: verify a live-provider optimization against a
-  // case that actually ran the new code, not historical data from before it
-  // shipped.)
+  // pair in run 130 — which predates this reorder entirely, so that data
+  // never actually tested the fix; it was stale pre-fix data misread as
+  // evidence about the fix. Note it's not fully explained why: even the old
+  // order shared an identical ~1,300-token system prompt across both
+  // passes, above OpenAI's usual 1,024-token caching minimum, and that
+  // still came back 0 cached tokens too. Lesson either way: verify a
+  // live-provider optimization against a case that actually ran the new
+  // code, not historical data from before it shipped.)
   const userPrompt = `Agent being reviewed: ${agentType}\n\n${basis}\n\nIts output to review:\n${content}${languageInstruction(language)}`
   // Anna's critic verifies cross-table numbers and gets medium reasoning
   // effort (measured: catches real contradictions the default effort
