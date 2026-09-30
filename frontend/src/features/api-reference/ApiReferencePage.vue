@@ -207,7 +207,10 @@ const poll = setInterval(async () => {
         <p class="text-sm">
           Valid keys: <code>daily_run_time</code>, <code>weekly_run_time</code> (HH:MM),
           <code>report_recipient_email</code>, <code>auto_reports_enabled</code> ("true"/"false"),
-          <code>report_language</code> ("en"/"id"). Unknown keys are silently ignored, invalid values 400. (<code>grade_forces_revision</code> is still accepted but has no effect — D/F grades always block approval.)
+          <code>report_language</code> ("en"/"id"), <code>monthly_cost_cap_usd</code> (a positive number, or empty
+          to disable — blocks new pipeline runs once this month's total AI cost reaches it). Unknown keys are
+          silently ignored, invalid values 400. (<code>grade_forces_revision</code> is still accepted but has no
+          effect — D/F grades always block approval.)
         </p>
       </section>
 

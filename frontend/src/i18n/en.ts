@@ -325,6 +325,9 @@ export default {
     reportLanguageHelp: 'The language the AI agents write generated report content in.',
     reportLanguageEn: 'English',
     reportLanguageId: 'Indonesian',
+    monthlyCostCap: 'Monthly spend cap (USD)',
+    monthlyCostCapHelp:
+      "Blocks new pipeline runs once this month's total AI cost reaches this amount — a safety limit against a scheduling bug or a stuck loop, not a routine budget. Leave blank to disable.",
     save: 'Save',
     saving: 'Saving…',
     saved: 'Saved.',

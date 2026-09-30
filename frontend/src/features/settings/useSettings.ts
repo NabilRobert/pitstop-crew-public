@@ -12,6 +12,10 @@ export function useSettings() {
   const reportRecipientEmail = ref('')
   const reportLanguage = ref('en')
   const autoReportsEnabled = ref(true)
+  // String, not number — empty string means "disabled", same "empty = off"
+  // convention as reportRecipientEmail, so it must round-trip through the
+  // input as-is rather than being coerced to 0.
+  const monthlyCostCapUsd = ref('')
 
   onMounted(async () => {
     try {
@@ -21,6 +25,7 @@ export function useSettings() {
       reportRecipientEmail.value = settings.report_recipient_email
       reportLanguage.value = settings.report_language
       autoReportsEnabled.value = settings.auto_reports_enabled === 'true'
+      monthlyCostCapUsd.value = settings.monthly_cost_cap_usd
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -39,12 +44,14 @@ export function useSettings() {
         report_recipient_email: reportRecipientEmail.value.trim(),
         report_language: reportLanguage.value,
         auto_reports_enabled: String(autoReportsEnabled.value),
+        monthly_cost_cap_usd: monthlyCostCapUsd.value.trim(),
       })
       dailyRunTime.value = settings.daily_run_time
       weeklyRunTime.value = settings.weekly_run_time
       reportRecipientEmail.value = settings.report_recipient_email
       reportLanguage.value = settings.report_language
       autoReportsEnabled.value = settings.auto_reports_enabled === 'true'
+      monthlyCostCapUsd.value = settings.monthly_cost_cap_usd
       saved.value = true
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -63,6 +70,7 @@ export function useSettings() {
     reportRecipientEmail,
     reportLanguage,
     autoReportsEnabled,
+    monthlyCostCapUsd,
     save,
   }
 }

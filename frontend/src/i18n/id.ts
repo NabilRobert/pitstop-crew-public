@@ -325,6 +325,9 @@ export default {
     reportLanguageHelp: 'Bahasa yang digunakan agen AI saat menulis konten laporan yang dihasilkan.',
     reportLanguageEn: 'Inggris',
     reportLanguageId: 'Indonesia',
+    monthlyCostCap: 'Batas biaya bulanan (USD)',
+    monthlyCostCapHelp:
+      'Memblokir run pipeline baru begitu total biaya AI bulan ini mencapai jumlah ini — batas keamanan terhadap bug penjadwalan atau loop yang macet, bukan anggaran rutin. Kosongkan untuk menonaktifkan.',
     save: 'Simpan',
     saving: 'Menyimpan…',
     saved: 'Tersimpan.',

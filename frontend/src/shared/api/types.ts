@@ -283,6 +283,8 @@ export interface Settings {
   report_recipient_email: string
   report_language: string
   auto_reports_enabled: string
+  /** Empty string = disabled (no cap). Otherwise a positive number, as a string. */
+  monthly_cost_cap_usd: string
 }
 
 export interface TriggerRunResponse {

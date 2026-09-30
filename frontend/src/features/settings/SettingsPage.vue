@@ -13,6 +13,7 @@ const {
   reportRecipientEmail,
   reportLanguage,
   autoReportsEnabled,
+  monthlyCostCapUsd,
   save,
 } = useSettings()
 </script>
@@ -87,6 +88,22 @@ const {
           </select>
           <p class="mt-1 text-xs text-ink-faint">
             {{ t('settings.reportLanguageHelp') }}
+          </p>
+        </div>
+
+        <div class="mt-5 border-t border-border pt-5">
+          <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint">
+            {{ t('settings.monthlyCostCap') }}
+          </label>
+          <input
+            v-model="monthlyCostCapUsd"
+            type="text"
+            inputmode="decimal"
+            placeholder="20"
+            class="w-full max-w-sm rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+          />
+          <p class="mt-1 text-xs text-ink-faint">
+            {{ t('settings.monthlyCostCapHelp') }}
           </p>
         </div>
 
