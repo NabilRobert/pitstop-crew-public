@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Suggestion } from '../../shared/api/types'
 import { formatDate, formatMicrosAsIDR } from '../../shared/utils/format'
+import CampaignProposal from './CampaignProposal.vue'
 import {
   suggestionTitle,
   evidenceRows,
@@ -18,7 +19,7 @@ const props = defineProps<{
   canEdit: boolean
   busy: boolean
 }>()
-const emit = defineEmits<{ (e: 'status', status: 'open' | 'applied' | 'dismissed'): void }>()
+const emit = defineEmits<{ (e: 'status', status: 'open' | 'applied' | 'dismissed' | 'planned'): void }>()
 
 const { t } = useI18n()
 
@@ -33,6 +34,8 @@ const where = computed(() =>
   [props.suggestion.campaign?.name, props.suggestion.ad_group?.name].filter(Boolean).join(' › ')
 )
 const isOpen = computed(() => props.suggestion.status === 'open')
+const isPlanned = computed(() => props.suggestion.status === 'planned')
+const proposal = computed(() => (props.suggestion.payload.kind === 'new_campaign' ? props.suggestion.payload : null))
 </script>
 
 <template>
@@ -66,12 +69,14 @@ const isOpen = computed(() => props.suggestion.status === 'open')
         v-if="!isOpen"
         class="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-ink-soft"
       >
-        {{ t(`keywordOptimizer.filters.status.${suggestion.status}`) }}
+        {{ isPlanned ? t('keywordOptimizer.proposal.plannedBadge') : t(`keywordOptimizer.filters.status.${suggestion.status}`) }}
       </span>
     </header>
 
     <h3 class="font-display text-lg font-bold text-ink">{{ title }}</h3>
     <p v-if="where" class="mt-1 font-mono text-[11px] text-ink-faint">{{ where }}</p>
+
+    <CampaignProposal v-if="proposal" :suggestion="suggestion" :payload="proposal" />
 
     <!-- Payload-specific detail. Everything is rendered as text, never as HTML:
          search-term text is untrusted input. -->
@@ -148,7 +153,51 @@ const isOpen = computed(() => props.suggestion.status === 'open')
     </div>
 
     <footer v-if="canEdit" class="mt-4 flex flex-wrap items-center gap-2">
-      <template v-if="isOpen">
+      <template v-if="proposal && isOpen">
+        <button
+          type="button"
+          class="rounded-md bg-rosso px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco hover:bg-rosso-dark disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="busy"
+          @click="emit('status', 'planned')"
+        >
+          {{ t('keywordOptimizer.proposal.plan') }}
+        </button>
+        <button
+          type="button"
+          class="rounded-md border border-border-strong px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="busy"
+          @click="emit('status', 'dismissed')"
+        >
+          {{ t('keywordOptimizer.card.dismiss') }}
+        </button>
+      </template>
+      <template v-else-if="proposal && isPlanned">
+        <button
+          type="button"
+          class="rounded-md bg-rosso px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco hover:bg-rosso-dark disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="busy"
+          @click="emit('status', 'applied')"
+        >
+          {{ t('keywordOptimizer.proposal.iCreatedIt') }}
+        </button>
+        <button
+          type="button"
+          class="rounded-md border border-border-strong px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="busy"
+          @click="emit('status', 'open')"
+        >
+          {{ t('keywordOptimizer.proposal.unplan') }}
+        </button>
+        <button
+          type="button"
+          class="rounded-md border border-border-strong px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="busy"
+          @click="emit('status', 'dismissed')"
+        >
+          {{ t('keywordOptimizer.card.dismiss') }}
+        </button>
+      </template>
+      <template v-else-if="isOpen">
         <button
           type="button"
           class="rounded-md bg-rosso px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco hover:bg-rosso-dark disabled:cursor-not-allowed disabled:opacity-50"

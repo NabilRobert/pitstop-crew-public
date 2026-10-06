@@ -128,7 +128,7 @@ export function visibleNotes(notes: BoardNote[], filter: BoardFilter, limit = BO
 
 export const STOP_TYPES: SuggestionType[] = ['negative_keyword', 'pause_keyword', 'change_match_type']
 export const GROW_TYPES: SuggestionType[] = ['promote_search_term', 'raise_bid_candidate', 'spin_out_campaign']
-export const NEW_TYPES: SuggestionType[] = ['new_keyword']
+export const NEW_TYPES: SuggestionType[] = ['new_keyword', 'new_campaign']
 
 export interface Headline {
   total: number

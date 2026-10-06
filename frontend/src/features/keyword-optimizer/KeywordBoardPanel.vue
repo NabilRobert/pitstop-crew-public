@@ -34,7 +34,7 @@ const props = defineProps<{
   /** Show the export panel for open negatives under the board. */
   showExport?: boolean
 }>()
-const emit = defineEmits<{ (e: 'status', id: number, status: 'open' | 'applied' | 'dismissed'): void }>()
+const emit = defineEmits<{ (e: 'status', id: number, status: 'open' | 'applied' | 'dismissed' | 'planned'): void }>()
 
 const { t } = useI18n()
 

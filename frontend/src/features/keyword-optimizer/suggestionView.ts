@@ -16,6 +16,7 @@ export const SUGGESTION_TYPES: SuggestionType[] = [
   'new_keyword',
   'spin_out_campaign',
   'raise_bid_candidate',
+  'new_campaign',
 ]
 
 /** One-line headline for a suggestion, built from its structured payload. */
@@ -45,6 +46,8 @@ export function suggestionTitle(s: Suggestion, t: Translate): string {
       return t('keywordOptimizer.title.new_keyword', { text: p.text, match: match(p.match_type) })
     case 'raise_bid_candidate':
       return t('keywordOptimizer.title.raise_bid_candidate', { keyword: s.keyword?.text ?? '—' })
+    case 'new_campaign':
+      return t('keywordOptimizer.title.new_campaign', { name: p.name })
   }
 }
 
@@ -129,5 +132,7 @@ export function tapeText(s: Suggestion, t: Translate): string {
       return t('keywordOptimizer.board.tape.new_keyword', { text: p.text })
     case 'raise_bid_candidate':
       return t('keywordOptimizer.board.tape.raise_bid_candidate')
+    case 'new_campaign':
+      return t('keywordOptimizer.board.tape.new_campaign', { name: p.name })
   }
 }

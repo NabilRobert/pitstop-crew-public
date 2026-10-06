@@ -202,6 +202,8 @@ export const api = {
     request<SuggestionsResponse>(`/keyword-suggestions${queryString({ ...query })}`),
   updateKeywordSuggestion: (id: number, status: Exclude<SuggestionStatus, 'superseded'>) =>
     request<Suggestion>(`/keyword-suggestions/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  exportCampaignBrief: (id: number, format: 'csv' | 'txt' = 'csv') =>
+    requestBlob(`/keyword-suggestions/${id}/brief${queryString({ format })}`),
   exportKeywordSuggestions: (format: 'csv' | 'txt' = 'csv', status: SuggestionStatus | 'all' = 'open') =>
     requestBlob(`/keyword-suggestions/export${queryString({ type: 'negative_keyword', status, format })}`),
   keywordSummary: (days = 30, adGroupId?: number) =>

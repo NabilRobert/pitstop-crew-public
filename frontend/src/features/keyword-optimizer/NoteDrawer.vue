@@ -18,7 +18,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'status', id: number, status: 'open' | 'applied' | 'dismissed'): void
+  (e: 'status', id: number, status: 'open' | 'applied' | 'dismissed' | 'planned'): void
 }>()
 
 const { t } = useI18n()

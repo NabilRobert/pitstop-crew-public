@@ -58,6 +58,15 @@ export const keywordOptimizerApi = {
     const row = fixtureState.find((s) => s.id === id)
     if (!row) throw new Error(`No keyword suggestion with id ${id}`)
     if (row.status === 'superseded') throw new Error('A superseded suggestion cannot be changed')
+    // Mirrors the backend's rules (contract 3.3): 'planned' only exists for new_campaign proposals.
+    if (status === 'planned' && row.type !== 'new_campaign') throw new Error("Only a new campaign proposal can be planned")
+    const allowed: Record<string, string[]> = {
+      open: ['applied', 'dismissed', ...(row.type === 'new_campaign' ? ['planned'] : [])],
+      planned: ['open', 'dismissed', 'applied'],
+      applied: ['open'],
+      dismissed: ['open'],
+    }
+    if (!(allowed[row.status] ?? []).includes(status)) throw new Error(`A suggestion that is ${row.status} cannot be changed to ${status}`)
     row.status = status
     row.status_changed_at = status === 'open' ? null : new Date().toISOString()
     return { ...row }
@@ -72,6 +81,16 @@ export const keywordOptimizerApi = {
   /** Per-day keyword rows for the whole account (no ad group filter). */
   keywordRows: (days = 30): Promise<KeywordPerformanceRow[]> =>
     USE_FIXTURES ? Promise.resolve(FIXTURE_KEYWORD_ROWS) : api.keywordPerformance(days),
+
+  /** The paste-ready brief for a new campaign proposal (3.3). In fixture mode a readable stand-in. */
+  exportBrief: (id: number, format: 'csv' | 'txt' = 'csv'): Promise<Blob> => {
+    if (!USE_FIXTURES) return api.exportCampaignBrief(id, format)
+    const row = fixtureState.find((s) => s.id === id)
+    if (!row || row.payload.kind !== 'new_campaign') return Promise.reject(new Error('Not a new campaign proposal'))
+    const p = row.payload
+    const lines = [p.name, ...p.ad_groups.flatMap((g) => [`  ${g.name}`, ...g.keywords.map((k) => `    ${k.text} (${k.match_type})`)])]
+    return Promise.resolve(new Blob([lines.join('\n')], { type: 'text/plain' }))
+  },
 
   exportNegatives: (format: 'csv' | 'txt', status: SuggestionStatus | 'all' = 'open'): Promise<Blob> => {
     if (!USE_FIXTURES) return api.exportKeywordSuggestions(format, status)

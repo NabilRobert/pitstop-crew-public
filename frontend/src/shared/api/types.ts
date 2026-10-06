@@ -439,12 +439,46 @@ export type SuggestionType =
   | 'spin_out_campaign'
   | 'new_keyword'
   | 'raise_bid_candidate'
-export type SuggestionStatus = 'open' | 'applied' | 'dismissed' | 'superseded'
+  | 'new_campaign' // contract 3.3: a whole new campaign proposal (see NewCampaignPayload)
+/** 'planned' (3.3): a new_campaign proposal the owner approved but that is not in Google Ads yet. */
+export type SuggestionStatus = 'open' | 'planned' | 'applied' | 'dismissed' | 'superseded'
 /** 'prior' = not yet backed by this account's data; shown as "unverified". */
 export type SuggestionBasis = 'evidence' | 'prior'
 export type SuggestionConfidence = 'high' | 'medium' | 'low'
 export type KeywordMatchType = 'exact' | 'phrase' | 'broad'
 export type ValueTier = 'micro' | 'lead' | 'visit' | 'sale'
+
+export type CampaignBasis = 'uncovered_stock' | 'aging_stock' | 'proven_cluster' | 'theme'
+
+/** Contract 3.3. Every number here is computed in the backend; the UI shows it, never recomputes it. */
+export interface NewCampaignPayload {
+  kind: 'new_campaign'
+  basis: CampaignBasis
+  /** Suggested campaign name; also what links a planned campaign to the real one later. */
+  name: string
+  theme: string | null
+  ad_groups: {
+    name: string
+    keywords: { text: string; match_type: KeywordMatchType; source: 'stock' | 'existing_keyword' | 'keyword_ideas' }[]
+    vehicle_ids: number[]
+  }[]
+  starter_negatives: { text: string; match_type: KeywordMatchType }[]
+  budget: {
+    daily_micros: number
+    target_cpa_micros: number | null
+    /** Shown to the reader: the lead-to-sale rate is a guess until real sales data exists. */
+    assumptions: { allowed_spend_share: number; lead_to_sale_rate: number }
+  }
+  stock: {
+    units: number
+    avg_days_listed: number | null
+    avg_margin_idr: number | null
+    total_value_idr: number | null
+    snapshot_on: string
+  }
+  /** Existing campaigns that already target some of this (cannibalisation warning). */
+  overlaps: { campaign_id: number; name: string; shared_keywords: number }[]
+}
 
 export type SuggestionPayload =
   | {
@@ -469,6 +503,7 @@ export type SuggestionPayload =
       is_test: boolean
     }
   | { kind: 'raise_bid_candidate'; current_bid_micros: number | null; rank_lost_share: number }
+  | NewCampaignPayload
 
 export interface SuggestionEvidence {
   window_start: string
@@ -499,6 +534,8 @@ export interface Suggestion {
   ad_group: { id: number; name: string } | null
   keyword: { id: number; text: string; match_type: KeywordMatchType } | null
   search_term: { id: number; text: string } | null
+  /** 3.3: set when a planned campaign shows up in the real data (same name); the status is then 'applied'. Optional until the backend ships 3.3. */
+  linked_campaign?: { id: number; name: string } | null
   payload: SuggestionPayload
   evidence: SuggestionEvidence
   expected_impact: { wasted_spend_micros_per_week?: number; extra_conversions_per_week?: number } | null

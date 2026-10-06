@@ -39,7 +39,7 @@ function setView(v: View) {
   }
 }
 
-const STATUS_FILTERS: StatusFilter[] = ['open', 'applied', 'dismissed', 'all']
+const STATUS_FILTERS: StatusFilter[] = ['open', 'planned', 'applied', 'dismissed', 'all']
 
 // Demo accounts can read everything but not write (server returns 403 on any non-GET).
 const canEdit = computed(() => !isDemo.value)

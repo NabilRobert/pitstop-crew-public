@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { downloadBlob } from '../../shared/utils/download'
 import { keywordOptimizerApi } from './keywordOptimizerApi'
 
 const props = defineProps<{ count: number }>()
@@ -20,14 +21,7 @@ async function download(format: 'csv' | 'txt') {
   failed.value = false
   try {
     const blob = await keywordOptimizerApi.exportNegatives(format)
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `negative-keywords-${today()}.${format}`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
+    downloadBlob(blob, `negative-keywords-${today()}.${format}`)
   } catch (e) {
     failed.value = true
     message.value = e instanceof Error ? e.message : String(e)
