@@ -31,6 +31,13 @@ import type {
   AssetGroupPerformanceRow,
   RecommendationRow,
   ChangeEventRow,
+  Suggestion,
+  SuggestionStatus,
+  SuggestionsQuery,
+  SuggestionsResponse,
+  InventorySummary,
+  KeywordSummaryResponse,
+  TriggerKeywordOptimizerResponse,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -73,6 +80,25 @@ async function requestAudio(path: string, body: unknown): Promise<Blob> {
     throw new Error(detail.detail || `Request failed: ${res.status}`)
   }
   return res.blob()
+}
+
+// The negatives export is a file download (CSV/TXT), not JSON, and needs the
+// auth header — so it can't be a plain <a href>. Returns the raw Blob.
+async function requestBlob(path: string): Promise<Blob> {
+  const res = await fetch(`${BASE_URL}${path}`, { headers: authHeaders() })
+  if (!res.ok) {
+    if (res.status === 401) localStorage.removeItem(TOKEN_KEY)
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Request failed: ${res.status}`)
+  }
+  return res.blob()
+}
+
+function queryString(params: Record<string, string | number | undefined>): string {
+  const parts = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+  return parts.length ? `?${parts.join('&')}` : ''
 }
 
 export const api = {
@@ -159,4 +185,16 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ title }),
     }),
+  // Overhaul v3 — keyword optimizer (overhaul-v3.md section 13, contract 3.0).
+  keywordSuggestions: (query: SuggestionsQuery = {}) =>
+    request<SuggestionsResponse>(`/keyword-suggestions${queryString({ ...query })}`),
+  updateKeywordSuggestion: (id: number, status: Exclude<SuggestionStatus, 'superseded'>) =>
+    request<Suggestion>(`/keyword-suggestions/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  exportKeywordSuggestions: (format: 'csv' | 'txt' = 'csv', status: SuggestionStatus | 'all' = 'open') =>
+    requestBlob(`/keyword-suggestions/export${queryString({ type: 'negative_keyword', status, format })}`),
+  keywordSummary: (days = 30, adGroupId?: number) =>
+    request<KeywordSummaryResponse>(`/keywords/summary${queryString({ days, adGroupId })}`),
+  inventorySummary: () => request<InventorySummary>('/inventory/summary'),
+  triggerKeywordOptimizer: () =>
+    request<TriggerKeywordOptimizerResponse>('/keyword-optimizer/run', { method: 'POST' }),
 }
