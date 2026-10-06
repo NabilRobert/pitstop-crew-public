@@ -173,3 +173,47 @@ export function tiltDegrees(keywordId: number): number {
 export function costPerConversionMicros(n: Pick<BoardNote, 'spendMicros' | 'conversions'>): number | null {
   return n.conversions > 0 ? n.spendMicros / n.conversions : null
 }
+
+export interface CampaignRollup {
+  keywords: number
+  /** Keyword count per verdict. Keywords without a verdict (older backend) are counted under `none`. */
+  verdicts: Record<KeywordVerdict | 'none', number>
+  /** Open suggestions that belong to this campaign (keyword-level or campaign-level). */
+  openSuggestions: number
+}
+
+const EMPTY_VERDICTS = (): CampaignRollup['verdicts'] => ({
+  winner: 0, wasting: 0, no_stock: 0, testing: 0, needs_data: 0, steady: 0, none: 0,
+})
+
+/** One small summary per campaign for the Campaigns list: how its keywords are judged, and how much advice is waiting.
+ * Campaigns with no keyword rows (Performance Max, Display) are simply absent from the map. */
+export function campaignRollup(
+  rows: KeywordPerformanceRow[],
+  summaries: KeywordSummary[],
+  suggestions: Suggestion[]
+): Map<number, CampaignRollup> {
+  const campaignOfKeyword = new Map<number, number>()
+  for (const r of rows) campaignOfKeyword.set(r.keyword_id, r.campaign_id)
+  const verdictOf = new Map(summaries.map((s) => [s.keyword_id, s.verdict ?? null]))
+
+  const out = new Map<number, CampaignRollup>()
+  const get = (campaignId: number): CampaignRollup => {
+    let r = out.get(campaignId)
+    if (!r) {
+      r = { keywords: 0, verdicts: EMPTY_VERDICTS(), openSuggestions: 0 }
+      out.set(campaignId, r)
+    }
+    return r
+  }
+  for (const [keywordId, campaignId] of campaignOfKeyword) {
+    const r = get(campaignId)
+    r.keywords++
+    r.verdicts[verdictOf.get(keywordId) ?? 'none']++
+  }
+  for (const s of suggestions) {
+    if (s.status !== 'open' || !s.campaign) continue
+    get(s.campaign.id).openSuggestions++
+  }
+  return out
+}

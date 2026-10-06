@@ -418,8 +418,17 @@ export default {
   },
   campaignsList: {
     title: 'Campaigns',
-    subtitle: 'Last 90 days · click a campaign for ad groups and keywords',
+    subtitle: 'Last {period} · click a campaign for its keyword board, ad groups and ads',
     loading: 'Loading campaigns…',
+    card: {
+      clicks: '{n} clicks',
+      keywords: '1 keyword | {n} keywords',
+      noKeywords: "No keywords: this campaign type doesn't use them.",
+      keywordsUnavailable: "Keyword details aren't available from the server right now.",
+      waiting: '1 suggestion waiting | {n} suggestions waiting',
+      nothingWaiting: 'Nothing waiting',
+      open: 'Open campaign',
+    },
   },
   campaignDetail: {
     back: '← Back to dashboard',

@@ -1,22 +1,32 @@
-import { ref, onMounted } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
 import type { Campaign } from '../../shared/api/types'
 import type { CampaignRow } from './useDashboard'
+import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
+import { campaignRollup, type CampaignRollup } from '../keyword-optimizer/boardModel'
 
-// Fixed window, matching CampaignDetailPage.vue — this index page is
-// purely a navigation aid into the per-campaign drill-down, not another
-// place to duplicate the dashboard's own period selector.
-const DAYS = 90
-
-export function useCampaignsList() {
+/** The campaigns index: totals per campaign for the chosen period (same 1W-5Y buttons as the dashboard), plus a
+ * best-effort keyword roll-up per campaign. If the keyword calls fail (an older backend), the cards simply show
+ * their totals without the keyword line. */
+export function useCampaignsList(days: Ref<number>) {
   const loading = ref(true)
   const error = ref<string | null>(null)
   const campaigns = ref<Campaign[]>([])
   const campaignRows = ref<CampaignRow[]>([])
+  const rollups = ref<Map<number, CampaignRollup>>(new Map())
+  const keywordInfoAvailable = ref(false)
 
-  onMounted(async () => {
+  // A slow answer for an earlier period must not overwrite the latest one.
+  let latest = 0
+
+  async function load() {
+    const mine = ++latest
+    loading.value = true
+    error.value = null
+    const DAYS = days.value
     try {
       const [campaignList, perf] = await Promise.all([api.campaigns(), api.performance(DAYS)])
+      if (mine !== latest) return
       campaigns.value = campaignList
 
       const byCampaign = new Map<string, CampaignRow>()
@@ -34,11 +44,32 @@ export function useCampaignsList() {
         .map((c) => ({ ...c, ctr: c.impressions ? (c.clicks / c.impressions) * 100 : 0 }))
         .sort((a, b) => b.cost_micros - a.cost_micros)
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e)
-    } finally {
-      loading.value = false
+      if (mine === latest) error.value = e instanceof Error ? e.message : String(e)
+      if (mine === latest) loading.value = false
+      return
     }
-  })
 
-  return { loading, error, campaigns, campaignRows }
+    // Keyword roll-up, best effort and independent of the totals above.
+    try {
+      const [rows, summary, suggestions] = await Promise.all([
+        keywordOptimizerApi.keywordRows(DAYS),
+        keywordOptimizerApi.summary(DAYS),
+        keywordOptimizerApi.suggestions({ status: 'all', limit: 200 }),
+      ])
+      if (mine !== latest) return
+      rollups.value = campaignRollup(rows, summary.items, suggestions.items)
+      keywordInfoAvailable.value = true
+    } catch {
+      if (mine === latest) {
+        rollups.value = new Map()
+        keywordInfoAvailable.value = false
+      }
+    } finally {
+      if (mine === latest) loading.value = false
+    }
+  }
+
+  watch(days, load, { immediate: true })
+
+  return { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable }
 }

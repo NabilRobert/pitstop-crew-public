@@ -418,8 +418,17 @@ export default {
   },
   campaignsList: {
     title: 'Kampanye',
-    subtitle: '90 hari terakhir · klik kampanye untuk lihat grup iklan dan kata kunci',
+    subtitle: '{period} terakhir · klik kampanye untuk melihat papan kata kunci, grup iklan, dan iklan',
     loading: 'Memuat kampanye…',
+    card: {
+      clicks: '{n} klik',
+      keywords: '1 kata kunci | {n} kata kunci',
+      noKeywords: 'Tanpa kata kunci: jenis kampanye ini tidak memakainya.',
+      keywordsUnavailable: 'Detail kata kunci belum tersedia dari server saat ini.',
+      waiting: '1 saran menunggu | {n} saran menunggu',
+      nothingWaiting: 'Tidak ada yang menunggu',
+      open: 'Buka kampanye',
+    },
   },
   campaignDetail: {
     back: '← Kembali ke dasbor',
