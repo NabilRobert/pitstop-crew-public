@@ -10,12 +10,12 @@ export type ThemeName = (typeof THEMES)[number]
 // consoleOpen and i18n/index.js's locale. 'ferrari' is the original brand
 // palette and the default; 'blueprint' is the black/white/blue/gray
 // alternative proposed via https://www.color-hex.com/color-palette/86164;
-// 'atom-eve' is a light theme built from cyan/yellow/pink/light pink/black.
+// 'atom-eve' is a bold dark theme built from cyan/yellow/pink/light pink/black.
 // See style.css for what each theme actually overrides. Status-flag colors
 // (good/caution/critical) are deliberately NOT part of this switch: they
 // encode meaning (approved vs flagged, grade severity), not brand, so they
 // stay green/yellow/red in every theme rather than losing that at-a-glance
-// signal (the light themes only darken their shades for contrast).
+// signal (a theme only shifts their shades for contrast on its own ground).
 const THEME_KEY = 'pitstop-theme'
 
 function isThemeName(value: string | null): value is ThemeName {

@@ -16,7 +16,9 @@ function readThemeColors() {
     // gray audio meter.
     waveColor: styles.getPropertyValue('--color-giallo').trim() || '#f8e823',
     progressColor: styles.getPropertyValue('--color-rosso').trim() || '#e42528',
-    cursorColor: styles.getPropertyValue('--color-bianco').trim() || '#ffffff',
+    // --color-wave-cursor exists only where --color-bianco (text on an accent fill) is dark, e.g. Atom-Eve,
+    // where a black cursor would vanish on the dark waveform; every other theme falls through to bianco as before.
+    cursorColor: styles.getPropertyValue('--color-wave-cursor').trim() || styles.getPropertyValue('--color-bianco').trim() || '#ffffff',
   }
 }
 

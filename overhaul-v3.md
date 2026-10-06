@@ -44,7 +44,7 @@ Principles, carried over from v1/v2 and not negotiable:
 | 5 | NVDA price-alert cron is parked, not part of v3 | owner |
 | 6 | Inventory comes from the owner's own **Postgres** database via `INVENTORY_DB_STRING` (a connection string) | owner |
 | 7 | The owner will plan/schedule the build; nothing starts unprompted | owner |
-| 8 | New frontend theme named **Atom-Eve**: a **light** theme, **not** the default (Ferrari stays default) | owner, 2026-10-06 |
+| 8 | New frontend theme named **Atom-Eve**: a bold **dark** theme (black ground, loud cyan/yellow/pink), **not** the default (Ferrari stays default). The owner first asked for light, then changed to dark on 2026-10-06; dark is final | owner, 2026-10-06 |
 
 ## 3. Phasing
 

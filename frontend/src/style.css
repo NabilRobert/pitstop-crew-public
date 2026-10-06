@@ -105,43 +105,42 @@
   --color-flag-critical-soft: #c81e211f;
 }
 
-/* "Atom-Eve" — a light theme from the owner's palette (cyan #00BCF0, yellow
-   #FFE556, pink #FF91AF, light pink #F4C2C2, black). Those four colors are
-   too light to be text on a light page (cyan 2.22:1, pink 2.12:1, yellow
-   1.27:1 on white), so they are used as FILLS here, with dark text on top
-   (--color-bianco is dark in this theme), and the darker cyan below is used
-   wherever an accent has to be text or a state border (--color-accent-ink,
-   --color-link). Neutrals are derived tints, not new brand colors. Status
-   flags reuse Blueprint's light-safe shades. See overhaul-v3-frontend.md
-   section 15 for the measured contrast of every pair. Not the default theme. */
+/* "Atom-Eve" — a DARK, loud theme from the owner's palette (cyan #00BCF0,
+   yellow #FFE556, pink #FF91AF, light pink #F4C2C2, black), after the
+   reference of Marathon's UI: a black ground with flat neon blocks and black
+   text on them, hard edges and bright outlines. The brand colors are bright
+   enough to be text on black (cyan 9.5:1, yellow 16.6, pink 9.9, light pink
+   13.3), so unlike a light theme they can be used as text, borders, fills and
+   glows all at once. Black is the text color ON a neon fill (--color-bianco),
+   and light pink is the soft ink and the outline color. Status flags are
+   brighter and hue-shifted (green/orange/red) so they stay distinct from the
+   brand fills. See overhaul-v3-frontend.md section 15 for every measured pair.
+   Not the default theme. */
 :root[data-theme='atom-eve'] {
-  /* Bold pass: a saturated pink ground with white cards, cyan-tinted raised
-     surfaces and stronger borders, instead of near-white with pale tints. Every
-     text pair was re-measured against the pink ground (the hardest background):
-     ink 14.9, ink-soft 9.0, ink-faint 5.9, accent-ink 5.4, flags 4.8-5.0. */
-  --color-bg: #f7d0d0;
-  --color-surface: #ffffff;
-  --color-surface-raised: #cdeffc;
-  --color-border: #000000;
-  --color-border-strong: #000000;
+  --color-bg: #000000;
+  --color-surface: #0b0b0d;
+  --color-surface-raised: #16161a;
+  --color-border: #f4c2c2;
+  --color-border-strong: #ff91af;
 
-  --color-ink: #000000;
-  --color-ink-soft: #3d2f34;
-  --color-ink-faint: #5a4a50;
+  --color-ink: #ffffff;
+  --color-ink-soft: #f4c2c2;
+  --color-ink-faint: #a88e94;
 
   --color-rosso: #00bcf0;
-  --color-rosso-dark: #00a8dc;
+  --color-rosso-dark: #33cdf5;
   --color-rosso-soft: #00bcf033;
   --color-giallo: #ffe556;
-  --color-giallo-soft: #ffe55680;
+  --color-giallo-soft: #ffe55640;
   --color-verde: #ff91af;
-  --color-verde-soft: #ff91af59;
+  --color-verde-soft: #ff91af40;
   --color-bianco: #000000;
-  --color-accent-ink: #005b75;
-  --color-link: #005b75;
+  --color-accent-ink: #00bcf0;
+  --color-link: #ffe556;
   --color-stripe-mid: #ffe556;
+  --color-wave-cursor: #ffffff;
   --glow-1: #00bcf040;
-  --glow-2: #ffe55659;
+  --glow-2: #ff91af33;
 
   /* Hard-edged, Marathon-style panels: sharp corners (pills stay round). */
   --radius-sm: 0;
@@ -149,28 +148,27 @@
   --radius-lg: 0;
   --radius-xl: 0;
 
-  --color-flag-good: #046a37;
-  --color-flag-good-soft: #046a3726;
-  --color-flag-caution: #7f5000;
-  --color-flag-caution-soft: #7f500026;
-  --color-flag-critical: #b01719;
-  --color-flag-critical-soft: #b0171926;
+  --color-flag-good: #2ee07f;
+  --color-flag-good-soft: #2ee07f26;
+  --color-flag-caution: #ff9f1a;
+  --color-flag-caution-soft: #ff9f1a26;
+  --color-flag-critical: #ff3b3b;
+  --color-flag-critical-soft: #ff3b3b26;
 }
 
-/* Atom-Eve's flat neon blocks: black text on solid brand fills (ink on yellow
-   is 16.6:1, on cyan 9.5:1, on pink 9.9:1). Scoped to this theme only. */
+/* Flat neon blocks: black text on solid brand fills (black on cyan is 9.5:1,
+   on yellow 16.6:1, on pink 9.9:1). Scoped to this theme only. */
 :root[data-theme='atom-eve'] main h1 {
   display: inline-block;
   background: var(--color-giallo);
-  color: var(--color-ink);
+  color: #000000;
   padding: 0.1em 0.45em;
-  border: 1px solid var(--color-border);
 }
 :root[data-theme='atom-eve'] thead {
-  background: var(--color-giallo);
+  background: var(--color-rosso);
 }
 :root[data-theme='atom-eve'] thead th {
-  color: var(--color-ink);
+  color: #000000;
 }
 :root[data-theme='atom-eve'] .top-stripe {
   height: 8px;

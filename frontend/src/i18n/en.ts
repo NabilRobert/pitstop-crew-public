@@ -171,7 +171,7 @@ export default {
     themeFerrariShort: 'FER',
     themeBlueprint: 'Blueprint — an alternative black/white/blue/gray palette',
     themeBlueprintShort: 'BP',
-    themeAtomEve: 'Atom-Eve — a light cyan/yellow/pink palette',
+    themeAtomEve: 'Atom-Eve — bold cyan, yellow and pink on black',
     themeAtomEveShort: 'AE',
     logout: 'Log out',
   },

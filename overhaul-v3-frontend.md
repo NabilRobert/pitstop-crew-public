@@ -52,72 +52,54 @@ Follow the existing pattern: a `features/<name>/` folder with a `*Page.vue` and 
 
 ## 15. New color theme: "Atom-Eve" (frontend)
 
-A third theme named **Atom-Eve** (`data-theme='atom-eve'`), built from the owner's palette. Decided 2026-10-06: it is a **light** theme, and it is **not the default** (Ferrari stays the default).
+A third theme named **Atom-Eve** (`data-theme='atom-eve'`) from the owner's palette. Decided 2026-10-06: **dark**, **bold**, and **not the default** (Ferrari stays the default). History, so nobody re-litigates it: the owner first asked for a light theme, then asked for bolder and more prominent colors modeled on Marathon's UI (a black ground with flat neon blocks, black text on them, hard edges), then changed their mind and asked for dark. Dark is final.
 
-| Color | Hex | Role |
-|---|---|---|
-| Cyan | `#00BCF0` | primary accent, used as a **fill** |
-| Yellow | `#FFE556` | secondary accent, used as a **fill / highlight** |
-| Pink | `#FF91AF` | third accent, used as a **fill** |
-| Light pink | `#F4C2C2` | borders, tints, selected rows, page tint |
-| Black | `#000000` | text and the darkest ink (as `#140f11`, a warm near-black) |
+| Color | Hex | Contrast on black | Role |
+|---|---|---|---|
+| Cyan | `#00BCF0` | 9.45 | primary accent: fills, active states, accent text, table headers |
+| Yellow | `#FFE556` | 16.59 | secondary accent: page-title blocks, links |
+| Pink | `#FF91AF` | 9.92 | third accent: chart series, strong borders, glow |
+| Light pink | `#F4C2C2` | 13.34 | soft ink and the default outline color |
+| Black | `#000000` | n/a | the ground, and the text color ON a neon fill |
 
-### 15.1 The core problem: these colors are too light to be text on a light page
+On black, every brand color clears 4.5:1 as text, so (unlike a light theme) they can be used as text, borders, fills and glows at the same time. Black text on the neon fills measures 9.45 (cyan), 16.59 (yellow) and 9.92 (pink).
 
-Measured contrast against white (WCAG: 4.5 for body text, 3 for UI components):
-
-| Color | on white |
-|---|---|
-| Cyan `#00BCF0` | 2.22 |
-| Pink `#FF91AF` | 2.12 |
-| Yellow `#FFE556` | 1.27 |
-| Light pink `#F4C2C2` | 1.57 |
-
-So on a light ground the palette works as **fills with dark text on them** (ink on cyan 8.54, on yellow 15.00, on pink 8.97, on light pink 12.06), but **not as text or thin lines**. The theme therefore uses the brand colors for fills, and adds two darker "ink" companions for the places where an accent is used as text. They are derived from the palette, not new brand colors.
-
-### 15.2 How the theme system works today (verified)
-- Tokens are CSS variables in `frontend/src/style.css`: Tailwind v4 `@theme { ... }` holds the default (Ferrari) palette; `:root[data-theme='blueprint'] { ... }` overrides it. The attribute selector wins on specificity, so no `!important`.
-- `frontend/src/shared/composables/theme.ts`: `type ThemeName = 'ferrari' | 'blueprint'`, persisted in `localStorage` key `pitstop-theme`, applied as `document.documentElement.dataset.theme`.
-- Token names are Ferrari-era and reused by Blueprint: `rosso` primary accent, `giallo` secondary, `verde` third, `bianco` = **text on an accent background**. **Do not rename them in v3**: it would touch most components for no visible gain.
-- Measured usage of the accent tokens in `.vue`/`.ts`: `bg-rosso` 24, `text-rosso` 11, `border-rosso` 15, `text-giallo` 4 (all four are router links), `bg-rosso-dark` 1. `verde` has **no** Tailwind class usage, so it only appears in charts. `giallo`, `rosso` are also read via `color-mix(...)` in `VoiceOrb.vue` and `AskaPage.vue`, and via `getPropertyValue` in `useWaveform.ts`. `.agent-prose a` in `style.css` uses `--color-giallo` for links.
-- Status colors `--color-flag-good|caution|critical` are deliberately not part of the brand switch. Blueprint overrides only their shades so they stay readable on a light background; Atom-Eve does the same.
+### 15.1 How the theme system works today (verified)
+- Tokens are CSS variables in `frontend/src/style.css`: Tailwind v4 `@theme { ... }` holds the default (Ferrari) palette; `:root[data-theme='...'] { ... }` blocks override it. The attribute selector wins on specificity, so no `!important`.
+- `frontend/src/shared/composables/theme.ts` derives the `ThemeName` type, the stored-value check and the TopBar switch from a `THEMES` list.
+- Token names are Ferrari-era and reused by every theme: `rosso` primary accent, `giallo` secondary, `verde` third, `bianco` = **text on an accent fill** (black in this theme). They are not renamed.
+- Two tokens carry "accent as text" and "link" separately, because on a light theme the brand fill is not legible as text: `--color-accent-ink` (`text-accent-ink`, `border-accent-ink`) and `--color-link` (`text-link`, `.agent-prose a`). They equal today's values in Ferrari and Blueprint. In Atom-Eve they simply equal cyan and yellow, so they cost nothing here and keep the other themes safe.
+- Status colors `--color-flag-*` are deliberately outside the brand switch: they encode meaning. Atom-Eve shifts their shades (brighter green, orange, red) so they stay distinct from the brand cyan/yellow/pink.
 - Chart.js needs raw hex, so `frontend/src/shared/utils/chartTheme.ts` keeps a hand-synced `PALETTES: Record<ThemeName, Palette>`.
 
-### 15.3 Two new tokens, so other themes don't change
-Add to the base `@theme` block, with values that equal today's usage so Ferrari and Blueprint render **exactly as before**:
-
-- `--color-accent-ink` (default = `var(--color-rosso)`): for accent used **as text**. Replace the 11 `text-rosso` usages with `text-accent-ink`.
-- `--color-link` (default = `var(--color-giallo)`): for link text. Replace the 4 `text-giallo` router links and the `.agent-prose a` rule with it.
-
-Without these, light mode would render cyan text at 2.22:1 and yellow links at 1.27:1.
-
-### 15.4 Token mapping (proposed; every ratio measured)
+### 15.2 Token mapping (as implemented; every ratio measured against the surface it sits on)
 
 ```css
 :root[data-theme='atom-eve'] {
-  --color-bg: #f7d0d0;
-  --color-surface: #ffffff;
-  --color-surface-raised: #cdeffc;
-  --color-border: #000000;
-  --color-border-strong: #000000;
+  --color-bg: #000000;
+  --color-surface: #0b0b0d;
+  --color-surface-raised: #16161a;
+  --color-border: #f4c2c2;
+  --color-border-strong: #ff91af;
 
-  --color-ink: #000000;
-  --color-ink-soft: #3d2f34;
-  --color-ink-faint: #5a4a50;
+  --color-ink: #ffffff;
+  --color-ink-soft: #f4c2c2;
+  --color-ink-faint: #a88e94;
 
   --color-rosso: #00bcf0;
-  --color-rosso-dark: #00a8dc;
+  --color-rosso-dark: #33cdf5;
   --color-rosso-soft: #00bcf033;
   --color-giallo: #ffe556;
-  --color-giallo-soft: #ffe55680;
+  --color-giallo-soft: #ffe55640;
   --color-verde: #ff91af;
-  --color-verde-soft: #ff91af59;
+  --color-verde-soft: #ff91af40;
   --color-bianco: #000000;
-  --color-accent-ink: #005b75;
-  --color-link: #005b75;
+  --color-accent-ink: #00bcf0;
+  --color-link: #ffe556;
   --color-stripe-mid: #ffe556;
+  --color-wave-cursor: #ffffff;
   --glow-1: #00bcf040;
-  --glow-2: #ffe55659;
+  --glow-2: #ff91af33;
 
   /* Hard-edged, Marathon-style panels: sharp corners (pills stay round). */
   --radius-sm: 0;
@@ -125,65 +107,56 @@ Without these, light mode would render cyan text at 2.22:1 and yellow links at 1
   --radius-lg: 0;
   --radius-xl: 0;
 
-  --color-flag-good: #046a37;
-  --color-flag-good-soft: #046a3726;
-  --color-flag-caution: #7f5000;
-  --color-flag-caution-soft: #7f500026;
-  --color-flag-critical: #b01719;
-  --color-flag-critical-soft: #b0171926;
+  --color-flag-good: #2ee07f;
+  --color-flag-good-soft: #2ee07f26;
+  --color-flag-caution: #ff9f1a;
+  --color-flag-caution-soft: #ff9f1a26;
+  --color-flag-critical: #ff3b3b;
+  --color-flag-critical-soft: #ff3b3b26;
 }
+```
 
-/* Atom-Eve's flat neon blocks: black text on solid brand fills (ink on yellow
-   is 16.6:1, on cyan 9.5:1, on pink 9.9:1). Scoped to this theme only. */
+Theme-scoped rules that make the neon blocks (all under `data-theme='atom-eve'`, so the other themes are untouched):
+
+```css
+/* Flat neon blocks: black text on solid brand fills (black on cyan is 9.5:1,
+   on yellow 16.6:1, on pink 9.9:1). Scoped to this theme only. */
 :root[data-theme='atom-eve'] main h1 {
   display: inline-block;
   background: var(--color-giallo);
-  color: var(--color-ink);
+  color: #000000;
   padding: 0.1em 0.45em;
-  border: 1px solid var(--color-border);
 }
 :root[data-theme='atom-eve'] thead {
-  background: var(--color-giallo);
+  background: var(--color-rosso);
 }
 :root[data-theme='atom-eve'] thead th {
-  color: var(--color-ink);
+  color: #000000;
 }
 :root[data-theme='atom-eve'] .top-stripe {
   height: 8px;
 }
 ```
 
-**Bold pass (2026-10-06), after the owner pointed at Marathon's UI as the reference:** flat neon blocks with black text, hard edges and heavy black outlines, kept light (not dark). Concretely: a saturated pink ground (`#f7d0d0`), white cards with **black 1px borders**, **sharp corners** (radius tokens set to 0; pills stay round), **yellow page-title blocks and yellow table headers** with black text, an 8px top color stripe, cyan-tinted raised surfaces (`#cdeffc`), pure-black ink, stronger accent washes and glows, and a darker `accent-ink`/`link` (`#005b75`) and flag set. Contrast was re-measured against the pink ground, the hardest background: ink 14.9, ink-soft 9.0, ink-faint 5.9, accent-ink 5.4, flags 4.8 to 5.0; black on the brand fills is 9.5 (cyan), 16.6 (yellow) and 9.9 (pink). The extra rules (`main h1`, `thead`, `.top-stripe`) are scoped to `data-theme='atom-eve'`, so the other themes are untouched. Left alone on purpose: drop shadows (Marathon's panels are flat) and a black top bar (its children use dark-on-light text tokens and would all need inverting).
+Measured contrast: ink 21.0 / 19.7 / 18.0 and ink-soft 13.3 / 12.5 / 11.5 and ink-faint 7.0 / 6.5 / 6.0 on bg / surface / raised; flag-good 12.1, flag-caution 11.5, flag-critical 6.5 on bg (5.5 on raised).
 
-Notes:
-- **`--color-bianco` is black here**, because it is the text color on every `bg-rosso` button and active pill, and on `::selection`. White on cyan fails.
-- A **pink-ink** for text is not needed yet, because pink has no text usage (`verde` is chart-only). If a component needs pink as text, use `#c2275c` (5.62 on white).
-- Borders are now black, so dividers are strong by design. Table row separators use `border-border/60`, which stays lighter.
+### 15.3 Risks specific to this palette
+- **Brand colors vs status colors.** Cyan/yellow/pink are bright and so are the flags. Critical red vs pink is only 1.5:1 apart, caution orange vs yellow 1.5:1, good green vs cyan 1.3:1. Color alone must never carry severity: grade badges, run status and flag pills keep their text labels. Check with a color-blindness simulator on the Run Inspector and Learning pages.
+- **Yellow links vs yellow title blocks.** Both are brand yellow. Links are text on dark, titles are black text on a yellow fill, so they read differently, but check pages where they sit together.
+- **Loud on purpose, but check density.** Light-pink outlines on every card and cyan table headers are heavy. If a data-dense page (Run Inspector, Reports list) feels noisy, tone the border down for that theme (for example `#f4c2c2` at 50%) rather than changing the palette.
+- **Charts.** Bars and lines both read well on black. Confirm adjacent series stay distinguishable, and that the impression-share stacked bar still uses the **flag** colors, as `chartTheme.ts` already intends. The tooltip stays dark in every theme.
+- **Waveform / voice orb.** They read `--color-giallo` / `--color-rosso` / `--color-bianco` at runtime. `bianco` is black here, so the waveform cursor has its own token, `--color-wave-cursor` (white), defined only in this theme; every other theme still falls through to `bianco`.
+- **`::selection`** is cyan with black text: fine.
+- **Existing screenshots** (case study, README) are Ferrari and are not affected.
 
-### 15.5 Risks specific to this palette
-- **`border-rosso` (15 usages).** Cyan on white is 2.22:1, below the 3:1 expected of a UI component. Where the border is the *only* sign of a selected or active state, switch that usage to `border-accent-ink` or add a fill change. Review each of the 15 rather than changing them blindly.
-- **Yellow = "caution".** Brand yellow `#FFE556` and the status caution amber are different in light mode (`#9a6300` text), but a yellow fill next to a caution pill can still read as a warning. Keep yellow for highlights and decoration only, never for status.
-- **Pink vs critical red.** Pink fills sit next to red status text. Never rely on color alone for severity: grade badges, run status and flag pills keep their text labels. Check with a color-blindness simulator on the Run Inspector and Learning pages.
-- **Charts on a white canvas.** Cyan, yellow and pink lines on white are 2.22, 1.27 and 2.12:1. Bars and areas with a visible fill are fine; **lines need a darker stroke** (use the ink companions: cyan `#00718f`, a darker pink such as `#c2275c`, and for yellow either avoid lines or give it a dark outline). Grid color should be dark-on-light (`rgba(0,0,0,0.08)`, as Blueprint does). The impression-share stacked bar must keep using the **flag** colors (`flagGood/Caution/Critical`), as `chartTheme.ts` already intends. The tooltip stays dark in every theme (existing comment), so its white title color is still right.
-- **Yellow fill with white text anywhere** would fail; the only valid text on a yellow fill is the dark ink. Grep for any component that hard-codes white text on `bg-giallo` (none was found in the usage count above, since `bg-giallo` has zero uses).
-- **Waveform / voice orb.** `useWaveform.ts` reads `--color-giallo` / `--color-rosso` / `--color-bianco` at runtime with Ferrari hex fallbacks; with `bianco` dark the cursor line will be dark on a light waveform, which is correct for a light page. `VoiceOrb.vue` uses `color-mix` on the accents; check that its glow reads on a white background.
-- **Selection color.** `::selection` is `rosso` background with `bianco` text, which becomes cyan with dark text: fine.
-- **Existing screenshots** (case study, README) are Ferrari. Not affected unless the owner wants Atom-Eve shown.
+### 15.4 Code changes (done in the frontend commits)
+`style.css` (block, scoped rules, two new tokens), `theme.ts` (THEMES list), `chartTheme.ts` (palette), `TopBar.vue` (list-driven switch, `top-stripe` class), EN/ID labels, and the `text-rosso` / `border-rosso` / `text-giallo` class renames to `text-accent-ink` / `border-accent-ink` / `text-link`.
 
-### 15.6 Code changes required
-1. `frontend/src/style.css`: add `--color-accent-ink` and `--color-link` to the base `@theme` (with the Ferrari-equal defaults above), add the `:root[data-theme='atom-eve']` block, and change `.agent-prose a` to `var(--color-link)`.
-2. Replace the 11 `text-rosso` usages with `text-accent-ink` and the 4 `text-giallo` router links with `text-link` (Tailwind v4 generates `text-link` from `--color-link`). Review the 15 `border-rosso` usages as described.
-3. `frontend/src/shared/composables/theme.ts`: extend `ThemeName` to include `'atom-eve'`. **The current load check is `stored === 'blueprint' ? 'blueprint' : 'ferrari'`; with a third theme it would silently reset a saved Atom-Eve to Ferrari on every reload.** Replace it with a membership check against a `THEMES` list. The default stays `'ferrari'`.
-4. `frontend/src/shared/utils/chartTheme.ts`: add an `'atom-eve'` entry (TypeScript will require it because `PALETTES` is a `Record<ThemeName, Palette>`): `rosso '#00bcf0'`, `giallo '#ffe556'`, `verde '#ff91af'`, `inkFaint '#6d6065'`, `gridColor 'rgba(0, 0, 0, 0.08)'`, flag colors equal to Blueprint's. Add line-stroke variants for the three series as noted in 15.5, and update the file's "keep in sync" comment to list `style.css`'s new tokens.
-5. `frontend/src/app/TopBar.vue`: the theme switch is a **hard-coded two-button** segmented control (`ferrari` / `blueprint`, each with `bg-rosso text-bianco` when active). Make it a third button or a small menu driven by the `THEMES` list. Check the width in both languages.
-6. `frontend/src/i18n/en.ts` and `id.ts`: add the long and short labels next to `themeFerrari` / `themeBlueprint` (for example `themeAtomEve`, `themeAtomEveShort: 'AE'`).
-
-### 15.7 Verification
-- Switch to Atom-Eve, reload (persistence), then click through every page: Dashboard, Campaigns, Reports, Learning, Run Inspector, System Health, Settings, Aska, How It Works, Engineering Notes, and the new Keyword Optimizer page.
-- Confirm Ferrari and Blueprint look **identical to before** (the two new tokens default to today's values). Compare screenshots.
-- Check every text-on-accent spot (login button, active pills, locale and theme switches, selection) and every link.
-- Check both languages.
-- Run a contrast check on the rendered pages (not just the token table), because `color-mix` and opacity utilities change effective colors.
+### 15.5 Verification
+- Switch to Atom-Eve, reload (persistence), and click through every page: Dashboard, Campaigns, Reports, Learning, Run Inspector, System Health, Settings, Aska, How It Works, Engineering Notes, and the Keyword Optimizer page.
+- Confirm Ferrari and Blueprint look **identical to before** (compare screenshots).
+- Check text on every neon fill (login button, active pills, locale and theme switches, selection, table headers, page titles) and every link.
+- Check both languages, and the waveform cursor (15.3).
 
 ## 16. i18n and docs
 
