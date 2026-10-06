@@ -8,6 +8,9 @@ import AdPerformanceTable from './AdPerformanceTable.vue'
 import ImpressionShareChart from './ImpressionShareChart.vue'
 import MetricCard from './MetricCard.vue'
 import PeriodSelector from './PeriodSelector.vue'
+import KeywordBoardPanel from '../keyword-optimizer/KeywordBoardPanel.vue'
+import { useKeywordOptimizer } from '../keyword-optimizer/useKeywordOptimizer'
+import { isDemo } from '../../shared/composables/auth'
 import AssetGroupBarChart from './AssetGroupBarChart.vue'
 import { useCampaignDetail } from './useCampaignDetail'
 import { PERIOD_OPTIONS } from './useDashboard'
@@ -35,7 +38,34 @@ const {
   impressionShareRows,
   assetGroupRows,
   totals,
+  keywordPerfRows,
+  keywordSummaries,
 } = useCampaignDetail(toRef(props, 'id'), days)
+
+// Suggestions are shared with the Keyword Optimizer page (same data, same actions), scoped to this campaign.
+const optimizer = useKeywordOptimizer()
+const hasKeywords = computed(() => adGroupRows.value.length > 0)
+const campaignIdNumber = computed(() => Number(props.id))
+
+// Board is the default; the table is one click away. Remembered per browser; works without storage.
+type KeywordView = 'board' | 'table'
+const VIEW_KEY = 'pitstop-campaign-keyword-view'
+function readView(): KeywordView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'table' ? 'table' : 'board'
+  } catch {
+    return 'board'
+  }
+}
+const keywordView = ref<KeywordView>(readView())
+function setKeywordView(v: KeywordView) {
+  keywordView.value = v
+  try {
+    localStorage.setItem(VIEW_KEY, v)
+  } catch {
+    // storage blocked: the choice just doesn't persist
+  }
+}
 
 // Only the very first load replaces the page with a spinner. Changing the period refreshes in place
 // (dimmed) so the page doesn't jump back to the top or lose what you were looking at.
@@ -85,6 +115,54 @@ const costPerEnquiry = computed(() => (totals.value.conversions > 0 ? totals.val
         <AssetGroupBarChart :rows="assetGroupRows" />
       </div>
 
+      <section class="mb-10">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
+            {{ t('campaignDetail.keywordsHeading') }}
+          </h2>
+          <div v-if="hasKeywords" class="flex items-center" role="group" :aria-label="t('campaignDetail.viewLabel')">
+            <button
+              type="button"
+              class="border border-border px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide"
+              :class="keywordView === 'board' ? 'border-rosso bg-rosso text-bianco' : 'text-ink-soft hover:text-ink'"
+              :aria-pressed="keywordView === 'board'"
+              @click="setKeywordView('board')"
+            >
+              {{ t('campaignDetail.viewBoard') }}
+            </button>
+            <button
+              type="button"
+              class="border border-l-0 border-border px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide"
+              :class="keywordView === 'table' ? 'border-rosso bg-rosso text-bianco' : 'text-ink-soft hover:text-ink'"
+              :aria-pressed="keywordView === 'table'"
+              @click="setKeywordView('table')"
+            >
+              {{ t('campaignDetail.viewTable') }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Performance Max and Display have no keywords in Google Ads: say so instead of showing an empty section. -->
+        <p v-if="!hasKeywords" class="rounded-lg border border-border bg-surface px-5 py-4 text-sm text-ink-soft">
+          {{ t('campaignDetail.noKeywordsType') }}
+        </p>
+        <KeywordTable v-else-if="keywordView === 'table'" :rows="keywordRows" />
+        <KeywordBoardPanel
+          v-else
+          :rows="keywordPerfRows"
+          :summaries="keywordSummaries"
+          :suggestions="optimizer.items.value"
+          :campaign-id="campaignIdNumber"
+          :can-edit="!isDemo"
+          :busy-ids="optimizer.busyIds.value"
+          :no-run-yet="!optimizer.loading.value && !optimizer.data.value?.run && optimizer.items.value.length === 0"
+          :summary-missing="keywordSummaries.length === 0 && keywordPerfRows.length > 0"
+          :period-days="days"
+          @status="(id, status) => optimizer.setStatus(id, status)"
+        />
+        <p v-if="hasKeywords" class="mt-2 text-xs text-ink-faint">{{ t('campaignDetail.activityNote') }}</p>
+      </section>
+
       <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
         {{ t('campaignDetail.adGroupsHeading') }}
       </h2>
@@ -127,11 +205,6 @@ const costPerEnquiry = computed(() => (totals.value.conversions > 0 ? totals.val
           </tbody>
         </table>
       </div>
-
-      <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
-        {{ t('campaignDetail.keywordsHeading') }}
-      </h2>
-      <KeywordTable :rows="keywordRows" />
 
       <h2 class="mb-3 mt-8 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
         {{ t('campaignDetail.searchTermsHeading') }}
