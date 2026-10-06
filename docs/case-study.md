@@ -24,6 +24,7 @@ Google Ads' own Recommendations tab is structurally biased toward spending more:
 - **A weekly feedback job** that reads recurring patterns in Ciri's critiques and drafts a prompt patch. It is never applied automatically; a person reviews it.
 - **A Run Inspector.** Every step of a run is recorded as a nested trace: the data it read, each agent, every model call with its full prompt and response, each critic review, and the approve / revise / flag decision that followed. It shows a timeline per step and per-call tokens and cost, and refreshes live while a run is in flight. Secrets are redacted before anything is stored, and prompt text is kept for 30 days.
 - **Operations.** Scheduled runs, failure alerts by email, a dead-man's-switch for when the schedule itself doesn't fire, a live console of what the pipeline is doing, and a System Health page.
+- **A keyword optimizer.** A weekly agent turns the account's keyword and search-term data into ranked suggestions (negatives, promotions, pauses, match-type changes, new keywords, campaign ideas), tied to the dealer's stock. The same split as the rest of the project applies: code finds the candidates and computes every number, the model only ranks and explains them, and the critic grades the result. Suggestions only, with a paste-ready negatives export.
 - **Coverage.** Campaigns, ad groups, keywords with Quality Score, search terms, ads, impression share and why it's lost, named conversion actions, Performance Max asset groups, Google's own recommendations, change history, and demographic segments. This is a deliberate subset of the API, chosen so each piece feeds the agents something they can reason about.
 
 ## Decisions worth explaining
@@ -51,11 +52,13 @@ Google Ads' own Recommendations tab is structurally biased toward spending more:
 - The demo runs on **generated data**: a seeded Markov-chain generator with deliberate patterns (a declining campaign, a seasonal spike, an outperforming segment), so the agents have something real to find. The UI labels this.
 - The **live Google Ads path is built but not exercised against a real account**: the developer token is at test-account access level, awaiting Basic Access review. Live calls reach Google correctly and stop at `DEVELOPER_TOKEN_NOT_APPROVED`.
 - The **AI pipeline, the critic loop, the grading and the operations tooling are real** and run against the generated data with live model calls.
+- The **keyword optimizer's** deterministic engine and its API are built and tested against the generated demo data (which has planted problems with known answers); its model step has not yet been run end-to-end on a real account, and the intent label on each search term is an estimate.
 - It is a single-user tool. Auth is one login; there is no multi-tenancy.
 
 ## What I'd do next
 
 - Get Basic Access approved and run one real account through the same pipeline.
+- Run the keyword optimizer end-to-end against a real account and measure whether its suggestions hold up once applied.
 - Track what happens to a recommendation after it's shown (acted on, ignored, outcome), so the critic can be checked against results and not only against itself.
 - Alerts to Slack/Discord, and thresholds so a report is only pushed when something moved.
 

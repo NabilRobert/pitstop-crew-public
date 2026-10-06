@@ -7,6 +7,8 @@ Pulls performance data from a Google Ads account, stores it over time, and runs 
 ## Beyond the core pipeline
 
 - **A Run Inspector** records every step of a pipeline run as a nested trace — the data it read, each agent, every model call with its full prompt and response, each critic review, and the approve/revise/flag decision that followed — with per-step tokens and cost, live while a run is in flight.
+- **A keyword optimizer** runs weekly as its own agent in the same pipeline and produces ranked, evidence-backed suggestions: negative keywords, search terms worth promoting, keywords to pause, match-type changes, new keywords and campaign ideas, each tied to the dealer's stock. Code finds the candidates and computes every number; the model only ranks and explains them, and the critic grades the result. Suggestions only, with a paste-ready negatives export; the owner marks each applied or dismissed. See [`overhaul-v3.md`](./overhaul-v3.md) for the scope and API contract, plus [`overhaul-v3-backend.md`](./overhaul-v3-backend.md) and [`overhaul-v3-frontend.md`](./overhaul-v3-frontend.md) for the implementation plans.
+- **A third color theme, Atom-Eve** (a bold pop-art pink with black type), alongside Ferrari and Blueprint; Ferrari stays the default.
 - **A Learning page** tracks Ciri's verdicts over time (approved clean / approved with notes / flagged / no review, by week and agent) and the weekly self-improvement job's suggestion history — never auto-applied, always reviewed by hand.
 - **Auth gates the whole app**: a full-access owner login, plus an optional read-only demo account (enforced server-side — a demo token gets a 403 on anything but GET, not just hidden buttons) for sharing a public link without risking real changes or model spend.
 - **A monthly spend ceiling** (Settings page) will actually refuse to start a new pipeline run once the month's tracked AI cost passes the configured cap, not just alert after the fact.
@@ -64,7 +66,7 @@ backend/src/
 frontend/src/
   app/          the app shell — top bar, login, live console panel, router (not a feature)
   features/     one folder per page — dashboard/, reports/, learning/, run-inspector/,
-                engineering-notes/, settings/, etc.
+                keyword-optimizer/, engineering-notes/, settings/, etc.
   shared/       cross-feature code — the report viewer (used by both Dashboard and Reports),
                 generic UI primitives, the API client, composables, and utils
 
