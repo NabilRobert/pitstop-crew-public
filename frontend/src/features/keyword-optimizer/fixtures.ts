@@ -10,6 +10,9 @@
 // negative with collisions, a low-confidence item, and each suggestion type.
 
 import type {
+  KeywordPerformanceRow,
+  KeywordSummary,
+  KeywordVerdict,
   InventorySummary,
   KeywordSummaryResponse,
   Suggestion,
@@ -307,42 +310,110 @@ export const FIXTURE_INVENTORY_UNAVAILABLE: InventorySummary = {
   by_model: [],
 }
 
+// ---------------------------------------------------------------------------
+// Keywords for the cork board. One compact table drives both the per-day
+// performance rows (here a single row per keyword, dated the window end) and
+// the window summary, so the two can never disagree. Ids 31, 32, 33, 40 and 48
+// are the ones the suggestion fixtures above point at.
+// ---------------------------------------------------------------------------
+
+interface FixtureKeyword {
+  id: number
+  text: string
+  match: 'exact' | 'phrase' | 'broad'
+  campaign: { id: number; name: string }
+  adGroup: { id: number; name: string }
+  /** Spend in thousand rupiah, clicks, conversions in the window. */
+  spendK: number
+  clicks: number
+  conv: number
+  verdict: KeywordVerdict
+  stock: number | null
+}
+
+const C_GENERIC = { id: 2, name: 'Search — Used Cars Generic' }
+const C_MODEL = { id: 3, name: 'Search — Model + Suburb' }
+const C_BRAND = { id: 1, name: 'Brand' }
+const AG_SUV = { id: 3, name: 'Used SUV' }
+const AG_SEDAN = { id: 4, name: 'Used Sedan' }
+const AG_BRIO = { id: 5, name: 'Honda Brio' }
+const AG_MPV = { id: 6, name: 'Used MPV' }
+const AG_BRAND = { id: 1, name: 'Brand terms' }
+
+const KEYWORDS: FixtureKeyword[] = [
+  { id: 33, text: 'toyota fortuner bekas', match: 'phrase', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 1400, clicks: 88, conv: 9, verdict: 'winner', stock: 3 },
+  { id: 34, text: 'fortuner vrz bekas', match: 'phrase', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 760, clicks: 47, conv: 5, verdict: 'winner', stock: 3 },
+  { id: 35, text: 'fortuner 2019 bekas', match: 'exact', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 520, clicks: 33, conv: 3, verdict: 'winner', stock: 2 },
+  { id: 36, text: 'jual fortuner second', match: 'phrase', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 410, clicks: 26, conv: 3, verdict: 'winner', stock: 3 },
+  { id: 31, text: 'mobil bekas', match: 'broad', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 2100, clicks: 133, conv: 2, verdict: 'wasting', stock: null },
+  { id: 32, text: 'mobil murah', match: 'broad', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 880, clicks: 52, conv: 0, verdict: 'wasting', stock: null },
+  { id: 48, text: 'honda brio rs bekas', match: 'exact', campaign: C_MODEL, adGroup: AG_BRIO, spendK: 1030, clicks: 71, conv: 0, verdict: 'no_stock', stock: 0 },
+  { id: 49, text: 'honda brio satya bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_BRIO, spendK: 360, clicks: 24, conv: 1, verdict: 'no_stock', stock: 0 },
+  { id: 40, text: 'sedan bekas', match: 'broad', campaign: C_GENERIC, adGroup: AG_SEDAN, spendK: 1250, clicks: 120, conv: 4, verdict: 'steady', stock: 5 },
+  { id: 41, text: 'honda civic bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_SEDAN, spendK: 640, clicks: 41, conv: 3, verdict: 'steady', stock: 1 },
+  { id: 42, text: 'toyota camry bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_SEDAN, spendK: 280, clicks: 17, conv: 1, verdict: 'needs_data', stock: 1 },
+  { id: 50, text: 'mitsubishi xpander bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_MPV, spendK: 990, clicks: 66, conv: 7, verdict: 'winner', stock: 5 },
+  { id: 51, text: 'xpander cross second', match: 'phrase', campaign: C_MODEL, adGroup: AG_MPV, spendK: 330, clicks: 21, conv: 2, verdict: 'steady', stock: 4 },
+  { id: 52, text: 'toyota avanza bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_MPV, spendK: 540, clicks: 36, conv: 2, verdict: 'steady', stock: 2 },
+  { id: 53, text: 'innova reborn bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_MPV, spendK: 470, clicks: 30, conv: 1, verdict: 'needs_data', stock: 2 },
+  { id: 54, text: 'innova zenix bekas', match: 'exact', campaign: C_MODEL, adGroup: AG_MPV, spendK: 90, clicks: 6, conv: 0, verdict: 'testing', stock: 3 },
+  { id: 55, text: 'daihatsu ayla bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_BRIO, spendK: 150, clicks: 12, conv: 0, verdict: 'needs_data', stock: 1 },
+  { id: 56, text: 'honda hr-v bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_SUV, spendK: 720, clicks: 48, conv: 4, verdict: 'steady', stock: 4 },
+  { id: 57, text: 'suzuki ertiga bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_MPV, spendK: 260, clicks: 19, conv: 0, verdict: 'needs_data', stock: 0 },
+  { id: 58, text: 'cicilan mobil bekas', match: 'phrase', campaign: C_GENERIC, adGroup: AG_SEDAN, spendK: 610, clicks: 39, conv: 4, verdict: 'steady', stock: null },
+  { id: 59, text: 'tukar tambah mobil', match: 'phrase', campaign: C_GENERIC, adGroup: AG_SEDAN, spendK: 340, clicks: 22, conv: 2, verdict: 'steady', stock: null },
+  { id: 60, text: 'showroom mobil bekas jakarta', match: 'phrase', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 580, clicks: 35, conv: 3, verdict: 'steady', stock: null },
+  { id: 61, text: 'pitstop auto', match: 'exact', campaign: C_BRAND, adGroup: AG_BRAND, spendK: 300, clicks: 58, conv: 6, verdict: 'winner', stock: null },
+  { id: 62, text: 'pitstop mobil bekas', match: 'phrase', campaign: C_BRAND, adGroup: AG_BRAND, spendK: 210, clicks: 41, conv: 4, verdict: 'winner', stock: null },
+  { id: 63, text: 'harga mobil baru', match: 'broad', campaign: C_GENERIC, adGroup: AG_SEDAN, spendK: 470, clicks: 44, conv: 0, verdict: 'wasting', stock: null },
+  { id: 64, text: 'servis mobil terdekat', match: 'broad', campaign: C_GENERIC, adGroup: AG_SEDAN, spendK: 390, clicks: 38, conv: 0, verdict: 'wasting', stock: null },
+  { id: 65, text: 'sparepart mobil bekas', match: 'broad', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 120, clicks: 9, conv: 0, verdict: 'needs_data', stock: null },
+  { id: 66, text: 'toyota yaris bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_SEDAN, spendK: 60, clicks: 5, conv: 0, verdict: 'needs_data', stock: 1 },
+]
+
+const MIX: Record<KeywordVerdict, KeywordSummary['intent_mix']> = {
+  winner: { buyer: 0.88, researcher: 0.12 },
+  wasting: { buyer: 0.4, researcher: 0.2, job_seeker: 0.25, consumer: 0.15 },
+  no_stock: { buyer: 0.8, researcher: 0.2 },
+  testing: null, // brand new: nothing classified yet, must show "no data yet" rather than 0%
+  needs_data: { buyer: 0.6, researcher: 0.4 },
+  steady: { buyer: 0.7, researcher: 0.3 },
+}
+
+/** The window's keyword rows (one per keyword, dated the window end). */
+export const FIXTURE_KEYWORD_ROWS: KeywordPerformanceRow[] = KEYWORDS.map((k) => ({
+  date: '2026-10-05',
+  keyword_id: k.id,
+  text: k.text,
+  match_type: k.match,
+  ad_group_id: k.adGroup.id,
+  ad_group: k.adGroup.name,
+  campaign_id: k.campaign.id,
+  campaign: k.campaign.name,
+  impressions: k.clicks * 22,
+  clicks: k.clicks,
+  cost_micros: k.spendK * 1_000 * RP,
+  conversions: k.conv,
+  quality_score: 6,
+  expected_ctr: 'average',
+  ad_relevance: 'average',
+  landing_page_experience: 'average',
+  conversions_value_micros: k.conv * 25_000 * RP,
+}))
+
 export const FIXTURE_KEYWORD_SUMMARY: KeywordSummaryResponse = {
   coverage: 0.81,
-  items: [
-    {
-      keyword_id: 31,
-      intent_mix: { buyer: 0.42, researcher: 0.18, job_seeker: 0.27, consumer: 0.13 },
-      intent_coverage: 0.78,
-      conversions_by_action: [
-        { conversion_action_id: 1, name: 'WhatsApp Click', tier: 'lead', conversions: 6, value_micros: 6 * 25_000 * RP },
-        { conversion_action_id: 2, name: 'Test Drive Booked', tier: 'visit', conversions: 1, value_micros: 1 * 120_000 * RP },
-      ],
-      stock_count: null,
-      avg_days_listed: null,
-      waste_exposure: 0.31,
-    },
-    {
-      keyword_id: 33,
-      intent_mix: { buyer: 0.88, researcher: 0.12 },
-      intent_coverage: 0.92,
-      conversions_by_action: [
-        { conversion_action_id: 1, name: 'WhatsApp Click', tier: 'lead', conversions: 9, value_micros: 9 * 25_000 * RP },
-        { conversion_action_id: 2, name: 'Test Drive Booked', tier: 'visit', conversions: 3, value_micros: 3 * 120_000 * RP },
-        { conversion_action_id: 5, name: 'Financing Page Visit', tier: 'micro', conversions: 4, value_micros: 4 * 5_000 * RP },
-      ],
-      stock_count: 3,
-      avg_days_listed: 41,
-      waste_exposure: 0.02,
-    },
-    {
-      keyword_id: 48,
-      intent_mix: null, // no classified terms yet: "no data yet", not 0%
-      intent_coverage: null,
-      conversions_by_action: [],
-      stock_count: 0,
-      avg_days_listed: null,
-      waste_exposure: null,
-    },
-  ],
+  items: KEYWORDS.map<KeywordSummary>((k) => ({
+    keyword_id: k.id,
+    verdict: k.verdict,
+    intent_mix: MIX[k.verdict],
+    intent_coverage: MIX[k.verdict] ? 0.8 : null,
+    conversions_by_action:
+      k.conv > 0
+        ? [{ conversion_action_id: 1, name: 'WhatsApp Click', tier: 'lead', conversions: k.conv, value_micros: k.conv * 25_000 * RP }]
+        : [],
+    stock_count: k.stock,
+    avg_days_listed: k.stock ? 30 : null,
+    waste_exposure: k.verdict === 'wasting' ? 0.4 : k.verdict === 'winner' ? 0.02 : null,
+  })),
 }

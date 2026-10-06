@@ -8,7 +8,7 @@
 
 You are implementing **only the frontend** of Overhaul v3. You need **two files**: this one and `overhaul-v3.md` (the scope doc). Read the scope doc first. Its sections 1-3 (goal, decisions, phasing) and 13 (the API contract) are binding and live only there. Section numbers are global across the files.
 
-- **Do not touch `backend/`.** Another file covers it. The backend is built in parallel; you work against the **API contract (scope doc section 13, version 3.0)**. Use fixtures that match it exactly until the real endpoints exist. If the contract seems wrong or incomplete, **stop and report it**; do not invent fields.
+- **Do not touch `backend/`.** Another file covers it. The backend is built in parallel; you work against the **API contract (scope doc section 13, version 3.1)**. Use fixtures that match it exactly until the real endpoints exist. If the contract seems wrong or incomplete, **stop and report it**; do not invent fields.
 - **Work one build step at a time** (section 17 below). After each step, report what changed and how you verified it, then wait.
 - **Ferrari and Blueprint must look exactly as before.** Compare screenshots before and after.
 - Run `npm run typecheck` and `npm run build` in `frontend/` before reporting a step done. There is no frontend test runner in this repo, so verify in the browser, in both languages (EN and ID), as the demo (read-only) account and as the owner.
@@ -35,13 +35,15 @@ Frontend facts (verified 2026-10-06): feature folders under `frontend/src/featur
 
 Follow the existing pattern: a `features/<name>/` folder with a `*Page.vue` and a `use*.ts` composable per data source; types in `shared/api/types.ts`; calls through `shared/api/api.ts`.
 
-- **`features/keyword-optimizer/KeywordOptimizerPage.vue`** (new route `/keyword-optimizer`, registered in `app/router/index.ts`, nav link in `app/navLinks.ts`):
-  - header: last run time, snapshot date of the inventory used, data source badge (demo / connected), coverage %;
-  - tabs or groups by type: Negatives, Promote, Pause, Match type, New keywords, Campaign ideas;
-  - each suggestion card: what to do, the evidence numbers (from the API, not the model), `basis` badge (`evidence` / `prior – unverified`), confidence, expected impact, inventory context (stock, days listed, margin), the LLM explanation, and a link into the keyword/campaign;
-  - actions **Applied** / **Dismiss** (owner only; hidden/disabled when `isDemo` from `shared/composables/auth`);
-  - first-class empty states: "not enough data yet", "nothing to suggest", "inventory unavailable";
-  - the open/applied/dismissed counts feeding the future outcome-tracking feature (backlog item 3).
+- **`features/keyword-optimizer/KeywordOptimizerPage.vue`** (route `/keyword-optimizer`, nav link in `app/navLinks.ts`). **Redesigned 2026-10-06 as a cork board** after the owner found the first version (a list of cards) hard to understand: "no visual language, no explanation". Decisions, all from the owner:
+  - **Keywords are the notes.** Each keyword is a pinned sticky note on a cork board. Note size = how much money it spent (three sizes by spend tier). A sticker on the corner is its verdict (`winner`, `wasting`, `no_stock`, `testing`, `needs_data`; `steady` gets no sticker), from `GET /keywords/summary` (contract 3.1). The advice is a strip of tape on the note with one plain sentence ("Block 'lowongan'", "Pause", "Bid a bit higher"). Suggestions with no keyword (campaign ideas, campaign-wide negatives, brand-new keyword ideas) go on a loose "ideas" tray next to the board.
+  - **Headline first, then three numbers.** A sentence answering "what do I do this week" ("9 things to do: 3 stop wasting money, 2 do more of what works, 4 need a look. Nothing changes in Google Ads until you do it."), then three big numbers: spend on keywords that are wasting money, spend on winners, and the to-do count. Wasted and winner money are sums over the verdicts; when the backend predates verdicts those two show "no data yet".
+  - **A legend strip** above the board: what size, the sticker colors and the tape mean. This is the page's explanation; the plain sentence on each tape is the second one.
+  - **Board size.** The biggest spenders plus anything with advice, about 24 notes, and a "Show all keywords" button for the rest. **One board** with filter chips (by campaign and by verdict), not a board per campaign.
+  - **Acting on a note.** Click a note to open a detail panel: the keyword's numbers, then each suggestion with its evidence, basis, confidence, impact, inventory context and the **Applied / Dismiss / Reopen** buttons (owner only). Dragging a tape strip into the **Done** or **Not now** bin is a shortcut for the same thing; buttons always work and are the only way on touch and keyboard.
+  - **A List view toggle** keeps the previous card list, for people who prefer rows and for screen readers.
+  - Notes are physical objects, so their paper colors (white, yellow, cyan, light pink) and black ink are fixed, not theme tokens: a note must stay legible in Ferrari, Blueprint and Atom-Eve alike. The cork itself is one tan in every theme.
+  - First-class states, unchanged: no run yet, empty list, below-threshold, no account data, backend without the optimizer, inventory unavailable.
 - **Export panel:** copy-to-clipboard and download for the negatives list and CSV.
 - **`KeywordTable.vue`:** add intent mix (small stacked bar), per-action conversions / value, keyword rank-lost share, a stock badge. Per-day fields come from the extended `GET /keywords/performance`; window aggregates (intent mix, per-action conversions, stock, waste exposure) come from the new `GET /keywords/summary` (section 13), joined by `keyword_id`; show "no data yet" for NULL, never 0. Extend `KeywordRow` and `aggregateKeywords` in `useCampaignDetail.ts` (the QS handling there shows the pattern: current-state metrics take the latest day, not a sum).
 - **`SearchTermTable.vue`:** intent label + confidence, tooltip with the rule id or "model".

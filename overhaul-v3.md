@@ -137,7 +137,7 @@ FROM keyword_view WHERE segments.date BETWEEN ...
 
 Open API question for phase 2: Pitstop anchors each search term to **one** keyword. The real API can attribute a term to a keyword via `segments.keyword.*`, but a term can surface under more than one. Decide how to collapse that (**VERIFY**).
 
-## 13. API contract (version 3.0, 2026-10-06)
+## 13. API contract (version 3.1, 2026-10-06)
 
 This section is **identical in the backend and frontend files**. It is the only thing the two sides share. If either side needs to change it, change it here first, bump the version, and regenerate both files.
 
@@ -257,8 +257,10 @@ type SuggestionPayload =
 - Query: `days` (default 30), `adGroupId` (optional).
 - 200: `{ items: KeywordSummary[]; coverage: number | null }`
   ```ts
+  type KeywordVerdict = 'winner' | 'wasting' | 'no_stock' | 'testing' | 'needs_data' | 'steady'
   interface KeywordSummary {
     keyword_id: number
+    verdict: KeywordVerdict                              // added in 3.1, see the rules below
     intent_mix: Partial<Record<Intent, number>> | null   // spend-weighted shares summing to ~1; null if no classified terms
     intent_coverage: number | null                       // visible search-term spend / keyword spend, 0-1
     conversions_by_action: { conversion_action_id: number; name: string; tier: ValueTier | null
@@ -269,6 +271,7 @@ type SuggestionPayload =
   }
   ```
 - `coverage` at the top level is the overall visible-search-term spend ÷ total keyword spend.
+- **`verdict` (3.1, additive).** One label per keyword for the cork-board view, decided in code with the engine's own rules, so a label and a suggestion can never disagree. Evaluate in this priority order and take the first match: `no_stock` (the keyword spent money in the window and `stock_count === 0`: clicks cannot become a sale), `testing` (the keyword is in the capped test group of new suggestions), `wasting` (the engine's significance rule says it is wasting money: enough clicks, zero conversions, or the same condition behind an open pause / negative suggestion), `winner` (enough clicks and a cost per conversion at or below the comparison the engine uses; never `winner` while an open pause suggestion exists for it), `needs_data` (below the significance thresholds, so no call can be made), otherwise `steady` (healthy, nothing notable). The backend chooses the exact thresholds and documents them in section 11 of the backend file. The frontend never recomputes a verdict.
 
 `GET /settings` and `PUT /settings` (existing flat key/value object, validated per key in `settings.ts`) gain these keys, all strings: `keyword_optimizer_enabled` (`'true'|'false'`), `keyword_test_budget_share` (`'0'–'1'`), `keyword_min_confidence_p` (`'0'–'1'`, exclusive of 0), `inventory_allowed_spend_share` (`'0'–'1'`), `inventory_lead_to_sale_rate` (`'0'–'1'`). A bad value gets 400 `{detail}` from the existing handler. The connection string is **never** a setting and never appears here.
 
@@ -294,7 +297,7 @@ Each side works one step at a time, stops, and reports before the next. The back
 | Risk | Mitigation |
 |---|---|
 | Claims outrun reality (live path untested) | Say "demo / API-shaped" everywhere; keep the test-access caveat in the case study |
-| Backend and frontend disagree on the API contract | The contract exists in one place only (scope doc section 13, version 3.0); both implementers treat it as binding and report conflicts instead of improvising |
+| Backend and frontend disagree on the API contract | The contract exists in one place only (scope doc section 13, version 3.1); both implementers treat it as binding and report conflicts instead of improvising |
 
 ## 19. Open questions
 

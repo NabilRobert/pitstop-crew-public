@@ -9,7 +9,7 @@
 You are implementing **only the backend** of Overhaul v3. You need **two files**: this one and `overhaul-v3.md` (the scope doc). Read the scope doc first. Its sections 1-5 (goal, decisions, phasing, the current code, API feasibility) and 13 (the API contract) are binding and live only there. Section numbers are global across the files.
 
 - **Do not touch `frontend/`.** Another file covers it. Do not touch `.env` (the `INVENTORY_DB_STRING` line already exists, empty).
-- **The API contract (scope doc section 13, version 3.0) is binding.** Match field names, nullability and status codes exactly. If the codebase or the data makes it impossible, **stop and report it**; do not improvise a different shape.
+- **The API contract (scope doc section 13, version 3.1) is binding.** Match field names, nullability and status codes exactly. If the codebase or the data makes it impossible, **stop and report it**; do not improvise a different shape.
 - **Work one build step at a time** (section 17 below). After each step, report what changed, how you verified it, and anything unexpected, then wait.
 - **Deliver full file contents** for every changed or new file (there is no git access on your side; the owner commits first, then you commit your copy). List the files per step.
 - **Verify, don't assume.** Every **VERIFY** item is unconfirmed. Resolve each before building on it and report the answer. **STARTING DEFAULT** items are tunable, not rules.

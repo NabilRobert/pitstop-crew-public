@@ -6,6 +6,7 @@
 
 import { api } from '../../shared/api/api'
 import type {
+  KeywordPerformanceRow,
   InventorySummary,
   KeywordSummaryResponse,
   Suggestion,
@@ -15,6 +16,7 @@ import type {
 } from '../../shared/api/types'
 import {
   FIXTURE_INVENTORY,
+  FIXTURE_KEYWORD_ROWS,
   FIXTURE_KEYWORD_SUMMARY,
   FIXTURE_SUGGESTIONS,
 } from './fixtures'
@@ -66,6 +68,10 @@ export const keywordOptimizerApi = {
 
   summary: (days = 30, adGroupId?: number): Promise<KeywordSummaryResponse> =>
     USE_FIXTURES ? Promise.resolve(FIXTURE_KEYWORD_SUMMARY) : api.keywordSummary(days, adGroupId),
+
+  /** Per-day keyword rows for the whole account (no ad group filter). */
+  keywordRows: (days = 30): Promise<KeywordPerformanceRow[]> =>
+    USE_FIXTURES ? Promise.resolve(FIXTURE_KEYWORD_ROWS) : api.keywordPerformance(days),
 
   exportNegatives: (format: 'csv' | 'txt', status: SuggestionStatus | 'all' = 'open'): Promise<Blob> => {
     if (!USE_FIXTURES) return api.exportKeywordSuggestions(format, status)

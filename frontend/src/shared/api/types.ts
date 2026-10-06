@@ -428,7 +428,7 @@ export interface EventPayloads {
 // first, then here.
 // ---------------------------------------------------------------------------
 
-export const KEYWORD_OPTIMIZER_CONTRACT_VERSION = '3.0'
+export const KEYWORD_OPTIMIZER_CONTRACT_VERSION = '3.1'
 
 export type Intent = 'buyer' | 'researcher' | 'job_seeker' | 'student' | 'competitor' | 'consumer' | 'unknown'
 export type SuggestionType =
@@ -548,8 +548,14 @@ export interface InventorySummary {
   }[]
 }
 
+/** One label per keyword for the cork-board view, decided in code by the backend (contract 3.1):
+ * no_stock > testing > wasting > winner > needs_data > steady. The frontend never recomputes it. */
+export type KeywordVerdict = 'winner' | 'wasting' | 'no_stock' | 'testing' | 'needs_data' | 'steady'
+
 export interface KeywordSummary {
   keyword_id: number
+  /** Optional only until the backend that ships contract 3.1 is deployed; undefined = no sticker. */
+  verdict?: KeywordVerdict
   /** Spend-weighted shares summing to ~1; null if no classified terms. */
   intent_mix: Partial<Record<Intent, number>> | null
   /** Visible search-term spend / keyword spend, 0-1. */
