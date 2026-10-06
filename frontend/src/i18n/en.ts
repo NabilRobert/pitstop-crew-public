@@ -450,6 +450,14 @@ export default {
     title: 'Campaigns',
     subtitle: 'Last {period} · click a campaign for its keyword board, ad groups and ads',
     loading: 'Loading campaigns…',
+    proposalsWaiting: '1 new campaign proposal is waiting for your decision. | {n} new campaign proposals are waiting for your decision.',
+    reviewProposals: 'Review in the Keyword Optimizer',
+    planned: {
+      title: 'Planned campaigns',
+      hint: 'Approved here, but not in Google Ads yet. Pitstop cannot create campaigns there yet: take the brief to Google Ads (or Google Ads Editor), create it, then mark it created.',
+      summary: '{groups} ad groups · {keywords} keywords · {budget} a day',
+      viewBrief: 'View brief',
+    },
     card: {
       clicks: '{n} clicks',
       keywords: '1 keyword | {n} keywords',

@@ -1,6 +1,6 @@
 import { ref, watch, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
-import type { Campaign } from '../../shared/api/types'
+import type { Campaign, Suggestion } from '../../shared/api/types'
 import type { CampaignRow } from './useDashboard'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 import { campaignRollup, type CampaignRollup } from '../keyword-optimizer/boardModel'
@@ -15,6 +15,8 @@ export function useCampaignsList(days: Ref<number>) {
   const campaignRows = ref<CampaignRow[]>([])
   const rollups = ref<Map<number, CampaignRollup>>(new Map())
   const keywordInfoAvailable = ref(false)
+  // Every suggestion (any status): the Planned lane and the "proposals waiting" notice read from here.
+  const suggestions = ref<Suggestion[]>([])
 
   // A slow answer for an earlier period must not overwrite the latest one.
   let latest = 0
@@ -51,17 +53,19 @@ export function useCampaignsList(days: Ref<number>) {
 
     // Keyword roll-up, best effort and independent of the totals above.
     try {
-      const [rows, summary, suggestions] = await Promise.all([
+      const [rows, summary, suggestionList] = await Promise.all([
         keywordOptimizerApi.keywordRows(DAYS),
         keywordOptimizerApi.summary(DAYS),
         keywordOptimizerApi.suggestions({ status: 'all', limit: 200 }),
       ])
       if (mine !== latest) return
-      rollups.value = campaignRollup(rows, summary.items, suggestions.items)
+      rollups.value = campaignRollup(rows, summary.items, suggestionList.items)
+      suggestions.value = suggestionList.items
       keywordInfoAvailable.value = true
     } catch {
       if (mine === latest) {
         rollups.value = new Map()
+        suggestions.value = []
         keywordInfoAvailable.value = false
       }
     } finally {
@@ -71,5 +75,5 @@ export function useCampaignsList(days: Ref<number>) {
 
   watch(days, load, { immediate: true })
 
-  return { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable }
+  return { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable, suggestions, reload: load }
 }

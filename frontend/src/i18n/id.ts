@@ -450,6 +450,14 @@ export default {
     title: 'Kampanye',
     subtitle: '{period} terakhir · klik kampanye untuk melihat papan kata kunci, grup iklan, dan iklan',
     loading: 'Memuat kampanye…',
+    proposalsWaiting: '1 usulan kampanye baru menunggu keputusan Anda. | {n} usulan kampanye baru menunggu keputusan Anda.',
+    reviewProposals: 'Tinjau di Pengoptimal Kata Kunci',
+    planned: {
+      title: 'Kampanye yang direncanakan',
+      hint: 'Disetujui di sini, tetapi belum ada di Google Ads. Pitstop belum bisa membuat kampanye di sana: bawa brief ke Google Ads (atau Google Ads Editor), buat kampanyenya, lalu tandai sudah dibuat.',
+      summary: '{groups} grup iklan · {keywords} kata kunci · {budget} per hari',
+      viewBrief: 'Lihat brief',
+    },
     card: {
       clicks: '{n} klik',
       keywords: '1 kata kunci | {n} kata kunci',
