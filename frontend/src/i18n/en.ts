@@ -66,7 +66,7 @@ export default {
         wasting: 'People click this keyword but almost none turn into enquiries, and there have been enough clicks to be sure it is not just bad luck.',
         no_stock: "You are paying for clicks on a car you don't have right now, so these clicks can't become a sale.",
         testing: 'A new idea on trial with a small, capped budget. It stays here until it proves itself or gets dropped.',
-        needs_data: "Not enough clicks yet to say whether it works. Leave it alone for now.",
+        needs_data: 'Not enough clicks yet to say whether it works. Any advice on it is a hint, not a finding.',
         steady: 'Doing fine. Nothing to change.',
       },
       headline: {
@@ -82,9 +82,9 @@ export default {
       },
       numbers: {
         nowhere: 'Going nowhere',
-        nowhereHint: 'Last 30 days, spent on keywords that waste money or have no cars to sell',
+        nowhereHint: 'Last 90 days, spent on keywords that waste money or have no cars to sell',
         winners: 'Working well',
-        winnersHint: 'Last 30 days, spent on keywords that bring in enquiries',
+        winnersHint: 'Last 90 days, spent on keywords that bring in enquiries',
         todo: 'To do',
         todoHint: 'Open suggestions',
       },

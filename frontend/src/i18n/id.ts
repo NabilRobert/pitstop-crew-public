@@ -66,7 +66,7 @@ export default {
         wasting: 'Orang mengklik kata kunci ini tetapi hampir tidak ada yang menjadi prospek, dan kliknya sudah cukup banyak untuk memastikan ini bukan sekadar sial.',
         no_stock: 'Anda membayar klik untuk mobil yang saat ini tidak Anda punya, jadi klik ini tidak bisa menjadi penjualan.',
         testing: 'Ide baru yang sedang diuji dengan anggaran kecil yang dibatasi. Tetap di sini sampai terbukti atau dibuang.',
-        needs_data: 'Klik belum cukup untuk menilai apakah berhasil. Biarkan dulu.',
+        needs_data: 'Klik belum cukup untuk menilai apakah berhasil. Saran apa pun di sini hanyalah petunjuk, bukan temuan.',
         steady: 'Baik-baik saja. Tidak ada yang perlu diubah.',
       },
       headline: {
@@ -82,9 +82,9 @@ export default {
       },
       numbers: {
         nowhere: 'Tidak ke mana-mana',
-        nowhereHint: '30 hari terakhir, biaya untuk kata kunci yang boros atau tanpa mobil untuk dijual',
+        nowhereHint: '90 hari terakhir, biaya untuk kata kunci yang boros atau tanpa mobil untuk dijual',
         winners: 'Berjalan baik',
-        winnersHint: '30 hari terakhir, biaya untuk kata kunci yang mendatangkan prospek',
+        winnersHint: '90 hari terakhir, biaya untuk kata kunci yang mendatangkan prospek',
         todo: 'Perlu dikerjakan',
         todoHint: 'Saran yang masih terbuka',
       },

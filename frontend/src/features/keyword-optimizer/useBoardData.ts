@@ -2,7 +2,9 @@ import { ref, onMounted } from 'vue'
 import { keywordOptimizerApi } from './keywordOptimizerApi'
 import type { KeywordPerformanceRow, KeywordSummary } from '../../shared/api/types'
 
-const DAYS = 30
+// 90 days, the same window the backend uses to decide each keyword's verdict (contract 3.1), so the
+// money behind "going nowhere" and "working well" is measured over the period the verdict was judged on.
+const DAYS = 90
 
 /** The per-keyword numbers behind the board. Independent of the suggestions call: if either fails the list
  * view and the rest of the page still work, and the board says its numbers are unavailable. */
