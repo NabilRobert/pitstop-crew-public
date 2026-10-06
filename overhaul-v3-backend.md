@@ -9,7 +9,7 @@
 You are implementing **only the backend** of Overhaul v3. You need **two files**: this one and `overhaul-v3.md` (the scope doc). Read the scope doc first. Its sections 1-5 (goal, decisions, phasing, the current code, API feasibility) and 13 (the API contract) are binding and live only there. Section numbers are global across the files.
 
 - **Do not touch `frontend/`.** Another file covers it. Do not touch `.env` (the `INVENTORY_DB_STRING` line already exists, empty).
-- **The API contract (scope doc section 13, version 3.2) is binding.** Match field names, nullability and status codes exactly. If the codebase or the data makes it impossible, **stop and report it**; do not improvise a different shape.
+- **The API contract (scope doc section 13, version 3.3) is binding.** Match field names, nullability and status codes exactly. If the codebase or the data makes it impossible, **stop and report it**; do not improvise a different shape.
 - **Work one build step at a time** (section 17 below). After each step, report what changed, how you verified it, and anything unexpected, then wait.
 - **Deliver full file contents** for every changed or new file (there is no git access on your side; the owner commits first, then you commit your copy). List the files per step.
 - **Verify, don't assume.** Every **VERIFY** item is unconfirmed. Resolve each before building on it and report the answer. **STARTING DEFAULT** items are tunable, not rules.
@@ -302,6 +302,36 @@ Run inside the weekly job *before* the engine (section 8 and 10). Both are cache
 - Trace spans: use existing kinds (`context`, `agent`, `decision`, `error`); no new `trace_events.kind` needed.
 - Optional: extend the dead-man's-switch to the keyword run with a longer stale window (it is weekly, not daily; the existing `STALE_HOURS = 30` is wrong for it).
 - **Cost:** estimate, not measured: one batched intent job (small, mostly one-off), one rank/explain call, and one to three critic calls. Expect a low-tens-of-cents weekly run; measure the first real runs in the Run Inspector and confirm it stays well inside `monthly_cost_cap_usd` (default $20, existing usage about $4–7/month).
+
+### 11.7 Campaign proposals: the `new_campaign` suggestion (contract 3.3)
+
+The owner wants the AI to look at the inventory and propose **whole new campaigns**, which, when approved, appear as **Planned** campaigns with a paste-ready brief (and, much later, can be created in Google Ads, see scope doc 3.1; that write path is **not** part of this task). Code decides; the model only explains, exactly as for every other suggestion. All thresholds are **STARTING DEFAULTS**, settings-backed where it makes sense, and tuned with the scoring harness.
+
+**Four bases** (`payload.basis`):
+- `uncovered_stock`: a make/model group (from `keyword_vehicle_parse` plus `vehicles`) with at least 2 available units and **no enabled keyword or campaign targeting it**. This is the clearest case: cars you can sell that nothing advertises.
+- `aging_stock`: units listed 60 or more days, or in the top quartile of margin, where coverage is thin (few keywords, or only needs_data / steady verdicts). Overlaps are reported, not hidden.
+- `proven_cluster`: the existing spin-out logic (4+ keywords on one make/model, cost per conversion well under the ad group's). Keep emitting `spin_out_campaign` for it **or** fold it into `new_campaign`, but never emit both for the same cluster. Say in your report which you chose.
+- `theme`: a price band or body type built from the stock mix, e.g. "family cars under Rp 200 juta": at least 4 units across at least 2 models in the band, with ad groups per model.
+
+**Proposal contents** (all computed in code, from `NewCampaignPayload` in the contract):
+- **Name:** deterministic from the make/model or theme ("Search — Toyota Innova Zenix"), made unique against existing campaign names and against open or planned proposals. The name matters: it is how a planned campaign is later recognised in the real data.
+- **Ad groups:** one per model (theme campaigns: per model within the band), each with `vehicle_ids`. **Keywords** are generated from stock attributes (make, model, year, "bekas" / "second", plus the dealer's city or suburbs the existing campaigns already use), each with a match type and a `source`. Cap at about 12 keywords per campaign and 4 ad groups; never propose a keyword that already exists in an enabled state or is a negative.
+- **Starter negatives:** the standard junk list plus the account's existing campaign-level negatives, so the new campaign does not begin by leaking spend.
+- **Budget:** `target_cpa_micros` from the section 10 formula (margin x allowed spend share x lead-to-sale rate). `daily_micros = clamp((allowed_spend_share x total margin of the units) / 30, floor, ceiling)`: the most the stock can justify, spread over a month, bounded by a settings floor and ceiling so a big pile of expensive cars cannot propose an absurd budget. Always include `assumptions`: `lead_to_sale_rate` is a guess, so any proposal that leans on it is `basis: 'prior'` (shown as unverified) and `confidence` is capped at `medium`.
+- **Overlaps:** existing campaigns that already target any of the proposal's keywords or models (`shared_keywords` counted), so the UI can warn about cannibalising.
+- **`stock`:** units, average days listed, average margin, total value, and the inventory snapshot date.
+
+**Guards:** at most 3 `new_campaign` proposals per run, ranked by (units x average margin); skip one whose fingerprint already has an open or planned proposal, or was dismissed recently; never propose from an inventory snapshot the source reported as unavailable (say so instead).
+
+**Lifecycle:** `open -> planned` (the owner approved it), `planned -> open` (undo), `planned -> dismissed`, `planned -> applied` (the owner created it by hand). After each data sync, if a campaign whose name matches a `planned` proposal (case-insensitive, trimmed) now exists, set `linked_campaign`, move the suggestion to `applied`, and stop proposing it.
+
+**Brief endpoint:** `GET /keyword-suggestions/:id/brief?format=csv|txt` for `new_campaign` only (scope doc section 13). The columns for Google Ads Editor must be **verified against a real Editor export**, like the negatives export. Neutralize every field against formula injection.
+
+**LLM step:** Kai ranks and explains the proposals in plain language ("You have 3 Innova Zenix units, listed 67 days, nothing advertises them"); the validator rejects unknown ids and any number not present in the proposal's own fields. Ciri grades as usual.
+
+**Demo data and harness:** plant ground truth for each basis (at least: 3 models in stock with no coverage, an aging group, a price-band theme, plus a **decoy**: stock that is already well covered and must NOT produce a proposal) and score them like every other plant.
+
+**Tests:** each basis fires; the decoy does not; name uniqueness; budget clamp (floor, ceiling, zero margin); keyword cap and de-duplication against existing keywords and negatives; overlap counting; dedupe and per-run cap; `planned -> applied` auto-link on a matching campaign name (case and whitespace insensitive); brief CSV neutralization; `planned` rejected for any other suggestion type.
 
 ## 12. Scoring harness and tests
 
