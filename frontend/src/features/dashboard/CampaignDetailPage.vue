@@ -1,19 +1,28 @@
 <script setup lang="ts">
-import { toRef } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatMicrosAsIDR, formatNumber, formatPercent } from '../../shared/utils/format'
 import KeywordTable from './KeywordTable.vue'
 import SearchTermTable from './SearchTermTable.vue'
 import AdPerformanceTable from './AdPerformanceTable.vue'
 import ImpressionShareChart from './ImpressionShareChart.vue'
+import MetricCard from './MetricCard.vue'
+import PeriodSelector from './PeriodSelector.vue'
 import AssetGroupBarChart from './AssetGroupBarChart.vue'
 import { useCampaignDetail } from './useCampaignDetail'
+import { PERIOD_OPTIONS } from './useDashboard'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
 })
 
 const { t } = useI18n()
+
+// Same period buttons as the dashboard (1W ... 5Y), same 3-month default.
+const days = ref(90)
+const periodSubtitleKey = computed(
+  () => PERIOD_OPTIONS.find((opt) => opt.days === days.value)?.subtitleKey ?? PERIOD_OPTIONS[2].subtitleKey
+)
 
 const {
   loading,
@@ -25,7 +34,16 @@ const {
   adRows,
   impressionShareRows,
   assetGroupRows,
-} = useCampaignDetail(toRef(props, 'id'))
+  totals,
+} = useCampaignDetail(toRef(props, 'id'), days)
+
+// Only the very first load replaces the page with a spinner. Changing the period refreshes in place
+// (dimmed) so the page doesn't jump back to the top or lose what you were looking at.
+const hasLoaded = ref(false)
+watch(loading, (isLoading) => {
+  if (!isLoading) hasLoaded.value = true
+})
+const costPerEnquiry = computed(() => (totals.value.conversions > 0 ? totals.value.cost_micros / totals.value.conversions : null))
 </script>
 
 <template>
@@ -34,7 +52,7 @@ const {
       {{ t('campaignDetail.back') }}
     </router-link>
 
-    <div v-if="loading" class="py-24 text-center text-ink-faint">{{ t('campaignDetail.loading') }}</div>
+    <div v-if="loading && !hasLoaded" class="py-24 text-center text-ink-faint">{{ t('campaignDetail.loading') }}</div>
 
     <div
       v-else-if="error"
@@ -43,9 +61,21 @@ const {
       {{ t('campaignDetail.couldNotLoad', { error }) }}
     </div>
 
-    <template v-else>
-      <h1 class="mb-1 mt-4 font-display text-2xl font-bold text-ink">{{ campaignName }}</h1>
-      <p class="mb-8 font-mono text-xs text-ink-faint">{{ t('campaignDetail.subtitle') }}</p>
+    <div v-else :class="{ 'opacity-60 transition-opacity': loading }" :aria-busy="loading">
+      <div class="mb-6 mt-4 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="mb-1 font-display text-2xl font-bold text-ink">{{ campaignName }}</h1>
+          <p class="font-mono text-xs text-ink-faint">{{ t('campaignDetail.subtitle', { period: t(periodSubtitleKey) }) }}</p>
+        </div>
+        <PeriodSelector v-model="days" />
+      </div>
+
+      <div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <MetricCard :label="t('campaignDetail.scoreboard.spend')" :value="formatMicrosAsIDR(totals.cost_micros)" accent="rosso" />
+        <MetricCard :label="t('campaignDetail.scoreboard.clicks')" :value="formatNumber(totals.clicks)" />
+        <MetricCard :label="t('campaignDetail.scoreboard.enquiries')" :value="totals.conversions.toFixed(1)" accent="giallo" />
+        <MetricCard :label="t('campaignDetail.scoreboard.costPer')" :value="costPerEnquiry === null ? '—' : formatMicrosAsIDR(costPerEnquiry)" />
+      </div>
 
       <div v-if="impressionShareRows.length" class="mb-8">
         <ImpressionShareChart :rows="impressionShareRows" />
@@ -112,6 +142,6 @@ const {
         {{ t('campaignDetail.adsHeading') }}
       </h2>
       <AdPerformanceTable :rows="adRows" />
-    </template>
+    </div>
   </main>
 </template>

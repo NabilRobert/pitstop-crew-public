@@ -17,6 +17,7 @@ import RecommendationsList from './RecommendationsList.vue'
 import ChangeEventTimeline from './ChangeEventTimeline.vue'
 import { useReportDrawer } from '../../shared/report/useReportDrawer'
 import { useDashboard, PERIOD_OPTIONS } from './useDashboard'
+import PeriodSelector from './PeriodSelector.vue'
 
 const { t } = useI18n()
 const {
@@ -68,18 +69,7 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
             {{ t('dashboard.subtitle', { period: t(activePeriodSubtitleKey), lastRun: lastRunLabel }) }}
           </p>
         </div>
-        <div class="flex gap-1 rounded-lg border border-border bg-surface p-1">
-          <button
-            v-for="opt in PERIOD_OPTIONS"
-            :key="opt.days"
-            type="button"
-            class="rounded px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide transition-colors"
-            :class="days === opt.days ? 'bg-rosso text-bianco' : 'text-ink-faint hover:text-ink'"
-            @click="days = opt.days"
-          >
-            {{ t(opt.labelKey) }}
-          </button>
-        </div>
+        <PeriodSelector v-model="days" />
       </div>
 
       <div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">

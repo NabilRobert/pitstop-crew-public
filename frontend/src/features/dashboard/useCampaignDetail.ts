@@ -14,10 +14,6 @@ import type {
 } from '../../shared/api/types'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 
-// Fixed window for this first drill-down slice — the campaign detail page
-// doesn't have its own period selector yet (a reasonable follow-up, not
-// required for v2 Stage 1). Matches the dashboard's own default.
-const DAYS = 90
 
 interface Totals {
   impressions: number
@@ -265,7 +261,7 @@ function aggregateAssetGroups(rows: AssetGroupPerformanceRow[]): AssetGroupRow[]
     .sort((a, b) => b.cost_micros - a.cost_micros)
 }
 
-export function useCampaignDetail(campaignId: Ref<string | number>) {
+export function useCampaignDetail(campaignId: Ref<string | number>, days: Ref<number>) {
   const loading = ref(true)
   const error = ref<string | null>(null)
   const campaignName = ref('')
@@ -273,6 +269,11 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
   const keywordRows = ref<KeywordRow[]>([])
   const searchTermRows = ref<SearchTermRow[]>([])
   const adRows = ref<AdRow[]>([])
+  // Raw per-day keyword rows and the window summary (verdicts), for the cork board on this page.
+  const keywordPerfRows = ref<KeywordPerformanceRow[]>([])
+  const keywordSummaries = ref<KeywordSummary[]>([])
+  // This campaign's own totals over the period (from the campaign-level rows, not the keywords').
+  const totals = ref({ impressions: 0, clicks: 0, cost_micros: 0, conversions: 0 })
   // v2 Stage 4 — impression share + optimization score. Rides the
   // existing /performance endpoint (campaign_performance columns, not a
   // new table), filtered client-side to this campaign by name — the
@@ -287,9 +288,14 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
   // naturally empty (and hides the section) for every non-PMax campaign.
   const assetGroupRows = ref<AssetGroupRow[]>([])
 
+  // A slow response for an earlier period must not overwrite a faster one for the latest period.
+  let latestLoad = 0
+
   async function load() {
+    const mine = ++latestLoad
     loading.value = true
     error.value = null
+    const DAYS = days.value
     try {
       const id = Number(campaignId.value)
       const [campaigns, adGroupPerf, perf, assetGroupPerf] = await Promise.all([
@@ -298,7 +304,13 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
         api.performance(DAYS),
         api.assetGroupPerformance(DAYS),
       ])
+      if (mine !== latestLoad) return
       campaignName.value = campaigns.find((c) => c.id === id)?.name ?? ''
+      const own = perf.filter((r) => r.campaign === campaignName.value)
+      totals.value = own.reduce(
+        (acc, r) => ({ impressions: acc.impressions + r.impressions, clicks: acc.clicks + r.clicks, cost_micros: acc.cost_micros + r.cost_micros, conversions: acc.conversions + r.conversions }),
+        { impressions: 0, clicks: 0, cost_micros: 0, conversions: 0 }
+      )
       adGroupRows.value = aggregateAdGroups(adGroupPerf)
       impressionShareRows.value = perf
         .filter((r) => r.campaign === campaignName.value && r.search_impression_share !== null)
@@ -310,13 +322,17 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
         Promise.all(adGroupIds.map((agId) => api.keywordPerformance(DAYS, agId))),
         Promise.all(adGroupIds.map((agId) => api.adPerformance(DAYS, agId))),
       ])
+      if (mine !== latestLoad) return
       const keywordPerf = keywordPerfByAdGroup.flat()
+      keywordPerfRows.value = keywordPerf
       keywordRows.value = aggregateKeywords(keywordPerf)
       // Window aggregates that cannot be derived from per-day rows (intent mix, per-action
       // conversions, stock). Best-effort: the table must keep working if this call fails or the
       // backend predates it, so a failure just leaves every summary cell on "no data yet".
       try {
         const summary = await keywordOptimizerApi.summary(DAYS)
+        if (mine !== latestLoad) return
+        keywordSummaries.value = summary.items
         const byId = new Map(summary.items.map((i) => [i.keyword_id, i]))
         keywordRows.value = keywordRows.value.map((k) => ({ ...k, summary: byId.get(k.keyword_id) ?? null }))
       } catch {
@@ -326,15 +342,16 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
 
       const keywordIds = [...new Set(keywordPerf.map((r) => r.keyword_id))]
       const searchTermPerfByKeyword = await Promise.all(keywordIds.map((kwId) => api.searchTermPerformance(DAYS, kwId)))
+      if (mine !== latestLoad) return
       searchTermRows.value = aggregateSearchTerms(searchTermPerfByKeyword.flat())
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e)
+      if (mine === latestLoad) error.value = e instanceof Error ? e.message : String(e)
     } finally {
-      loading.value = false
+      if (mine === latestLoad) loading.value = false
     }
   }
 
-  watch(campaignId, load, { immediate: true })
+  watch([campaignId, days], load, { immediate: true })
 
   return {
     loading,
@@ -346,5 +363,8 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
     adRows,
     impressionShareRows,
     assetGroupRows,
+    keywordPerfRows,
+    keywordSummaries,
+    totals,
   }
 }
