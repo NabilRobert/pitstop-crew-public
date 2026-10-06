@@ -67,19 +67,19 @@ const PALETTES: Record<ThemeName, Palette> = {
   },
   // Atom-Eve is also a light theme: dark-on-light grid/ticks like Blueprint.
   // rosso/giallo/verde are the BRAND FILL colors (cyan/yellow/pink); they are
-  // 2.22/1.27/2.12:1 on white, fine for bars and areas but too faint for a
+  // 2.22/1.27/2.12:1 on white (worse on the pink ground), fine for bars and areas but too faint for a
   // thin line. Every chart that uses them today is a bar chart; a future line
-  // chart in this theme needs a darker stroke instead (e.g. #00718f), not
-  // these. Flags reuse Blueprint's light-safe shades.
+  // chart in this theme needs a darker stroke instead (e.g. #005b75), not
+  // these. Flags are Atom-Eve's own darker shades, measured against its pink ground.
   'atom-eve': {
     rosso: '#00bcf0',
     giallo: '#ffe556',
     verde: '#ff91af',
-    inkFaint: '#6d6065',
-    gridColor: 'rgba(0, 0, 0, 0.08)',
-    flagGood: '#067a3f',
-    flagCaution: '#9a6300',
-    flagCritical: '#c81e21',
+    inkFaint: '#5a4a50',
+    gridColor: 'rgba(0, 0, 0, 0.14)',
+    flagGood: '#046a37',
+    flagCaution: '#7f5000',
+    flagCritical: '#b01719',
   },
 }
 

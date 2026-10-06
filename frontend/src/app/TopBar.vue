@@ -17,7 +17,7 @@ const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visib
 
 <template>
   <header class="border-b border-border bg-surface/80 backdrop-blur">
-    <div class="h-[3px] w-full bg-gradient-to-r from-verde via-stripe-mid to-rosso" />
+    <div class="top-stripe h-[3px] w-full bg-gradient-to-r from-verde via-stripe-mid to-rosso" />
     <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
       <div class="flex items-center gap-3">
         <router-link to="/" class="block">

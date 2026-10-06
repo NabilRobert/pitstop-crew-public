@@ -95,43 +95,70 @@ Without these, light mode would render cyan text at 2.22:1 and yellow links at 1
 
 ```css
 :root[data-theme='atom-eve'] {
-  --color-bg: #fff8f8;            /* page: a faint light-pink tint */
+  --color-bg: #f7d0d0;
   --color-surface: #ffffff;
-  --color-surface-raised: #fceded;
-  --color-border: #f4c2c2;        /* light pink; a divider, 1.57:1 vs surface */
-  --color-border-strong: #cf8d95; /* 2.66:1 vs surface; use where a border is the only cue */
+  --color-surface-raised: #cdeffc;
+  --color-border: #000000;
+  --color-border-strong: #000000;
 
-  --color-ink: #140f11;           /* 18.98 on surface */
-  --color-ink-soft: #52454a;      /* 9.10 on surface */
-  --color-ink-faint: #6d6065;     /* 5.98 on surface, 5.26 on raised */
+  --color-ink: #000000;
+  --color-ink-soft: #3d2f34;
+  --color-ink-faint: #5a4a50;
 
-  --color-rosso: #00bcf0;         /* cyan fill */
-  --color-rosso-dark: #0095be;    /* hover/pressed fill; ink on it 6.04 */
-  --color-rosso-soft: #00bcf026;
-  --color-giallo: #ffe556;        /* yellow fill / highlight */
-  --color-giallo-soft: #ffe55659;
-  --color-verde: #ff91af;         /* pink fill */
-  --color-verde-soft: #ff91af40;
-  --color-bianco: #140f11;        /* text ON an accent fill: dark, not white (white on cyan is 2.22:1) */
-  --color-accent-ink: #00718f;    /* cyan as text: 5.59 on surface, 4.92 on raised */
-  --color-link: #00718f;
-  --glow-1: #00bcf01f;
-  --glow-2: #ff91af1a;
+  --color-rosso: #00bcf0;
+  --color-rosso-dark: #00a8dc;
+  --color-rosso-soft: #00bcf033;
+  --color-giallo: #ffe556;
+  --color-giallo-soft: #ffe55680;
+  --color-verde: #ff91af;
+  --color-verde-soft: #ff91af59;
+  --color-bianco: #000000;
+  --color-accent-ink: #005b75;
+  --color-link: #005b75;
+  --color-stripe-mid: #ffe556;
+  --glow-1: #00bcf040;
+  --glow-2: #ffe55659;
 
-  --color-flag-good: #067a3f;     /* same light-safe set Blueprint uses */
-  --color-flag-good-soft: #067a3f1f;
-  --color-flag-caution: #9a6300;
-  --color-flag-caution-soft: #9a63001f;
-  --color-flag-critical: #c81e21;
-  --color-flag-critical-soft: #c81e211f;
+  /* Hard-edged, Marathon-style panels: sharp corners (pills stay round). */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+
+  --color-flag-good: #046a37;
+  --color-flag-good-soft: #046a3726;
+  --color-flag-caution: #7f5000;
+  --color-flag-caution-soft: #7f500026;
+  --color-flag-critical: #b01719;
+  --color-flag-critical-soft: #b0171926;
+}
+
+/* Atom-Eve's flat neon blocks: black text on solid brand fills (ink on yellow
+   is 16.6:1, on cyan 9.5:1, on pink 9.9:1). Scoped to this theme only. */
+:root[data-theme='atom-eve'] main h1 {
+  display: inline-block;
+  background: var(--color-giallo);
+  color: var(--color-ink);
+  padding: 0.1em 0.45em;
+  border: 1px solid var(--color-border);
+}
+:root[data-theme='atom-eve'] thead {
+  background: var(--color-giallo);
+}
+:root[data-theme='atom-eve'] thead th {
+  color: var(--color-ink);
+}
+:root[data-theme='atom-eve'] .top-stripe {
+  height: 8px;
 }
 ```
 
+**Bold pass (2026-10-06), after the owner pointed at Marathon's UI as the reference:** flat neon blocks with black text, hard edges and heavy black outlines, kept light (not dark). Concretely: a saturated pink ground (`#f7d0d0`), white cards with **black 1px borders**, **sharp corners** (radius tokens set to 0; pills stay round), **yellow page-title blocks and yellow table headers** with black text, an 8px top color stripe, cyan-tinted raised surfaces (`#cdeffc`), pure-black ink, stronger accent washes and glows, and a darker `accent-ink`/`link` (`#005b75`) and flag set. Contrast was re-measured against the pink ground, the hardest background: ink 14.9, ink-soft 9.0, ink-faint 5.9, accent-ink 5.4, flags 4.8 to 5.0; black on the brand fills is 9.5 (cyan), 16.6 (yellow) and 9.9 (pink). The extra rules (`main h1`, `thead`, `.top-stripe`) are scoped to `data-theme='atom-eve'`, so the other themes are untouched. Left alone on purpose: drop shadows (Marathon's panels are flat) and a black top bar (its children use dark-on-light text tokens and would all need inverting).
+
 Notes:
-- **`--color-bianco` must be dark here**, because it is the text color on every `bg-rosso` button and active pill, and on `::selection`. White on cyan fails.
-- A **pink-ink** for text is not needed in v1, because pink has no text usage (`verde` is chart-only). If a future component needs pink as text, use `#c2275c` (5.62 on surface).
-- `ink-faint` was tuned: the first candidate `#7d6f75` fell to 4.20 on the raised surface, below 4.5.
-- The light pink page tint (`#fff8f8`) and raised surface (`#fceded`) are derived tints, so the palette reads pink-warm instead of plain white.
+- **`--color-bianco` is black here**, because it is the text color on every `bg-rosso` button and active pill, and on `::selection`. White on cyan fails.
+- A **pink-ink** for text is not needed yet, because pink has no text usage (`verde` is chart-only). If a component needs pink as text, use `#c2275c` (5.62 on white).
+- Borders are now black, so dividers are strong by design. Table row separators use `border-border/60`, which stays lighter.
 
 ### 15.5 Risks specific to this palette
 - **`border-rosso` (15 usages).** Cyan on white is 2.22:1, below the 3:1 expected of a UI component. Where the border is the *only* sign of a selected or active state, switch that usage to `border-accent-ink` or add a fill change. Review each of the 15 rather than changing them blindly.
