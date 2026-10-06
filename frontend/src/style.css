@@ -191,6 +191,13 @@ body {
   background-attachment: fixed;
 }
 
+/* Horizontally scrollable rows (the top-bar nav, chart tab groups): a thin,
+   theme-colored scrollbar instead of the browser's chunky default. */
+.nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-display);
   color: var(--color-ink);

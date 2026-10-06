@@ -18,7 +18,7 @@ const idByName = computed(() => new Map((props.campaigns ?? []).map((c) => [c.na
 
 <template>
   <div class="overflow-x-auto rounded-lg border border-border bg-surface">
-    <table class="w-full border-collapse text-left">
+    <table class="w-full min-w-max border-collapse text-left">
       <thead>
         <tr class="border-b border-border">
           <th

@@ -165,6 +165,7 @@ export default {
     readOnly: 'Read-only',
     readOnlyTooltip: 'Demo account: view only, no changes or model calls',
     liveData: 'Live Data',
+    navLabel: 'Main navigation',
     switchLanguage: 'Switch language',
     switchTheme: 'Switch color theme',
     themeFerrari: 'Ferrari — the original red/black/yellow racing palette',

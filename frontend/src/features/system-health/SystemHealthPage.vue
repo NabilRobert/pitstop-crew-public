@@ -47,7 +47,7 @@ const { health, loading, error, switchStatus } = useSystemHealth()
 
       <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{{ t('systemHealth.recentRuns') }}</h2>
       <div class="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table class="w-full border-collapse text-left">
+        <table class="w-full min-w-max border-collapse text-left">
           <thead>
             <tr class="border-b border-border">
               <th class="px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">{{ t('systemHealth.columns.type') }}</th>

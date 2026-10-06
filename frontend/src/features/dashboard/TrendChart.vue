@@ -15,14 +15,14 @@ const { metric, byDate, chartData, chartOptions } = useTrendChart(toRef(props, '
 
 <template>
   <div class="rounded-lg border border-border bg-surface p-5">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
       <h2 class="font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{{ t('trendChart.title') }}</h2>
-      <div class="flex gap-1">
+      <div class="nav-scroll flex max-w-full gap-1 overflow-x-auto">
         <button
           v-for="m in METRICS"
           :key="m.key"
           type="button"
-          class="rounded px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide"
+          class="shrink-0 whitespace-nowrap rounded-sm px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide"
           :class="metric === m.key ? 'bg-rosso text-bianco' : 'text-ink-faint hover:text-ink'"
           @click="metric = m.key"
         >

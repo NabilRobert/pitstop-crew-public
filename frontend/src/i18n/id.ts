@@ -165,6 +165,7 @@ export default {
     readOnly: 'Hanya baca',
     readOnlyTooltip: 'Akun demo: hanya lihat, tanpa perubahan atau panggilan model',
     liveData: 'Data Live',
+    navLabel: 'Navigasi utama',
     switchLanguage: 'Ganti bahasa',
     switchTheme: 'Ganti tema warna',
     themeFerrari: 'Ferrari — palet balap merah/hitam/kuning yang asli',

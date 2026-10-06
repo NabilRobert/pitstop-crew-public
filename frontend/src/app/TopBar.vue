@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { theme, setTheme, THEMES, type ThemeName } from '../shared/composables/theme.js'
 import { useTopBar } from './useTopBar.js'
 
@@ -13,12 +15,28 @@ const THEME_LABELS: Record<ThemeName, { title: string; short: string }> = {
   'atom-eve': { title: 'topBar.themeAtomEve', short: 'topBar.themeAtomEveShort' },
 }
 const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visibleNavLinks } = useTopBar()
+
+// The nav is one horizontally scrollable row (it no longer wraps labels onto two lines),
+// so on a narrow screen the active link can sit off-screen: scroll it into view on navigation.
+const route = useRoute()
+const navEl = ref<HTMLElement | null>(null)
+async function revealActiveLink() {
+  await nextTick()
+  const active = navEl.value?.querySelector<HTMLElement>('[aria-current="page"]')
+  if (!active || !navEl.value) return
+  const box = navEl.value.getBoundingClientRect()
+  const item = active.getBoundingClientRect()
+  if (item.left < box.left) navEl.value.scrollLeft += item.left - box.left - 12
+  else if (item.right > box.right) navEl.value.scrollLeft += item.right - box.right + 12
+}
+onMounted(revealActiveLink)
+watch(() => route.path, revealActiveLink)
 </script>
 
 <template>
   <header class="border-b border-border bg-surface/80 backdrop-blur">
     <div class="top-stripe h-[3px] w-full bg-gradient-to-r from-verde via-stripe-mid to-rosso" />
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-3 px-6 py-4">
       <div class="flex items-center gap-3">
         <router-link to="/" class="block">
           <img src="/logo.png" alt="Pitstop" class="h-10 w-10 rounded-full" />
@@ -28,27 +46,8 @@ const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visib
         </span>
       </div>
 
-      <nav class="flex items-center gap-5">
-        <router-link
-          v-for="link in visibleNavLinks"
-          :key="link.to"
-          :to="link.to"
-          class="font-mono text-[11px] font-bold uppercase tracking-wide transition-colors hover:text-ink"
-          :class="isActive(link.to) ? 'text-accent-ink' : 'text-ink-soft'"
-        >
-          {{ t(link.labelKey) }}
-        </router-link>
-        <router-link
-          v-if="dataSource === 'demo' && !isDemo"
-          to="/time-machine"
-          class="font-mono text-[11px] font-bold uppercase tracking-wide transition-colors hover:text-ink"
-          :class="isActive('/time-machine') ? 'text-accent-ink' : 'text-ink-soft'"
-        >
-          {{ t('nav.timeMachine') }}
-        </router-link>
-      </nav>
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <div
           class="flex items-center overflow-hidden rounded-full border border-border"
           role="group"
@@ -119,6 +118,31 @@ const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visib
           {{ t('topBar.logout') }}
         </button>
       </div>
+      <nav
+        ref="navEl"
+        class="nav-scroll -mx-1 flex w-full items-center gap-5 overflow-x-auto px-1 pb-1"
+        :aria-label="t('topBar.navLabel')"
+      >
+        <router-link
+          v-for="link in visibleNavLinks"
+          :key="link.to"
+          :to="link.to"
+          class="shrink-0 whitespace-nowrap font-mono text-[11px] font-bold uppercase tracking-wide transition-colors hover:text-ink"
+          :class="isActive(link.to) ? 'text-accent-ink' : 'text-ink-soft'"
+          :aria-current="isActive(link.to) ? 'page' : undefined"
+        >
+          {{ t(link.labelKey) }}
+        </router-link>
+        <router-link
+          v-if="dataSource === 'demo' && !isDemo"
+          to="/time-machine"
+          class="shrink-0 whitespace-nowrap font-mono text-[11px] font-bold uppercase tracking-wide transition-colors hover:text-ink"
+          :class="isActive('/time-machine') ? 'text-accent-ink' : 'text-ink-soft'"
+          :aria-current="isActive('/time-machine') ? 'page' : undefined"
+        >
+          {{ t('nav.timeMachine') }}
+        </router-link>
+      </nav>
     </div>
   </header>
 </template>

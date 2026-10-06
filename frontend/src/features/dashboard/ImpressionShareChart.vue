@@ -26,7 +26,7 @@ const latestOptimizationScore = computed(() => {
 
 <template>
   <div class="rounded-lg border border-border bg-surface p-5">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
       <h2 class="font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
         {{ t('impressionShareChart.title') }}
       </h2>
