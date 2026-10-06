@@ -109,3 +109,25 @@ export function formatIdr(idr: number | null | undefined): string {
   if (idr === null || idr === undefined) return '—'
   return formatMicrosAsIDR(idr * 1_000_000)
 }
+
+/** The one plain sentence printed on a note's tape strip ("what to do"). Short on purpose:
+ * the full evidence is one click away in the detail panel. */
+export function tapeText(s: Suggestion, t: Translate): string {
+  const p = s.payload
+  switch (p.kind) {
+    case 'negative_keyword':
+      return t('keywordOptimizer.board.tape.negative_keyword', { text: p.text })
+    case 'promote_search_term':
+      return t('keywordOptimizer.board.tape.promote_search_term', { text: p.text })
+    case 'change_match_type':
+      return t('keywordOptimizer.board.tape.change_match_type', { to: t(`keywordOptimizer.match.${p.to}`) })
+    case 'pause_keyword':
+      return t('keywordOptimizer.board.tape.pause_keyword')
+    case 'spin_out_campaign':
+      return t('keywordOptimizer.board.tape.spin_out_campaign', { name: p.suggested_name })
+    case 'new_keyword':
+      return t('keywordOptimizer.board.tape.new_keyword', { text: p.text })
+    case 'raise_bid_candidate':
+      return t('keywordOptimizer.board.tape.raise_bid_candidate')
+  }
+}

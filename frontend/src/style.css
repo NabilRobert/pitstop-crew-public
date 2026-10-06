@@ -191,6 +191,18 @@ body {
   background-attachment: fixed;
 }
 
+/* The keyword optimizer's cork board: one tan in every theme, because a board is a physical
+   object. The dots are decorative only. */
+.cork-board {
+  background-color: #c99a62;
+  background-image:
+    radial-gradient(rgba(0, 0, 0, 0.14) 1px, transparent 1.6px),
+    radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1.6px);
+  background-size: 7px 7px, 11px 11px;
+  background-position: 0 0, 3px 4px;
+  border: 2px solid #000;
+}
+
 /* Horizontally scrollable rows (the top-bar nav, chart tab groups): a thin,
    theme-colored scrollbar instead of the browser's chunky default. */
 .nav-scroll {

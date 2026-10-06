@@ -6,7 +6,8 @@ import { api, ApiError } from '../../shared/api/api'
 
 export type StatusFilter = Exclude<SuggestionStatus, 'superseded'> | 'all'
 
-// One page of the list is enough for this view; the contract caps `limit` at 200.
+// The contract caps `limit` at 200. Everything is loaded once (all statuses), so the board, its
+// Done / Not now bins and the list view all read the same data and never disagree.
 const PAGE_LIMIT = 200
 
 export function useKeywordOptimizer() {
@@ -16,6 +17,7 @@ export function useKeywordOptimizer() {
   // 404 on the list endpoint means the backend is reachable but does not have the keyword
   // optimizer yet (an older deploy) - a different problem from "couldn't reach the backend".
   const backendMissing = ref(false)
+  // List-view filters (local; the board has its own).
   const statusFilter = ref<StatusFilter>('open')
   const typeFilter = ref<SuggestionType | 'all'>('all')
   const busyIds = ref<Set<number>>(new Set())
@@ -28,7 +30,7 @@ export function useKeywordOptimizer() {
     error.value = null
     backendMissing.value = false
     try {
-      data.value = await keywordOptimizerApi.suggestions({ status: statusFilter.value, limit: PAGE_LIMIT })
+      data.value = await keywordOptimizerApi.suggestions({ status: 'all', limit: PAGE_LIMIT })
     } catch (e) {
       backendMissing.value = e instanceof ApiError && e.status === 404
       error.value = e instanceof Error ? e.message : String(e)
@@ -37,22 +39,26 @@ export function useKeywordOptimizer() {
     }
   }
 
-  async function setFilter(value: StatusFilter) {
-    statusFilter.value = value
-    await load()
-  }
+  /** Every suggestion loaded, any status. */
+  const items = computed<Suggestion[]>(() => data.value?.items ?? [])
+  const openCount = computed(() => items.value.filter((s) => s.status === 'open').length)
+  const appliedCount = computed(() => items.value.filter((s) => s.status === 'applied').length)
+  const dismissedCount = computed(() => items.value.filter((s) => s.status === 'dismissed').length)
 
-  /** Counts per type over everything loaded for the current status filter. */
+  const inStatus = computed(() =>
+    statusFilter.value === 'all' ? items.value : items.value.filter((s) => s.status === statusFilter.value)
+  )
+
+  /** Counts per type over the current status filter (list view chips). */
   const typeCounts = computed(() => {
     const counts = Object.fromEntries(SUGGESTION_TYPES.map((t) => [t, 0])) as Record<SuggestionType, number>
-    for (const s of data.value?.items ?? []) counts[s.type]++
+    for (const s of inStatus.value) counts[s.type]++
     return counts
   })
 
-  const visibleItems = computed<Suggestion[]>(() => {
-    const items = data.value?.items ?? []
-    return typeFilter.value === 'all' ? items : items.filter((s) => s.type === typeFilter.value)
-  })
+  const visibleItems = computed<Suggestion[]>(() =>
+    typeFilter.value === 'all' ? inStatus.value : inStatus.value.filter((s) => s.type === typeFilter.value)
+  )
 
   const truncated = computed(() => !!data.value && data.value.total > data.value.items.length)
 
@@ -62,8 +68,7 @@ export function useKeywordOptimizer() {
     actionError.value = null
     try {
       await keywordOptimizerApi.setStatus(id, status)
-      // The row no longer belongs to the current status filter (unless 'all'): reload so
-      // the list, counts and totals all come from the server, not from local guesses.
+      // Reload so the board, bins, list and counts all come from the server, not from local guesses.
       await load()
     } catch (e) {
       actionError.value = e instanceof Error ? e.message : String(e)
@@ -92,7 +97,8 @@ export function useKeywordOptimizer() {
   onMounted(load)
 
   return {
-    data, loading, error, backendMissing, statusFilter, typeFilter, setFilter, typeCounts, visibleItems,
-    truncated, busyIds, actionError, runMessage, runStarting, setStatus, runNow, reload: load,
+    data, loading, error, backendMissing, items, openCount, appliedCount, dismissedCount,
+    statusFilter, typeFilter, typeCounts, visibleItems, truncated, busyIds, actionError,
+    runMessage, runStarting, setStatus, runNow, reload: load,
   }
 }
