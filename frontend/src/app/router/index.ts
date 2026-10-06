@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import DashboardPage from '../../features/dashboard/DashboardPage.vue'
 import CampaignsListPage from '../../features/dashboard/CampaignsListPage.vue'
 import CampaignDetailPage from '../../features/dashboard/CampaignDetailPage.vue'
+import KeywordOptimizerPage from '../../features/keyword-optimizer/KeywordOptimizerPage.vue'
 import ReportsListPage from '../../features/reports/ReportsListPage.vue'
 import ReportDetailPage from '../../features/reports/ReportDetailPage.vue'
 import SystemHealthPage from '../../features/system-health/SystemHealthPage.vue'
@@ -19,6 +20,7 @@ const routes = [
   { path: '/', name: 'dashboard', component: DashboardPage },
   { path: '/campaigns', name: 'campaigns', component: CampaignsListPage },
   { path: '/campaigns/:id', name: 'campaign-detail', component: CampaignDetailPage, props: true },
+  { path: '/keyword-optimizer', name: 'keyword-optimizer', component: KeywordOptimizerPage },
   { path: '/reports', name: 'reports', component: ReportsListPage },
   { path: '/reports/:period/:id', name: 'report-detail', component: ReportDetailPage, props: true },
   { path: '/system-health', name: 'system-health', component: SystemHealthPage },
