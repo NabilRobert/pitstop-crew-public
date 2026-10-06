@@ -9,7 +9,10 @@ import type {
   AdStrength,
   PerformanceRow,
   AssetGroupPerformanceRow,
+  Intent,
+  KeywordSummary,
 } from '../../shared/api/types'
+import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 
 // Fixed window for this first drill-down slice — the campaign detail page
 // doesn't have its own period selector yet (a reasonable follow-up, not
@@ -39,6 +42,14 @@ export interface KeywordRow extends Totals {
   expected_ctr: QsBucket | null
   ad_relevance: QsBucket | null
   landing_page_experience: QsBucket | null
+  // Overhaul v3 (contract 3.0). null / undefined from an older backend both mean
+  // "no data yet" and must render as "—", never as 0.
+  search_impression_share: number | null
+  rank_lost_share: number | null
+  bid_micros: number | null
+  value_micros: number | null
+  /** Window aggregates from GET /keywords/summary; null if that call failed or the keyword is absent. */
+  summary: KeywordSummary | null
 }
 
 export interface SearchTermRow extends Totals {
@@ -48,6 +59,11 @@ export interface SearchTermRow extends Totals {
   keyword: string
   ctr: number
   wasted: boolean
+  // Overhaul v3 (contract 3.0); null when the backend has not classified the term yet.
+  intent: Intent | null
+  intent_confidence: number | null
+  intent_method: 'rule' | 'llm' | null
+  value_micros: number | null
 }
 
 export interface AdRow extends Totals {
@@ -97,7 +113,7 @@ function aggregateAdGroups(rows: AdGroupPerformanceRow[]): AdGroupRow[] {
  * recent day only — QS is a current-state diagnostic, summing/averaging
  * it across days wouldn't mean anything. */
 function aggregateKeywords(rows: KeywordPerformanceRow[]): KeywordRow[] {
-  const byKeyword = new Map<number, KeywordRow & { latestDate: string }>()
+  const byKeyword = new Map<number, KeywordRow & { latestDate: string; shareDate: string }>()
   for (const r of rows) {
     const existing = byKeyword.get(r.keyword_id)
     if (!existing) {
@@ -115,10 +131,25 @@ function aggregateKeywords(rows: KeywordPerformanceRow[]): KeywordRow[] {
         expected_ctr: r.expected_ctr,
         ad_relevance: r.ad_relevance,
         landing_page_experience: r.landing_page_experience,
+        search_impression_share: r.search_impression_share ?? null,
+        rank_lost_share: r.search_rank_lost_impression_share ?? null,
+        bid_micros: r.cpc_bid_micros ?? null,
+        value_micros: r.conversions_value_micros ?? null,
+        summary: null,
         latestDate: r.date,
+        shareDate: r.search_impression_share != null || r.search_rank_lost_impression_share != null ? r.date : '',
       })
       continue
     }
+    if (r.conversions_value_micros != null) existing.value_micros = (existing.value_micros ?? 0) + r.conversions_value_micros
+    // Impression share is a current-state number like QS, but a day with no impressions has none:
+    // take the latest day that actually HAS one, rather than showing "no data" over older real data.
+    if ((r.search_impression_share != null || r.search_rank_lost_impression_share != null) && r.date >= existing.shareDate) {
+      existing.shareDate = r.date
+      existing.search_impression_share = r.search_impression_share ?? null
+      existing.rank_lost_share = r.search_rank_lost_impression_share ?? null
+    }
+    if (r.date >= existing.latestDate) existing.bid_micros = r.cpc_bid_micros ?? null
     existing.impressions += r.impressions
     existing.clicks += r.clicks
     existing.cost_micros += r.cost_micros
@@ -132,7 +163,7 @@ function aggregateKeywords(rows: KeywordPerformanceRow[]): KeywordRow[] {
     }
   }
   return Array.from(byKeyword.values())
-    .map(({ latestDate: _latestDate, ...k }) => ({ ...k, ctr: k.impressions ? (k.clicks / k.impressions) * 100 : 0 }))
+    .map(({ latestDate: _latestDate, shareDate: _shareDate, ...k }) => ({ ...k, ctr: k.impressions ? (k.clicks / k.impressions) * 100 : 0 }))
     .sort((a, b) => b.cost_micros - a.cost_micros)
 }
 
@@ -155,9 +186,14 @@ function aggregateSearchTerms(rows: SearchTermPerformanceRow[]): SearchTermRow[]
         conversions: 0,
         ctr: 0,
         wasted: false,
+        intent: r.intent ?? null,
+        intent_confidence: r.intent_confidence ?? null,
+        intent_method: r.intent_method ?? null,
+        value_micros: null,
       })
     }
     const agg = byTerm.get(r.search_term_id)!
+    if (r.conversions_value_micros != null) agg.value_micros = (agg.value_micros ?? 0) + r.conversions_value_micros
     agg.impressions += r.impressions
     agg.clicks += r.clicks
     agg.cost_micros += r.cost_micros
@@ -276,6 +312,16 @@ export function useCampaignDetail(campaignId: Ref<string | number>) {
       ])
       const keywordPerf = keywordPerfByAdGroup.flat()
       keywordRows.value = aggregateKeywords(keywordPerf)
+      // Window aggregates that cannot be derived from per-day rows (intent mix, per-action
+      // conversions, stock). Best-effort: the table must keep working if this call fails or the
+      // backend predates it, so a failure just leaves every summary cell on "no data yet".
+      try {
+        const summary = await keywordOptimizerApi.summary(DAYS)
+        const byId = new Map(summary.items.map((i) => [i.keyword_id, i]))
+        keywordRows.value = keywordRows.value.map((k) => ({ ...k, summary: byId.get(k.keyword_id) ?? null }))
+      } catch {
+        // intentionally ignored, see above
+      }
       adRows.value = aggregateAds(adPerfByAdGroup.flat())
 
       const keywordIds = [...new Set(keywordPerf.map((r) => r.keyword_id))]

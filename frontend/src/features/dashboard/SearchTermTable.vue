@@ -34,6 +34,15 @@ const { t } = useI18n()
           <th class="px-4 py-3 text-right font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">
             {{ t('searchTermTable.columns.conversions') }}
           </th>
+          <th class="px-4 py-3 text-right font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">
+            {{ t('searchTermTable.columns.value') }}
+          </th>
+          <th
+            class="cursor-help px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint"
+            :title="t('searchTermTable.columnHelp.intent')"
+          >
+            {{ t('searchTermTable.columns.intent') }}
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -62,9 +71,19 @@ const { t } = useI18n()
           <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ formatPercent(row.ctr) }}</td>
           <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ formatMicrosAsIDR(row.cost_micros) }}</td>
           <td class="px-4 py-3 text-right tabular-nums text-ink">{{ row.conversions.toFixed(1) }}</td>
+          <td class="px-4 py-3 text-right tabular-nums text-ink-soft">
+            <template v-if="row.value_micros">{{ formatMicrosAsIDR(row.value_micros) }}</template>
+            <span v-else class="text-ink-faint" :title="t('searchTermTable.noDataYet')">—</span>
+          </td>
+          <td class="px-4 py-3" :title="row.intent_method ? t('searchTermTable.intentMethod', { method: t(`searchTermTable.methods.${row.intent_method}`), pct: Math.round((row.intent_confidence ?? 0) * 100) }) : ''">
+            <span v-if="row.intent === null" class="text-ink-faint" :title="t('searchTermTable.noDataYet')">—</span>
+            <span v-else class="font-mono text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+              {{ t(`keywordOptimizer.intent.${row.intent}`) }}
+            </span>
+          </td>
         </tr>
         <tr v-if="!rows.length">
-          <td colspan="7" class="px-4 py-8 text-center text-ink-faint">{{ t('searchTermTable.noData') }}</td>
+          <td colspan="9" class="px-4 py-8 text-center text-ink-faint">{{ t('searchTermTable.noData') }}</td>
         </tr>
       </tbody>
     </table>
