@@ -105,67 +105,69 @@
   --color-flag-critical-soft: #c81e211f;
 }
 
-/* "Atom-Eve" — a DARK, loud theme from the owner's palette (cyan #00BCF0,
-   yellow #FFE556, pink #FF91AF, light pink #F4C2C2, black), after the
-   reference of Marathon's UI: a black ground with flat neon blocks and black
-   text on them, hard edges and bright outlines. The brand colors are bright
-   enough to be text on black (cyan 9.5:1, yellow 16.6, pink 9.9, light pink
-   13.3), so unlike a light theme they can be used as text, borders, fills and
-   glows all at once. Black is the text color ON a neon fill (--color-bianco),
-   and light pink is the soft ink and the outline color. Status flags are
-   brighter and hue-shifted (green/orange/red) so they stay distinct from the
-   brand fills. See overhaul-v3-frontend.md section 15 for every measured pair.
-   Not the default theme. */
+/* "Atom-Eve" — a bold POP-ART theme from the owner's palette (cyan #00BCF0,
+   yellow #FFE556, pink #FF91AF, light pink #F4C2C2, black), modeled on a
+   Dribbble pop-art storefront the owner chose: one huge flat saturated ground
+   (here a bold pink, deeper than the palette's #FF91AF), pure black type and
+   outlines, black solid primary buttons with white text, and small hits of
+   yellow and cyan. Cards are the palette's light pink on that ground, inputs
+   and hover rows are yellow, table headers are cyan, page titles are yellow
+   blocks. Black is the text color almost everywhere (7.1:1 on the ground,
+   13.3 on light pink, 16.6 on yellow, 9.5 on cyan); white only appears on the
+   black primary fill (21:1). The pink ground is a saturated colour, not a
+   white page, but it is a bright theme, so status text uses dark shades.
+   See overhaul-v3-frontend.md section 15. Not the default theme. */
 :root[data-theme='atom-eve'] {
-  --color-bg: #000000;
-  --color-surface: #0b0b0d;
-  --color-surface-raised: #16161a;
-  --color-border: #f4c2c2;
-  --color-border-strong: #ff91af;
+  --color-bg: #ff6aa0;
+  --color-surface: #f4c2c2;
+  --color-surface-raised: #ffe556;
+  --color-border: #000000;
+  --color-border-strong: #000000;
 
-  --color-ink: #ffffff;
-  --color-ink-soft: #f4c2c2;
-  --color-ink-faint: #a88e94;
+  --color-ink: #000000;
+  --color-ink-soft: #2e0a18;
+  --color-ink-faint: #4a0f26;
 
-  --color-rosso: #00bcf0;
-  --color-rosso-dark: #33cdf5;
-  --color-rosso-soft: #00bcf033;
+  /* "rosso" is the PRIMARY fill: solid black with white text, as in the example. */
+  --color-rosso: #000000;
+  --color-rosso-dark: #26262b;
+  --color-rosso-soft: #00000014;
   --color-giallo: #ffe556;
-  --color-giallo-soft: #ffe55640;
-  --color-verde: #ff91af;
-  --color-verde-soft: #ff91af40;
-  --color-bianco: #000000;
-  --color-accent-ink: #00bcf0;
-  --color-link: #ffe556;
+  --color-giallo-soft: #ffe55680;
+  --color-verde: #00bcf0;
+  --color-verde-soft: #00bcf033;
+  --color-bianco: #ffffff;
+  --color-accent-ink: #000000;
+  --color-link: #000000;
   --color-stripe-mid: #ffe556;
-  --color-wave-cursor: #ffffff;
-  --glow-1: #00bcf040;
-  --glow-2: #ff91af33;
+  --color-wave-cursor: #000000;
+  --glow-1: #ffffff2e;
+  --glow-2: #ffe55640;
 
-  /* Hard-edged, Marathon-style panels: sharp corners (pills stay round). */
+  /* Hard-edged panels: sharp corners (pills stay round). */
   --radius-sm: 0;
   --radius-md: 0;
   --radius-lg: 0;
   --radius-xl: 0;
 
-  --color-flag-good: #2ee07f;
-  --color-flag-good-soft: #2ee07f26;
-  --color-flag-caution: #ff9f1a;
-  --color-flag-caution-soft: #ff9f1a26;
-  --color-flag-critical: #ff3b3b;
-  --color-flag-critical-soft: #ff3b3b26;
+  --color-flag-good: #023a1c;
+  --color-flag-good-soft: #023a1c26;
+  --color-flag-caution: #4f2c00;
+  --color-flag-caution-soft: #4f2c0026;
+  --color-flag-critical: #6e000d;
+  --color-flag-critical-soft: #6e000d26;
 }
 
-/* Flat neon blocks: black text on solid brand fills (black on cyan is 9.5:1,
-   on yellow 16.6:1, on pink 9.9:1). Scoped to this theme only. */
+/* Flat colour blocks with black type, as in the reference. Scoped to this theme. */
 :root[data-theme='atom-eve'] main h1 {
   display: inline-block;
   background: var(--color-giallo);
   color: #000000;
   padding: 0.1em 0.45em;
+  border: 2px solid #000000;
 }
 :root[data-theme='atom-eve'] thead {
-  background: var(--color-rosso);
+  background: #00bcf0;
 }
 :root[data-theme='atom-eve'] thead th {
   color: #000000;

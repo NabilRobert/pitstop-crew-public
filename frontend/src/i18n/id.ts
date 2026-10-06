@@ -171,7 +171,7 @@ export default {
     themeFerrariShort: 'FER',
     themeBlueprint: 'Blueprint — palet alternatif hitam/putih/biru/abu-abu',
     themeBlueprintShort: 'BP',
-    themeAtomEve: 'Atom-Eve — cyan, kuning, dan pink yang tegas di atas hitam',
+    themeAtomEve: 'Atom-Eve — pink pop-art yang tegas dengan hitam, kuning, dan cyan',
     themeAtomEveShort: 'AE',
     logout: 'Keluar',
   },

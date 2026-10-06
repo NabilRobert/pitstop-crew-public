@@ -10,7 +10,7 @@ export type ThemeName = (typeof THEMES)[number]
 // consoleOpen and i18n/index.js's locale. 'ferrari' is the original brand
 // palette and the default; 'blueprint' is the black/white/blue/gray
 // alternative proposed via https://www.color-hex.com/color-palette/86164;
-// 'atom-eve' is a bold dark theme built from cyan/yellow/pink/light pink/black.
+// 'atom-eve' is a bold pop-art theme: a saturated pink ground with black type, built from the cyan/yellow/pink/light pink/black palette.
 // See style.css for what each theme actually overrides. Status-flag colors
 // (good/caution/critical) are deliberately NOT part of this switch: they
 // encode meaning (approved vs flagged, grade severity), not brand, so they

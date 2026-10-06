@@ -65,18 +65,19 @@ const PALETTES: Record<ThemeName, Palette> = {
     flagCaution: '#9a6300',
     flagCritical: '#c81e21',
   },
-  // Atom-Eve is dark with bright brand colors, so bars AND lines read well on
-  // it (cyan 9.5:1, yellow 16.6:1, pink 9.9:1 on black). Flags are its own
-  // brighter green/orange/red so they stay distinct from the brand fills.
+  // Atom-Eve charts sit on its light-pink cards, where the brand cyan and yellow
+  // fills are nearly invisible (1.4:1 and 1.2:1), so the three series use black
+  // and darker companions of the palette: black, a deep cyan (2.9:1) and a deep
+  // pink (4.5:1). Flags are the theme's own dark shades.
   'atom-eve': {
-    rosso: '#00bcf0',
-    giallo: '#ffe556',
-    verde: '#ff91af',
-    inkFaint: '#a88e94',
-    gridColor: 'rgba(244, 194, 194, 0.12)',
-    flagGood: '#2ee07f',
-    flagCaution: '#ff9f1a',
-    flagCritical: '#ff3b3b',
+    rosso: '#000000',
+    giallo: '#007fa8',
+    verde: '#b0004f',
+    inkFaint: '#4a0f26',
+    gridColor: 'rgba(0, 0, 0, 0.15)',
+    flagGood: '#023a1c',
+    flagCaution: '#4f2c00',
+    flagCritical: '#6e000d',
   },
 }
 
