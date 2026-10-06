@@ -428,7 +428,7 @@ export interface EventPayloads {
 // first, then here.
 // ---------------------------------------------------------------------------
 
-export const KEYWORD_OPTIMIZER_CONTRACT_VERSION = '3.1'
+export const KEYWORD_OPTIMIZER_CONTRACT_VERSION = '3.2'
 
 export type Intent = 'buyer' | 'researcher' | 'job_seeker' | 'student' | 'competitor' | 'consumer' | 'unknown'
 export type SuggestionType =
@@ -554,6 +554,13 @@ export type KeywordVerdict = 'winner' | 'wasting' | 'no_stock' | 'testing' | 'ne
 
 export interface KeywordSummary {
   keyword_id: number
+  // Contract 3.2 (additive): identity and status, so a campaign's page can list its CURRENT keywords,
+  // including paused ones and ones with no activity. Optional until the backend that ships 3.2 is deployed.
+  text?: string
+  match_type?: KeywordMatchType
+  campaign?: { id: number; name: string }
+  ad_group?: { id: number; name: string }
+  status?: 'enabled' | 'paused'
   /** Optional only until the backend that ships contract 3.1 is deployed; undefined = no sticker. */
   verdict?: KeywordVerdict
   /** Spend-weighted shares summing to ~1; null if no classified terms. */

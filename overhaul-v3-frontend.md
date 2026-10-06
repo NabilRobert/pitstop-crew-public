@@ -8,7 +8,7 @@
 
 You are implementing **only the frontend** of Overhaul v3. You need **two files**: this one and `overhaul-v3.md` (the scope doc). Read the scope doc first. Its sections 1-3 (goal, decisions, phasing) and 13 (the API contract) are binding and live only there. Section numbers are global across the files.
 
-- **Do not touch `backend/`.** Another file covers it. The backend is built in parallel; you work against the **API contract (scope doc section 13, version 3.1)**. Use fixtures that match it exactly until the real endpoints exist. If the contract seems wrong or incomplete, **stop and report it**; do not invent fields.
+- **Do not touch `backend/`.** Another file covers it. The backend is built in parallel; you work against the **API contract (scope doc section 13, version 3.2)**. Use fixtures that match it exactly until the real endpoints exist. If the contract seems wrong or incomplete, **stop and report it**; do not invent fields.
 - **Work one build step at a time** (section 17 below). After each step, report what changed and how you verified it, then wait.
 - **Ferrari and Blueprint must look exactly as before.** Compare screenshots before and after.
 - Run `npm run typecheck` and `npm run build` in `frontend/` before reporting a step done. There is no frontend test runner in this repo, so verify in the browser, in both languages (EN and ID), as the demo (read-only) account and as the owner.
