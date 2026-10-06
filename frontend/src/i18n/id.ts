@@ -34,6 +34,8 @@ export default {
     themeFerrariShort: 'FER',
     themeBlueprint: 'Blueprint — palet alternatif hitam/putih/biru/abu-abu',
     themeBlueprintShort: 'BP',
+    themeAtomEve: 'Atom-Eve — palet terang cyan/kuning/pink',
+    themeAtomEveShort: 'AE',
     logout: 'Keluar',
   },
   consolePanel: {

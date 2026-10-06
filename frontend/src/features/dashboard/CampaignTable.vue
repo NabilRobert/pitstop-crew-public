@@ -69,7 +69,7 @@ const idByName = computed(() => new Map((props.campaigns ?? []).map((c) => [c.na
             <router-link
               v-if="idByName.get(row.campaign)"
               :to="`/campaigns/${idByName.get(row.campaign)}`"
-              class="hover:text-rosso hover:underline"
+              class="hover:text-accent-ink hover:underline"
             >
               {{ row.campaign }}
             </router-link>

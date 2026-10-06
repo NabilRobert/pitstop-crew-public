@@ -69,7 +69,7 @@ const { health, loading, error, switchStatus } = useSystemHealth()
                 <td class="px-4 py-3 text-right">
                   <router-link
                     :to="`/runs/${run.id}`"
-                    class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-rosso"
+                    class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-accent-ink"
                   >
                     {{ t('systemHealth.inspect') }} →
                   </router-link>

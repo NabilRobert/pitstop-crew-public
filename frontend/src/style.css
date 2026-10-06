@@ -30,6 +30,14 @@
   --color-verde: #039b4e;
   --color-verde-soft: #039b4e26;
   --color-bianco: #ffffff;
+  /* Accent used AS TEXT or as a state border, and link text. Separate from
+     rosso/giallo because a theme's brand fill color is not always legible as
+     text (Atom-Eve's cyan is 2.22:1 on white). Equal to today's value in
+     Ferrari and Blueprint, so those render exactly as before. */
+  --color-accent-ink: #e42528;
+  --color-link: #f8e823;
+  /* Middle stop of the top-bar gradient strip. */
+  --color-stripe-mid: #ffffff;
   --glow-1: #e4252814;
   --glow-2: #f8e82310;
 
@@ -83,8 +91,53 @@
   --color-verde: #8a8d92;
   --color-verde-soft: #8a8d9224;
   --color-bianco: #ffffff;
+  --color-accent-ink: #0090d1;
+  --color-link: #16181c;
+  --color-stripe-mid: #ffffff;
   --glow-1: #0090d10d;
   --glow-2: #00000008;
+
+  --color-flag-good: #067a3f;
+  --color-flag-good-soft: #067a3f1f;
+  --color-flag-caution: #9a6300;
+  --color-flag-caution-soft: #9a63001f;
+  --color-flag-critical: #c81e21;
+  --color-flag-critical-soft: #c81e211f;
+}
+
+/* "Atom-Eve" — a light theme from the owner's palette (cyan #00BCF0, yellow
+   #FFE556, pink #FF91AF, light pink #F4C2C2, black). Those four colors are
+   too light to be text on a light page (cyan 2.22:1, pink 2.12:1, yellow
+   1.27:1 on white), so they are used as FILLS here, with dark text on top
+   (--color-bianco is dark in this theme), and the darker cyan below is used
+   wherever an accent has to be text or a state border (--color-accent-ink,
+   --color-link). Neutrals are derived tints, not new brand colors. Status
+   flags reuse Blueprint's light-safe shades. See overhaul-v3-frontend.md
+   section 15 for the measured contrast of every pair. Not the default theme. */
+:root[data-theme='atom-eve'] {
+  --color-bg: #fff8f8;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fceded;
+  --color-border: #f4c2c2;
+  --color-border-strong: #cf8d95;
+
+  --color-ink: #140f11;
+  --color-ink-soft: #52454a;
+  --color-ink-faint: #6d6065;
+
+  --color-rosso: #00bcf0;
+  --color-rosso-dark: #0095be;
+  --color-rosso-soft: #00bcf026;
+  --color-giallo: #ffe556;
+  --color-giallo-soft: #ffe55659;
+  --color-verde: #ff91af;
+  --color-verde-soft: #ff91af40;
+  --color-bianco: #140f11;
+  --color-accent-ink: #00718f;
+  --color-link: #00718f;
+  --color-stripe-mid: #ffe556;
+  --glow-1: #00bcf01f;
+  --glow-2: #ff91af1a;
 
   --color-flag-good: #067a3f;
   --color-flag-good-soft: #067a3f1f;
@@ -149,7 +202,7 @@ h1, h2, h3, h4 {
 .agent-prose ol { list-style-type: decimal; }
 .agent-prose code { font-family: var(--font-mono); font-size: 0.9em; background: var(--color-surface-raised); padding: 0.1em 0.35em; border-radius: 3px; }
 .agent-prose hr { border: none; border-top: 1px solid var(--color-border); margin: 1.2em 0; }
-.agent-prose a { color: var(--color-giallo); text-decoration: underline; }
+.agent-prose a { color: var(--color-link); text-decoration: underline; }
 
 /* GFM tables (marked parses these automatically) — agents return these
    for genuinely tabular answers, e.g. Aska breaking down a metric per

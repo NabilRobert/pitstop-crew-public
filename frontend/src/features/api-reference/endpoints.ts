@@ -93,7 +93,7 @@ export const TIME_MACHINE_ENDPOINTS: EndpointDef[] = [
 
 export const METHOD_COLOR: Record<EndpointDef['method'], string> = {
   GET: 'text-flag-good',
-  POST: 'text-rosso',
+  POST: 'text-accent-ink',
   PUT: 'text-flag-caution',
   DELETE: 'text-flag-critical',
 }

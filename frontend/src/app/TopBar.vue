@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { theme, setTheme } from '../shared/composables/theme.js'
+import { theme, setTheme, THEMES, type ThemeName } from '../shared/composables/theme.js'
 import { useTopBar } from './useTopBar.js'
 
 const { t } = useI18n()
+
+// i18n keys per theme — one entry per name in THEMES (the Record type makes a
+// missing entry a compile error when a theme is added).
+const THEME_LABELS: Record<ThemeName, { title: string; short: string }> = {
+  ferrari: { title: 'topBar.themeFerrari', short: 'topBar.themeFerrariShort' },
+  blueprint: { title: 'topBar.themeBlueprint', short: 'topBar.themeBlueprintShort' },
+  'atom-eve': { title: 'topBar.themeAtomEve', short: 'topBar.themeAtomEveShort' },
+}
 const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visibleNavLinks } = useTopBar()
 </script>
 
 <template>
   <header class="border-b border-border bg-surface/80 backdrop-blur">
-    <div class="h-[3px] w-full bg-gradient-to-r from-verde via-bianco to-rosso" />
+    <div class="h-[3px] w-full bg-gradient-to-r from-verde via-stripe-mid to-rosso" />
     <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
       <div class="flex items-center gap-3">
         <router-link to="/" class="block">
@@ -26,7 +34,7 @@ const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visib
           :key="link.to"
           :to="link.to"
           class="font-mono text-[11px] font-bold uppercase tracking-wide transition-colors hover:text-ink"
-          :class="isActive(link.to) ? 'text-rosso' : 'text-ink-soft'"
+          :class="isActive(link.to) ? 'text-accent-ink' : 'text-ink-soft'"
         >
           {{ t(link.labelKey) }}
         </router-link>
@@ -34,7 +42,7 @@ const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visib
           v-if="dataSource === 'demo' && !isDemo"
           to="/time-machine"
           class="font-mono text-[11px] font-bold uppercase tracking-wide transition-colors hover:text-ink"
-          :class="isActive('/time-machine') ? 'text-rosso' : 'text-ink-soft'"
+          :class="isActive('/time-machine') ? 'text-accent-ink' : 'text-ink-soft'"
         >
           {{ t('nav.timeMachine') }}
         </router-link>
@@ -69,22 +77,16 @@ const { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visib
           :aria-label="t('topBar.switchTheme')"
         >
           <button
+            v-for="name in THEMES"
+            :key="name"
             type="button"
             class="px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wide transition-colors"
-            :class="theme === 'ferrari' ? 'bg-rosso text-bianco' : 'text-ink-soft hover:text-ink'"
-            :title="t('topBar.themeFerrari')"
-            @click="setTheme('ferrari')"
+            :class="theme === name ? 'bg-rosso text-bianco' : 'text-ink-soft hover:text-ink'"
+            :title="t(THEME_LABELS[name].title)"
+            :aria-pressed="theme === name"
+            @click="setTheme(name)"
           >
-            {{ t('topBar.themeFerrariShort') }}
-          </button>
-          <button
-            type="button"
-            class="px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wide transition-colors"
-            :class="theme === 'blueprint' ? 'bg-rosso text-bianco' : 'text-ink-soft hover:text-ink'"
-            :title="t('topBar.themeBlueprint')"
-            @click="setTheme('blueprint')"
-          >
-            {{ t('topBar.themeBlueprintShort') }}
+            {{ t(THEME_LABELS[name].short) }}
           </button>
         </div>
         <span

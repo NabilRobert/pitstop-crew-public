@@ -17,7 +17,7 @@ const { t } = useI18n()
         v-for="s in SECTIONS"
         :key="s.id"
         :href="`#${s.id}`"
-        class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-rosso"
+        class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-accent-ink"
       >
         {{ t(s.labelKey) }}
       </a>
@@ -41,7 +41,7 @@ const { t } = useI18n()
         </ul>
         <p>
           {{ t('engineeringNotes.qualityControl.linkBefore') }}
-          <router-link to="/learning" class="text-giallo underline">{{ t('engineeringNotes.qualityControl.linkText') }}</router-link>
+          <router-link to="/learning" class="text-link underline">{{ t('engineeringNotes.qualityControl.linkText') }}</router-link>
           {{ t('engineeringNotes.qualityControl.linkAfter') }}
         </p>
       </section>
@@ -51,7 +51,7 @@ const { t } = useI18n()
         <p>{{ t('engineeringNotes.observability.p1') }}</p>
         <p>
           {{ t('engineeringNotes.observability.linkBefore') }}
-          <router-link to="/system-health" class="text-giallo underline">{{ t('engineeringNotes.observability.linkText') }}</router-link>
+          <router-link to="/system-health" class="text-link underline">{{ t('engineeringNotes.observability.linkText') }}</router-link>
           {{ t('engineeringNotes.observability.linkAfter') }}
         </p>
       </section>

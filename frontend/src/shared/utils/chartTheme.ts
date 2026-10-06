@@ -1,7 +1,7 @@
 // Shared Chart.js setup for the dashboard's charts. Chart.js needs raw
 // color strings, not CSS custom properties, so the brand-accent entries
-// here mirror style.css's --color-rosso/-giallo/-verde by hand, for BOTH
-// themes — keep the two in sync if either palette changes.
+// here mirror style.css's --color-rosso/-giallo/-verde by hand, for ALL
+// themes — keep them in sync if any palette changes.
 import { computed, type ComputedRef } from 'vue'
 import {
   Chart as ChartJS,
@@ -60,6 +60,22 @@ const PALETTES: Record<ThemeName, Palette> = {
     giallo: '#16181c',
     verde: '#8a8d92',
     inkFaint: '#7d818a',
+    gridColor: 'rgba(0, 0, 0, 0.08)',
+    flagGood: '#067a3f',
+    flagCaution: '#9a6300',
+    flagCritical: '#c81e21',
+  },
+  // Atom-Eve is also a light theme: dark-on-light grid/ticks like Blueprint.
+  // rosso/giallo/verde are the BRAND FILL colors (cyan/yellow/pink); they are
+  // 2.22/1.27/2.12:1 on white, fine for bars and areas but too faint for a
+  // thin line. Every chart that uses them today is a bar chart; a future line
+  // chart in this theme needs a darker stroke instead (e.g. #00718f), not
+  // these. Flags reuse Blueprint's light-safe shades.
+  'atom-eve': {
+    rosso: '#00bcf0',
+    giallo: '#ffe556',
+    verde: '#ff91af',
+    inkFaint: '#6d6065',
     gridColor: 'rgba(0, 0, 0, 0.08)',
     flagGood: '#067a3f',
     flagCaution: '#9a6300',

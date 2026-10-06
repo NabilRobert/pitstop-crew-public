@@ -86,7 +86,7 @@ const stateLabelKey = {
     <aside class="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-border bg-surface px-3 py-4">
       <button
         type="button"
-        class="mb-3 flex items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft hover:border-rosso hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+        class="mb-3 flex items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft hover:border-accent-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
         :disabled="state !== 'idle'"
         @click="startNewConversation"
       >
@@ -98,7 +98,7 @@ const stateLabelKey = {
         v-model="conversationSearch"
         type="text"
         :placeholder="t('aska.searchConversations')"
-        class="mb-2 w-full rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+        class="mb-2 w-full rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
       />
 
       <select
@@ -124,7 +124,7 @@ const stateLabelKey = {
             :ref="(el) => { editInputRefs[c.id] = el as HTMLInputElement | null }"
             v-model="editingTitle"
             type="text"
-            class="block w-full rounded-md border border-rosso bg-surface-raised px-2 py-2 text-sm text-ink focus:outline-none"
+            class="block w-full rounded-md border border-accent-ink bg-surface-raised px-2 py-2 text-sm text-ink focus:outline-none"
             @keydown.enter="commitEditing"
             @keydown.escape="cancelEditing"
             @blur="commitEditing"
@@ -149,7 +149,7 @@ const stateLabelKey = {
               <span
                 role="button"
                 :aria-label="t('aska.deleteConversation')"
-                class="rounded p-1 text-ink-faint hover:text-rosso"
+                class="rounded p-1 text-ink-faint hover:text-accent-ink"
                 @click.stop="confirmDelete(c.id, c.title)"
               >
                 🗑
@@ -201,7 +201,7 @@ const stateLabelKey = {
           v-model="question"
           type="text"
           :placeholder="t('aska.placeholder')"
-          class="flex-1 rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+          class="flex-1 rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
           :disabled="state !== 'idle'"
         />
         <button
@@ -225,13 +225,13 @@ const stateLabelKey = {
             v-for="entry in displayMessages"
             :key="entry.id"
             class="space-y-1.5 rounded-lg border p-4 transition-colors"
-            :class="entry.id === voiceFallbackMessageId ? 'border-rosso bg-surface-raised' : 'border-border bg-surface'"
+            :class="entry.id === voiceFallbackMessageId ? 'border-accent-ink bg-surface-raised' : 'border-border bg-surface'"
           >
             <div class="flex items-baseline gap-2">
               <span class="font-medium text-ink">{{ entry.question }}</span>
               <span class="font-mono text-[10px] text-ink-faint">{{ formatDate(entry.created_at) }}</span>
             </div>
-            <p v-if="entry.id === voiceFallbackMessageId" class="text-xs italic text-rosso">
+            <p v-if="entry.id === voiceFallbackMessageId" class="text-xs italic text-accent-ink">
               {{ t('aska.voiceUnavailable') }}
             </p>
             <div class="agent-prose text-sm" v-html="renderMarkdown(entry.answer)" />

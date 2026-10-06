@@ -106,7 +106,7 @@ const {
         v-model="question"
         type="text"
         :placeholder="transcribing ? t('askPanel.transcribing') : t('askPanel.placeholder')"
-        class="flex-1 rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+        class="flex-1 rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
         :disabled="asking || recording || transcribing"
       />
       <button

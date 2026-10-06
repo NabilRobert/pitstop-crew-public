@@ -45,7 +45,7 @@ const {
             <input
               v-model="dailyRunTime"
               type="time"
-              class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-rosso focus:outline-none"
+              class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent-ink focus:outline-none"
             />
           </div>
           <div>
@@ -55,7 +55,7 @@ const {
             <input
               v-model="weeklyRunTime"
               type="time"
-              class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-rosso focus:outline-none"
+              class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent-ink focus:outline-none"
             />
           </div>
         </div>
@@ -68,7 +68,7 @@ const {
             v-model="reportRecipientEmail"
             type="email"
             placeholder="you@example.com"
-            class="w-full max-w-sm rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+            class="w-full max-w-sm rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
           />
           <p class="mt-1 text-xs text-ink-faint">
             {{ t('settings.emailHelp') }}
@@ -81,7 +81,7 @@ const {
           </label>
           <select
             v-model="reportLanguage"
-            class="w-full max-w-sm rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-rosso focus:outline-none"
+            class="w-full max-w-sm rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent-ink focus:outline-none"
           >
             <option value="en">{{ t('settings.reportLanguageEn') }}</option>
             <option value="id">{{ t('settings.reportLanguageId') }}</option>
@@ -100,7 +100,7 @@ const {
             type="text"
             inputmode="decimal"
             placeholder="20"
-            class="w-full max-w-sm rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-rosso focus:outline-none"
+            class="w-full max-w-sm rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
           />
           <p class="mt-1 text-xs text-ink-faint">
             {{ t('settings.monthlyCostCapHelp') }}

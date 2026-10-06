@@ -28,7 +28,7 @@ const { t } = useI18n()
         v-for="s in SECTIONS"
         :key="s.id"
         :href="`#${s.id}`"
-        class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-rosso"
+        class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-accent-ink"
       >
         {{ s.label }}
       </a>
