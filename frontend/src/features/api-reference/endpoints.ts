@@ -4,7 +4,7 @@ export interface ApiSection {
 }
 
 export interface EndpointDef {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   path: string
   desc: string
 }
@@ -15,6 +15,7 @@ export const SECTIONS: ApiSection[] = [
   { id: 'reports', label: 'Reports' },
   { id: 'outputs', label: 'Outputs & Ask' },
   { id: 'pipeline', label: 'Pipeline & ops' },
+  { id: 'keyword-optimizer', label: 'Keyword optimizer' },
   { id: 'settings', label: 'Settings' },
   { id: 'learning', label: 'Learning' },
   { id: 'time-machine', label: 'Time Machine' },
@@ -67,6 +68,39 @@ export const PIPELINE_ENDPOINTS: EndpointDef[] = [
   },
 ]
 
+export const KEYWORD_OPTIMIZER_ENDPOINTS: EndpointDef[] = [
+  {
+    method: 'GET',
+    path: '/keyword-suggestions?status=open&type=&campaign_id=&limit=50&offset=0',
+    desc: '{items, total, run, inventory}. Ranked (rank ascending, nulls last, then newest). status is open|applied|dismissed|superseded|all, limit 1-200. run is the latest keyword_optimizer run, or null before the first one — a normal state, not an error. Each item carries structured evidence and a type-specific payload; every number comes from those fields, never from the model\'s explanation text.',
+  },
+  {
+    method: 'PATCH',
+    path: '/keyword-suggestions/:id',
+    desc: '{status: "applied"|"dismissed"|"open"}. Owner only (the demo account gets 403). Allowed: open→applied, open→dismissed, and undoing either back to open. Any other move, or touching a superseded row, is 409. Applied/dismissed is the owner\'s own bookkeeping — nothing is sent to Google Ads.',
+  },
+  {
+    method: 'GET',
+    path: '/keyword-suggestions/export?type=negative_keyword&status=open&format=csv|txt',
+    desc: 'The open negative keywords as a file to paste or import into Google Ads Editor. Every field is neutralized against spreadsheet formula injection, because search-term text is untrusted input.',
+  },
+  {
+    method: 'GET',
+    path: '/inventory/summary',
+    desc: 'Stock totals, aging buckets and per-model stock/margin with a snapshot date. Always 200: if the inventory source is down it returns source "unavailable" and a short sanitized error. The connection string is never returned.',
+  },
+  {
+    method: 'GET',
+    path: '/keywords/summary?days=30&adGroupId=',
+    desc: 'Window aggregates that cannot be derived from the per-day keyword rows: intent mix, how much spend could be classified, waste exposure, conversions by conversion action, and stock.',
+  },
+  {
+    method: 'POST',
+    path: '/keyword-optimizer/run',
+    desc: 'Owner only. Starts a keyword optimizer run on demand → 202 {run_id}. 409 if another run is in progress, 429 at the monthly spend cap — same locking and cap as /pipeline/run.',
+  },
+]
+
 export const SETTINGS_ENDPOINTS: EndpointDef[] = [
   { method: 'GET', path: '/settings', desc: 'Current settings (run times, recipient email, etc.).' },
   {
@@ -95,5 +129,6 @@ export const METHOD_COLOR: Record<EndpointDef['method'], string> = {
   GET: 'text-flag-good',
   POST: 'text-accent-ink',
   PUT: 'text-flag-caution',
+  PATCH: 'text-flag-caution',
   DELETE: 'text-flag-critical',
 }

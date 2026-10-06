@@ -96,9 +96,10 @@ export interface SearchTermPerformanceRow {
   conversions: number
   // Overhaul v3 (contract 3.0) — additive, optional until the backend ships.
   conversions_value_micros?: number
-  intent?: Intent
-  intent_confidence?: number
-  intent_method?: 'rule' | 'llm'
+  /** null when the term is unclassified (contract rule; the backend returns null, not 'unknown'). */
+  intent?: Intent | null
+  intent_confidence?: number | null
+  intent_method?: 'rule' | 'llm' | null
 }
 
 // v2 Stage 3 — ads/creatives. ad_strength is a static per-ad attribute

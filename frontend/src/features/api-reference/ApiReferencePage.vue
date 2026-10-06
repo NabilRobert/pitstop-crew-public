@@ -7,6 +7,7 @@ import {
   REPORTS_ENDPOINTS,
   OUTPUTS_ENDPOINTS,
   PIPELINE_ENDPOINTS,
+  KEYWORD_OPTIMIZER_ENDPOINTS,
   SETTINGS_ENDPOINTS,
   LEARNING_ENDPOINTS,
   TIME_MACHINE_ENDPOINTS,
@@ -47,7 +48,11 @@ const { t } = useI18n()
         </p>
         <ul>
           <li>JSON body parsing, CORS locked to one origin (<code>FRONTEND_ORIGIN</code> in <code>.env</code>).</li>
-          <li>No auth on this boundary at all, by design — a single-user app.</li>
+          <li>
+            Everything except <code>/health</code>, <code>/config</code> and <code>POST /auth/login</code> needs a
+            bearer token from the login. The owner account has full access; the optional demo account is read-only,
+            enforced server-side (every non-GET gets a 403, not just hidden buttons).
+          </li>
           <li>
             Error responses are shaped <code>{ detail: "..." }</code> everywhere — a holdover from when this was a
             FastAPI backend, so frontend error handling never had to change.
@@ -186,6 +191,32 @@ const poll = setInterval(async () => {
         </p>
       </section>
 
+      <section id="keyword-optimizer">
+        <h2>Keyword optimizer — suggestions, inventory and the weekly run</h2>
+        <table class="w-full min-w-max border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="py-2 pr-3 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Method & path</th>
+              <th class="py-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="e in KEYWORD_OPTIMIZER_ENDPOINTS" :key="e.method + e.path" class="border-b border-border/60 last:border-0">
+              <td class="py-2 pr-3 align-top font-mono text-xs">
+                <span :class="METHOD_COLOR[e.method]" class="font-bold">{{ e.method }}</span> {{ e.path }}
+              </td>
+              <td class="py-2 align-top text-ink-soft">{{ e.desc }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="text-sm">
+          The existing <code>GET /keywords/performance</code> and <code>GET /search-terms/performance</code> only
+          gained fields (bids, impression share, conversion value, search-term intent); nothing was removed.
+          <code>intent</code> is <code>null</code> for a term that has not been classified. In every response,
+          <code>null</code> means "no data", never zero.
+        </p>
+      </section>
+
       <section id="settings">
         <h2>Settings</h2>
         <table class="w-full border-collapse text-left text-sm">
@@ -208,7 +239,10 @@ const poll = setInterval(async () => {
           Valid keys: <code>daily_run_time</code>, <code>weekly_run_time</code> (HH:MM),
           <code>report_recipient_email</code>, <code>auto_reports_enabled</code> ("true"/"false"),
           <code>report_language</code> ("en"/"id"), <code>monthly_cost_cap_usd</code> (a positive number, or empty
-          to disable — blocks new pipeline runs once this month's total AI cost reaches it). Unknown keys are
+          to disable — blocks new pipeline runs once this month's total AI cost reaches it), and the keyword
+          optimizer's <code>keyword_optimizer_enabled</code> ("true"/"false"), <code>keyword_test_budget_share</code>,
+          <code>keyword_min_confidence_p</code> (above 0), <code>inventory_allowed_spend_share</code> and
+          <code>inventory_lead_to_sale_rate</code> (all 0 to 1, as strings). Unknown keys are
           silently ignored, invalid values 400. (<code>grade_forces_revision</code> is still accepted but has no
           effect — D/F grades always block approval.)
         </p>
