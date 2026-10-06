@@ -686,6 +686,7 @@ export default {
       reports: 'Reports',
       ask: 'Ask',
       learning: 'Learning page',
+      keywordOptimizer: 'Keyword Optimizer page',
       health: 'System Health',
       console: 'Console + Generate now',
       settings: 'Settings + email',
@@ -752,6 +753,13 @@ export default {
       title: 'Learning page',
       body: "Two signals shown together, deliberately — a weekly outcomes trend per agent (approved clean, approved with notes, flagged, no review; final outputs only) alone can be misleading, since approval got easier to earn under the severity-based rule and a rise in approvals isn't proof of better reports. Paired with the actual weekly suggestion history (what Ciri's recurring patterns actually led to), the two corroborate each other instead of either one being read in isolation. The full A–F grading rubric is also documented here, word-for-word what Ciri is actually instructed to grade against.",
     },
+    keywordOptimizer: {
+      title: 'Keyword Optimizer page',
+      body: "A weekly list of concrete keyword suggestions, each backed by the data behind it. Nothing here changes your Google Ads account: you read a suggestion, apply it yourself in Google Ads if you agree, then mark it applied here.",
+      item1: "Each card shows what to do, the numbers it is based on, how confident it is, and whether it is backed by this account's data or only by general rules (marked unverified). Negatives that would also block a converting search say so before you apply them.",
+      item2: "The suggestions are tied to the cars currently in stock, so a keyword for a model you have none of is called out, and new keyword ideas come from what is actually listed. The inventory panel at the bottom shows stock, how long cars have been listed, and margin.",
+      item3: "Negative keywords can be downloaded or copied as a list to paste into Google Ads Editor. The page works for the read-only demo account too, but only the owner can mark suggestions applied or dismissed or start a run.",
+    },
     health: {
       title: 'System Health',
       body: 'Built for the "this runs unattended" story, not just the happy-path demo. Shows the last successful scheduled run, a dead-man\'s-switch indicator (trips if too long has passed since a successful run — since failure alerts alone say nothing if the cron job never fires at all), and a log of every run — including failures, with the actual error message.',
@@ -779,6 +787,7 @@ export default {
     nav: {
       overview: 'Overview',
       qualityControl: 'Trusting the AI',
+      keywordOptimizer: 'Keyword optimizer',
       observability: 'Observability',
       cost: 'Cost',
       operations: 'Operations',
@@ -801,6 +810,16 @@ export default {
       linkBefore: 'The full grading rubric, and the actual weekly trend of how often reports get flagged, is on the',
       linkText: 'Learning page',
       linkAfter: '.',
+    },
+    keywordOptimizer: {
+      title: 'The keyword optimizer: code decides, the model explains',
+      p1: "Google Ads is keyword-driven, so there is a dedicated keyword optimizer. It runs weekly as its own agent in the same pipeline (same run lock, spend cap and Run Inspector trace as the daily report), and its output is suggestions only, like everything else here. The design rule is the same one as the critic: the thing that decides must not be the thing that is allowed to be creative.",
+      item1: "Code finds the candidates, not the model. Negative keywords, search terms worth promoting, keywords to pause, match-type changes, new keywords and campaign ideas are all computed from the data with the numbers attached. The model (Kai) can only rank and explain candidates the engine produced; anything it invents is rejected, and every number on screen comes from the stored fields, never from the model's sentences. Ciri then grades the result like any other agent.",
+      item2: "\"Not enough data\" is a real answer. A keyword with no conversions is only called wasted after enough clicks that the account's own conversion rate makes zero results unlikely by chance; below that it is a hint, not a finding. With no history at all, negatives come from general rules and are labelled unverified rather than dressed up as evidence.",
+      item3: "A suggestion is checked against its own side effects: a proposed negative is tested against the search terms that actually converted, and any it would also block are shown on the card before anyone applies it.",
+      item4: "Inventory is part of the decision, but it is not trusted blindly. Suggestions are tied to the stock actually listed, including a call-out for advertising a model with no cars, and the inventory comes from a separate read-only connection whose address lives only on the server. If that source is down the page says so and carries on without the stock-based suggestions.",
+      item5: "Search-term text is attacker-controlled input. It is rendered as plain text, kept out of any instructions to the model, and neutralized in the negatives export so a term starting with = or + cannot become a spreadsheet formula.",
+      notProven: "What is not proven yet: the deterministic parts are exercised against the generated demo data, which has planted problems with known answers, but the model step has not yet been run end-to-end on a real account. The intent label on each search term is an estimate, and the demo data is synthetic.",
     },
     observability: {
       title: 'Seeing what the AI actually did',

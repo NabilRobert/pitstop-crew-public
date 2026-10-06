@@ -46,6 +46,19 @@ const { t } = useI18n()
         </p>
       </section>
 
+      <section id="keyword-optimizer">
+        <h2>{{ t('engineeringNotes.keywordOptimizer.title') }}</h2>
+        <p>{{ t('engineeringNotes.keywordOptimizer.p1') }}</p>
+        <ul>
+          <li>{{ t('engineeringNotes.keywordOptimizer.item1') }}</li>
+          <li>{{ t('engineeringNotes.keywordOptimizer.item2') }}</li>
+          <li>{{ t('engineeringNotes.keywordOptimizer.item3') }}</li>
+          <li>{{ t('engineeringNotes.keywordOptimizer.item4') }}</li>
+          <li>{{ t('engineeringNotes.keywordOptimizer.item5') }}</li>
+        </ul>
+        <p>{{ t('engineeringNotes.keywordOptimizer.notProven') }}</p>
+      </section>
+
       <section id="observability">
         <h2>{{ t('engineeringNotes.observability.title') }}</h2>
         <p>{{ t('engineeringNotes.observability.p1') }}</p>

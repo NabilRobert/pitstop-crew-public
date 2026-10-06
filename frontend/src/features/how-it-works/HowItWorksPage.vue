@@ -127,6 +127,16 @@ const { t } = useI18n()
         </p>
       </section>
 
+      <section id="keyword-optimizer">
+        <h2>{{ t('howItWorks.keywordOptimizer.title') }}</h2>
+        <p>{{ t('howItWorks.keywordOptimizer.body') }}</p>
+        <ul>
+          <li>{{ t('howItWorks.keywordOptimizer.item1') }}</li>
+          <li>{{ t('howItWorks.keywordOptimizer.item2') }}</li>
+          <li>{{ t('howItWorks.keywordOptimizer.item3') }}</li>
+        </ul>
+      </section>
+
       <section id="health">
         <h2>{{ t('howItWorks.health.title') }}</h2>
         <p>

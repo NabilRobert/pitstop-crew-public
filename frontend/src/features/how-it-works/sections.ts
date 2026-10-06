@@ -13,6 +13,7 @@ export const SECTIONS: Section[] = [
   { id: 'reports', labelKey: 'howItWorks.nav.reports' },
   { id: 'ask', labelKey: 'howItWorks.nav.ask' },
   { id: 'learning', labelKey: 'howItWorks.nav.learning' },
+  { id: 'keyword-optimizer', labelKey: 'howItWorks.nav.keywordOptimizer' },
   { id: 'health', labelKey: 'howItWorks.nav.health' },
   { id: 'console', labelKey: 'howItWorks.nav.console' },
   { id: 'settings', labelKey: 'howItWorks.nav.settings' },

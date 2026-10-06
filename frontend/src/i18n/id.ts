@@ -686,6 +686,7 @@ export default {
       reports: 'Laporan',
       ask: 'Tanya',
       learning: 'Halaman Pembelajaran',
+      keywordOptimizer: 'Halaman Pengoptimal Kata Kunci',
       health: 'Kondisi Sistem',
       console: 'Konsol + Buat sekarang',
       settings: 'Pengaturan + email',
@@ -752,6 +753,13 @@ export default {
       title: 'Halaman Pembelajaran',
       body: 'Dua sinyal ditampilkan bersama, secara sengaja — tren hasil mingguan per agen (disetujui tanpa catatan, disetujui dengan catatan, ditandai, tanpa tinjauan; hanya keluaran final) saja bisa menyesatkan, karena persetujuan lebih mudah didapat di bawah aturan berbasis keparahan dan naiknya persetujuan bukan bukti laporan makin baik. Dipadukan dengan riwayat saran mingguan yang sesungguhnya (apa yang benar-benar dihasilkan dari pola berulang Ciri), keduanya saling menguatkan alih-alih dibaca sendiri-sendiri. Rubrik penilaian A–F lengkap juga didokumentasikan di sini, sama persis dengan instruksi yang sebenarnya diberikan ke Ciri.',
     },
+    keywordOptimizer: {
+      title: 'Halaman Pengoptimal Kata Kunci',
+      body: "Daftar saran kata kunci yang konkret setiap minggu, masing-masing didukung data di baliknya. Tidak ada yang mengubah akun Google Ads Anda di sini: Anda membaca saran, menerapkannya sendiri di Google Ads jika setuju, lalu menandainya diterapkan di sini.",
+      item1: "Setiap kartu menampilkan apa yang harus dilakukan, angka yang mendasarinya, tingkat keyakinannya, dan apakah ia didukung data akun ini atau hanya aturan umum (ditandai belum terverifikasi). Kata kunci negatif yang juga akan memblokir pencarian berkonversi menyebutkannya sebelum Anda menerapkannya.",
+      item2: "Saran dikaitkan dengan mobil yang sedang tersedia, jadi kata kunci untuk model yang tidak Anda punya akan ditandai, dan ide kata kunci baru berasal dari yang benar-benar terpasang. Panel inventaris di bawah menampilkan stok, lama mobil terpasang, dan margin.",
+      item3: "Kata kunci negatif dapat diunduh atau disalin sebagai daftar untuk ditempel ke Google Ads Editor. Halaman ini juga berfungsi untuk akun demo baca-saja, tetapi hanya pemilik yang dapat menandai saran diterapkan atau diabaikan atau memulai proses.",
+    },
     health: {
       title: 'Kondisi Sistem',
       body: 'Dibangun untuk skenario "sistem ini berjalan tanpa pengawasan", bukan sekadar demo jalur mulus. Menampilkan run terjadwal sukses terakhir, indikator dead-man\'s-switch (aktif jika sudah terlalu lama sejak run sukses terakhir — karena peringatan kegagalan saja tidak berguna kalau cron job-nya sendiri tidak pernah jalan), dan log setiap run — termasuk yang gagal, lengkap dengan pesan errornya.',
@@ -779,6 +787,7 @@ export default {
     nav: {
       overview: 'Ikhtisar',
       qualityControl: 'Mempercayai AI',
+      keywordOptimizer: 'Pengoptimal kata kunci',
       observability: 'Observabilitas',
       cost: 'Biaya',
       operations: 'Operasional',
@@ -801,6 +810,16 @@ export default {
       linkBefore: 'Rubrik penilaian lengkap, dan tren mingguan sesungguhnya seberapa sering laporan ditandai, ada di',
       linkText: 'halaman Pembelajaran',
       linkAfter: '.',
+    },
+    keywordOptimizer: {
+      title: 'Pengoptimal kata kunci: kode yang memutuskan, model yang menjelaskan',
+      p1: "Google Ads digerakkan oleh kata kunci, jadi ada pengoptimal kata kunci tersendiri. Ia berjalan mingguan sebagai agent terpisah di pipeline yang sama (kunci proses, batas biaya, dan jejak Run Inspector yang sama dengan laporan harian), dan keluarannya hanya saran, seperti yang lain di sini. Aturan desainnya sama dengan kritikus: yang memutuskan tidak boleh sekaligus yang boleh berkreasi.",
+      item1: "Kode yang menemukan kandidat, bukan model. Kata kunci negatif, istilah pencarian yang layak dipromosikan, kata kunci yang perlu dijeda, perubahan tipe pencocokan, kata kunci baru, dan ide kampanye semuanya dihitung dari data lengkap dengan angkanya. Model (Kai) hanya boleh mengurutkan dan menjelaskan kandidat yang dihasilkan mesin; apa pun yang ia karang ditolak, dan setiap angka di layar berasal dari data tersimpan, bukan dari kalimat model. Ciri lalu menilai hasilnya seperti agent lain.",
+      item2: "\"Data belum cukup\" adalah jawaban yang sah. Kata kunci tanpa konversi baru disebut boros setelah klik yang cukup, sehingga tanpa hasil tidak mungkin sekadar kebetulan menurut tingkat konversi akun itu sendiri; di bawah itu hanya petunjuk, bukan temuan. Tanpa riwayat sama sekali, negatif berasal dari aturan umum dan diberi label belum terverifikasi, bukan disamarkan sebagai bukti.",
+      item3: "Setiap saran diperiksa terhadap efek sampingnya sendiri: kata kunci negatif yang diusulkan diuji terhadap istilah pencarian yang benar-benar berkonversi, dan yang ikut terblokir ditampilkan di kartu sebelum ada yang menerapkannya.",
+      item4: "Inventaris ikut menentukan, tetapi tidak dipercaya begitu saja. Saran dikaitkan dengan stok yang benar-benar terpasang, termasuk peringatan saat mengiklankan model yang tidak ada mobilnya, dan inventaris berasal dari koneksi baca-saja terpisah yang alamatnya hanya ada di server. Jika sumber itu mati, halaman menyatakannya dan tetap jalan tanpa saran berbasis stok.",
+      item5: "Teks istilah pencarian adalah masukan yang bisa dikendalikan penyerang. Ia ditampilkan sebagai teks biasa, dijauhkan dari instruksi ke model, dan dinetralkan pada ekspor negatif agar istilah yang diawali = atau + tidak bisa menjadi rumus spreadsheet.",
+      notProven: "Yang belum terbukti: bagian deterministik diuji terhadap data demo buatan yang memiliki masalah tertanam dengan jawaban yang diketahui, tetapi langkah model belum dijalankan end-to-end pada akun nyata. Label maksud pencarian pada tiap istilah hanyalah perkiraan, dan data demo bersifat sintetis.",
     },
     observability: {
       title: 'Melihat apa yang sebenarnya dilakukan AI',
