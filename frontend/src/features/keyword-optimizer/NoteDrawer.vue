@@ -65,6 +65,7 @@ onBeforeUnmount(() => {
       </header>
 
       <template v-if="note">
+        <p v-if="note.status === 'paused'" class="drawer__paused">{{ t('keywordOptimizer.board.drawer.paused') }}</p>
         <div v-if="verdict" class="drawer__verdict">
           <span
             v-if="STICKERED.includes(verdict)"
@@ -129,6 +130,7 @@ onBeforeUnmount(() => {
 .drawer__close { flex: none; padding: 6px 12px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-ink); background: var(--color-surface); border: 1.5px solid var(--color-border-strong); cursor: pointer; }
 .drawer__verdict { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; padding: 10px; background: var(--color-surface); border: 1.5px solid var(--color-border); }
 .drawer__verdict p { margin: 0; font-size: 0.92rem; color: var(--color-ink-soft); }
+.drawer__paused { margin: 0 0 12px; padding: 8px 10px; font-size: 0.9rem; background: var(--color-surface-raised); border: 1.5px dashed var(--color-border-strong); }
 .drawer__sticker { flex: none; padding: 1px 6px; border: 1px solid #000; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .drawer__numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 8px; margin: 0 0 12px; }
 .drawer__numbers div { padding: 8px 10px; background: var(--color-surface); border: 1.5px solid var(--color-border); }

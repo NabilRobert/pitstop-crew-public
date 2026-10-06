@@ -45,7 +45,10 @@ const scoped = computed(() =>
 const scopedRows = computed(() =>
   props.campaignId === null ? props.rows : props.rows.filter((r) => r.campaign_id === props.campaignId)
 )
-const notes = computed(() => buildNotes(scopedRows.value, props.summaries, scoped.value))
+const scopedSummaries = computed(() =>
+  props.campaignId === null ? props.summaries : props.summaries.filter((m) => !m.campaign || m.campaign.id === props.campaignId)
+)
+const notes = computed(() => buildNotes(scopedRows.value, scopedSummaries.value, scoped.value))
 const ideas = computed(() => looseIdeas(scoped.value))
 const headline = computed(() => buildHeadline(scoped.value))
 const numbers = computed(() => boardNumbers(notes.value))

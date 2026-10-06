@@ -24,6 +24,8 @@ export interface BoardNote {
   spendMicros: number
   clicks: number
   conversions: number
+  /** Contract 3.2: 'paused' keywords are shown muted; null when the backend predates it. */
+  status: 'enabled' | 'paused' | null
   /** null when the backend predates contract 3.1 (no sticker rather than a guessed one). */
   verdict: KeywordVerdict | null
   summary: KeywordSummary | null
@@ -50,7 +52,7 @@ export function buildNotes(
   summaries: KeywordSummary[],
   suggestions: Suggestion[]
 ): BoardNote[] {
-  const byKeyword = new Map<number, Omit<BoardNote, 'size' | 'open' | 'all' | 'verdict' | 'summary'>>()
+  const byKeyword = new Map<number, Omit<BoardNote, 'size' | 'open' | 'all' | 'verdict' | 'summary' | 'status'>>()
   for (const r of rows) {
     const existing = byKeyword.get(r.keyword_id)
     if (!existing) {
@@ -69,6 +71,22 @@ export function buildNotes(
       existing.clicks += r.clicks
       existing.conversions += r.conversions
     }
+  }
+
+  // Contract 3.2: the summary lists EVERY non-removed keyword, including paused ones and ones with no
+  // activity in the period. They have no performance rows, so give them a note with zero spend.
+  for (const sm of summaries) {
+    if (byKeyword.has(sm.keyword_id) || !sm.text || !sm.campaign || !sm.ad_group) continue
+    byKeyword.set(sm.keyword_id, {
+      keywordId: sm.keyword_id,
+      text: sm.text,
+      matchType: sm.match_type ?? 'phrase',
+      campaign: sm.campaign,
+      adGroup: sm.ad_group.name,
+      spendMicros: 0,
+      clicks: 0,
+      conversions: 0,
+    })
   }
 
   const summaryById = new Map(summaries.map((s) => [s.keyword_id, s]))
@@ -90,6 +108,7 @@ export function buildNotes(
     return {
       ...k,
       verdict: summary?.verdict ?? null,
+      status: summary?.status ?? null,
       summary,
       size: i < lCut ? 'L' : i < mCut ? 'M' : 'S',
       open: all.filter((s) => s.status === 'open'),
@@ -195,6 +214,8 @@ export function campaignRollup(
 ): Map<number, CampaignRollup> {
   const campaignOfKeyword = new Map<number, number>()
   for (const r of rows) campaignOfKeyword.set(r.keyword_id, r.campaign_id)
+  // 3.2: paused and idle keywords have no rows but belong to a campaign all the same.
+  for (const sm of summaries) if (sm.campaign && !campaignOfKeyword.has(sm.keyword_id)) campaignOfKeyword.set(sm.keyword_id, sm.campaign.id)
   const verdictOf = new Map(summaries.map((s) => [s.keyword_id, s.verdict ?? null]))
 
   const out = new Map<number, CampaignRollup>()

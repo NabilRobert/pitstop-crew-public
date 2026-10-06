@@ -493,6 +493,7 @@ interface FixtureKeyword {
   conv: number
   verdict: KeywordVerdict
   stock: number | null
+  status?: 'enabled' | 'paused'
 }
 
 const C_GENERIC = { id: 2, name: 'Search — Used Cars Generic' }
@@ -532,6 +533,8 @@ const KEYWORDS: FixtureKeyword[] = [
   { id: 63, text: 'harga mobil baru', match: 'broad', campaign: C_GENERIC, adGroup: AG_SEDAN, spendK: 470, clicks: 44, conv: 0, verdict: 'wasting', stock: null },
   { id: 64, text: 'servis mobil terdekat', match: 'broad', campaign: C_GENERIC, adGroup: AG_SEDAN, spendK: 390, clicks: 38, conv: 0, verdict: 'wasting', stock: null },
   { id: 65, text: 'sparepart mobil bekas', match: 'broad', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 120, clicks: 9, conv: 0, verdict: 'needs_data', stock: null },
+  { id: 67, text: 'used suv jakarta', match: 'exact', campaign: C_GENERIC, adGroup: AG_SUV, spendK: 0, clicks: 0, conv: 0, verdict: 'steady', stock: 3, status: 'paused' },
+  { id: 68, text: 'wuling confero bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_MPV, spendK: 0, clicks: 0, conv: 0, verdict: 'needs_data', stock: 0, status: 'enabled' },
   { id: 66, text: 'toyota yaris bekas', match: 'phrase', campaign: C_MODEL, adGroup: AG_SEDAN, spendK: 60, clicks: 5, conv: 0, verdict: 'needs_data', stock: 1 },
 ]
 
@@ -545,7 +548,7 @@ const MIX: Record<KeywordVerdict, KeywordSummary['intent_mix']> = {
 }
 
 /** The window's keyword rows (one per keyword, dated the window end). */
-export const FIXTURE_KEYWORD_ROWS: KeywordPerformanceRow[] = KEYWORDS.map((k) => ({
+export const FIXTURE_KEYWORD_ROWS: KeywordPerformanceRow[] = KEYWORDS.filter((k) => k.clicks > 0).map((k) => ({
   date: '2026-10-05',
   keyword_id: k.id,
   text: k.text,
@@ -569,6 +572,11 @@ export const FIXTURE_KEYWORD_SUMMARY: KeywordSummaryResponse = {
   coverage: 0.81,
   items: KEYWORDS.map<KeywordSummary>((k) => ({
     keyword_id: k.id,
+    text: k.text,
+    match_type: k.match,
+    campaign: k.campaign,
+    ad_group: k.adGroup,
+    status: k.status ?? 'enabled',
     verdict: k.verdict,
     intent_mix: MIX[k.verdict],
     intent_coverage: MIX[k.verdict] ? 0.8 : null,

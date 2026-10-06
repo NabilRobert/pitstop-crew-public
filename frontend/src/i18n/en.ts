@@ -105,6 +105,7 @@ export default {
         leads: '{n} enquiry | {n} enquiries',
         noLeads: 'no enquiries',
         noCars: 'No cars in stock',
+        paused: 'Paused',
       },
       tape: {
         negative_keyword: 'Block "{text}"',
@@ -134,6 +135,7 @@ export default {
         close: 'Close',
         advice: 'Advice ({n})',
         noAdvice: 'Nothing is suggested for this keyword.',
+        paused: 'This keyword is paused in Google Ads. It is not spending, so it stays on the board only so you can see it.',
       },
     },
     proposal: {

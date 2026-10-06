@@ -20,7 +20,8 @@ const style = computed(() => (props.note.verdict ? VERDICT_STYLE[props.note.verd
 const stickered = computed(() => !!props.note.verdict && STICKERED.includes(props.note.verdict))
 const label = computed(() => t('keywordOptimizer.board.note.aria', {
   keyword: props.note.text,
-  verdict: props.note.verdict ? t(`keywordOptimizer.board.verdict.${props.note.verdict}`) : t('keywordOptimizer.board.verdict.none'),
+  verdict: (props.note.status === 'paused' ? `${t('keywordOptimizer.board.note.paused')}, ` : '') +
+    (props.note.verdict ? t(`keywordOptimizer.board.verdict.${props.note.verdict}`) : t('keywordOptimizer.board.verdict.none')),
   spend: formatMicrosAsIDR(props.note.spendMicros),
   n: props.note.open.length,
 }))
@@ -35,10 +36,11 @@ function dragStart(e: DragEvent, s: Suggestion) {
 <template>
   <div
     class="note"
-    :class="`note--${note.size}`"
+    :class="[`note--${note.size}`, { 'note--paused': note.status === 'paused' }]"
     :style="{ '--tilt': `${tiltDegrees(note.keywordId)}deg`, '--paper': style?.paper ?? PAPER_FALLBACK }"
   >
     <span class="note__pin" aria-hidden="true" />
+    <span v-if="note.status === 'paused'" class="note__paused">{{ t('keywordOptimizer.board.note.paused') }}</span>
     <span
       v-if="stickered && style"
       class="note__sticker"
@@ -111,6 +113,23 @@ function dragStart(e: DragEvent, s: Suggestion) {
   border-radius: 9999px;
   background: #000;
   box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.35);
+}
+.note--paused { opacity: 0.72; border-style: dashed; }
+.note--paused:hover, .note--paused:focus-within { opacity: 1; }
+.note__paused {
+  position: absolute;
+  top: 8px;
+  left: -8px;
+  padding: 1px 6px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transform: rotate(-4deg);
 }
 .note__sticker {
   position: absolute;

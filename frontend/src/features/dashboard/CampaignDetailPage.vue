@@ -160,7 +160,7 @@ const costPerEnquiry = computed(() => (totals.value.conversions > 0 ? totals.val
           :period-days="days"
           @status="(id, status) => optimizer.setStatus(id, status)"
         />
-        <p v-if="hasKeywords" class="mt-2 text-xs text-ink-faint">{{ t('campaignDetail.activityNote') }}</p>
+        <p v-if="hasKeywords && !keywordSummaries.some((m) => m.text)" class="mt-2 text-xs text-ink-faint">{{ t('campaignDetail.activityNote') }}</p>
       </section>
 
       <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">

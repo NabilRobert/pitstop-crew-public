@@ -105,6 +105,7 @@ export default {
         leads: '{n} prospek | {n} prospek',
         noLeads: 'belum ada prospek',
         noCars: 'Tidak ada stok mobil',
+        paused: 'Dijeda',
       },
       tape: {
         negative_keyword: 'Blokir "{text}"',
@@ -134,6 +135,7 @@ export default {
         close: 'Tutup',
         advice: 'Saran ({n})',
         noAdvice: 'Tidak ada saran untuk kata kunci ini.',
+        paused: 'Kata kunci ini dijeda di Google Ads. Ia tidak mengeluarkan biaya, dan tetap ada di papan agar Anda bisa melihatnya.',
       },
     },
     proposal: {
