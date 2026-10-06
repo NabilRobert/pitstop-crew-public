@@ -34,6 +34,10 @@ export default {
       raise_bid_candidate: 'Pertimbangkan bid lebih tinggi untuk "{keyword}"',
     },
     subtitle: 'Saran mingguan untuk kata kunci Anda, masing-masing didukung data akun di baliknya. Ini hanya saran: tidak ada yang berubah di akun Google Ads Anda.',
+    backendMissing: {
+      title: 'Backend belum memiliki pengoptimal kata kunci',
+      body: 'Server menjawab, tetapi tidak mengenal endpoint pengoptimal kata kunci (404). Kemungkinan server masih menjalankan versi lama. Deploy backend yang menyertakannya, atau setel VITE_KEYWORD_OPTIMIZER_FIXTURES=true di frontend/.env.local untuk mencoba halaman ini dengan data contoh.',
+    },
     runNow: 'Jalankan sekarang',
     runStarting: 'Memulai…',
     runStarted: 'Proses #{id} dimulai. Saran akan muncul di sini setelah selesai.',

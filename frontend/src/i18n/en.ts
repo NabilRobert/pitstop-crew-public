@@ -34,6 +34,10 @@ export default {
       raise_bid_candidate: 'Consider a higher bid on "{keyword}"',
     },
     subtitle: 'Weekly suggestions for your keywords, each backed by the account data behind it. These are suggestions only: nothing here changes your Google Ads account.',
+    backendMissing: {
+      title: 'The backend has no keyword optimizer yet',
+      body: 'The server answered, but it does not know the keyword optimizer endpoints (404). It is probably running an older version. Deploy the backend that includes them, or set VITE_KEYWORD_OPTIMIZER_FIXTURES=true in frontend/.env.local to preview this page with sample data.',
+    },
     runNow: 'Run now',
     runStarting: 'Starting…',
     runStarted: 'Run #{id} started. Suggestions appear here when it finishes.',

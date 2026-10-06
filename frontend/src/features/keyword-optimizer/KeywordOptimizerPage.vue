@@ -12,7 +12,7 @@ import { useKeywordOptimizer, type StatusFilter } from './useKeywordOptimizer'
 
 const { t } = useI18n()
 const {
-  data, loading, error, statusFilter, typeFilter, setFilter, typeCounts, visibleItems,
+  data, loading, error, backendMissing, statusFilter, typeFilter, setFilter, typeCounts, visibleItems,
   truncated, busyIds, actionError, runMessage, runStarting, setStatus, runNow,
 } = useKeywordOptimizer()
 
@@ -20,7 +20,7 @@ const STATUS_FILTERS: StatusFilter[] = ['open', 'applied', 'dismissed', 'all']
 
 // Demo accounts can read everything but not write (server returns 403 on any non-GET).
 const canEdit = computed(() => !isDemo.value)
-const canRun = computed(() => !isDemo.value && !USE_FIXTURES)
+const canRun = computed(() => !isDemo.value && !USE_FIXTURES && !backendMissing.value)
 
 const run = computed(() => data.value?.run ?? null)
 const negativeCount = computed(
@@ -65,6 +65,11 @@ function runStatusClass(status: string): string {
     </p>
 
     <div v-if="loading && !data" class="py-24 text-center text-ink-faint">{{ t('common.loading') }}</div>
+
+    <div v-else-if="backendMissing" class="rounded-lg border border-flag-caution/40 bg-flag-caution-soft px-5 py-4 text-ink">
+      <div class="font-bold text-flag-caution">{{ t('keywordOptimizer.backendMissing.title') }}</div>
+      <p class="mt-1 text-sm text-ink-soft">{{ t('keywordOptimizer.backendMissing.body') }}</p>
+    </div>
 
     <div v-else-if="error" class="rounded-lg border border-flag-critical/40 bg-flag-critical-soft px-5 py-4 text-flag-critical">
       {{ t('common.couldNotReachBackend', { error }) }}

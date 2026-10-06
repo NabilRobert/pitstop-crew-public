@@ -41,6 +41,18 @@ import type {
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
+/** An Error that also carries the HTTP status, so callers can tell "the route does not exist" (404)
+ * from "the server could not be reached" without parsing the message. Still a plain Error to
+ * anything that only reads `.message`. */
+export class ApiError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const TOKEN_KEY = 'pitstop-auth-token'
@@ -61,7 +73,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     if (res.status === 401) localStorage.removeItem(TOKEN_KEY)
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail || `Request failed: ${res.status}`)
+    throw new ApiError(body.detail || `Request failed: ${res.status}`, res.status)
   }
   if (res.status === 204) return undefined as T
   return res.json()
@@ -77,7 +89,7 @@ async function requestAudio(path: string, body: unknown): Promise<Blob> {
   if (!res.ok) {
     if (res.status === 401) localStorage.removeItem(TOKEN_KEY)
     const detail = await res.json().catch(() => ({}))
-    throw new Error(detail.detail || `Request failed: ${res.status}`)
+    throw new ApiError(detail.detail || `Request failed: ${res.status}`, res.status)
   }
   return res.blob()
 }
@@ -89,7 +101,7 @@ async function requestBlob(path: string): Promise<Blob> {
   if (!res.ok) {
     if (res.status === 401) localStorage.removeItem(TOKEN_KEY)
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail || `Request failed: ${res.status}`)
+    throw new ApiError(body.detail || `Request failed: ${res.status}`, res.status)
   }
   return res.blob()
 }
@@ -165,7 +177,7 @@ export const api = {
     if (!res.ok) {
       if (res.status === 401) localStorage.removeItem(TOKEN_KEY)
       const body = await res.json().catch(() => ({}))
-      throw new Error(body.detail || `Request failed: ${res.status}`)
+      throw new ApiError(body.detail || `Request failed: ${res.status}`, res.status)
     }
     return res.json()
   },
