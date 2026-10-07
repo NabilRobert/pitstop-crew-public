@@ -53,7 +53,7 @@ Principles, carried over from v1/v2 and not negotiable:
 |---|---|---|
 | **1** | Intent per search term, intent mix per keyword, cached | No |
 | **1** | Value tiers: conversion actions with values, keyword-level conversions by action | No |
-| **1** | Deterministic engine + weekly agent + suggestions UI + inventory | No |
+| **1** | Deterministic engine + scheduled agent (daily at 06:00 by default, owner-set time, can be turned off) + suggestions UI + inventory | No |
 | **2** | Live ingestion of keyword / search-term / negative data from the real API | No (read) |
 | **4** | **Create campaigns and ads in Google Ads from Pitstop** (the owner's end state). Needs Basic Access, write scope, and the safeguards in section 3.1 | **Yes** (campaign / ad-group / ad mutations) |
 | **3** | Closed-loop sale / margin attribution | **Yes** (offline conversion upload) — outside Pitstop's read-only stance, so it needs its own decision |
@@ -142,7 +142,7 @@ FROM keyword_view WHERE segments.date BETWEEN ...
 
 Open API question for phase 2: Pitstop anchors each search term to **one** keyword. The real API can attribute a term to a keyword via `segments.keyword.*`, but a term can surface under more than one. Decide how to collapse that (**VERIFY**).
 
-## 13. API contract (version 3.4, 2026-10-07)
+## 13. API contract (version 3.5, 2026-10-07)
 
 This section is **identical in the backend and frontend files**. It is the only thing the two sides share. If either side needs to change it, change it here first, bump the version, and regenerate both files.
 
@@ -315,7 +315,7 @@ type SuggestionPayload =
 - **3.2: the summary lists every keyword that is not removed, including enabled keywords with no activity in the window and paused ones.** Until now only keywords with performance rows were reachable, so a paused keyword, a brand-new one or one with zero impressions could not be shown, and the UI could not tell "paused" from "never ran". A keyword with no activity is returned with its identity fields, `status`, and honest empties (`intent_mix: null`, `conversions_by_action: []`, verdict `needs_data` or `testing`). A `paused` keyword never gets a `winner`/`wasting` verdict that implies action: use `steady` unless it is `no_stock`. Existing consumers are unaffected (all additions).
 - **`verdict` (3.1, additive).** One label per keyword for the cork-board view, decided in code with the engine's own rules, so a label and a suggestion can never disagree. Evaluate in this priority order and take the first match: `no_stock` (the keyword spent money in the window and `stock_count === 0`: clicks cannot become a sale), `testing` (the keyword is in the capped test group of new suggestions), `wasting` (the engine's significance rule says it is wasting money: enough clicks, zero conversions, or the same condition behind an open pause / negative suggestion), `winner` (enough clicks and a cost per conversion at or below the comparison the engine uses; never `winner` while an open pause suggestion exists for it), `needs_data` (below the significance thresholds, so no call can be made), otherwise `steady` (healthy, nothing notable). The backend chooses the exact thresholds and documents them in section 11 of the backend file. The frontend never recomputes a verdict.
 
-`GET /settings` and `PUT /settings` (existing flat key/value object, validated per key in `settings.ts`) gain these keys, all strings: `keyword_optimizer_enabled` (`'true'|'false'`), `keyword_test_budget_share` (`'0'–'1'`), `keyword_min_confidence_p` (`'0'–'1'`, exclusive of 0), `inventory_allowed_spend_share` (`'0'–'1'`), `inventory_lead_to_sale_rate` (`'0'–'1'`). **3.4** adds `campaign_daily_budget_floor_idr` (default `'20000'`) and `campaign_daily_budget_ceiling_idr` (default `'100000'`): whole rupiah, digits only (surrounding spaces ignored), a safe integer above 0. Nothing checks the floor against the ceiling: a ceiling below the floor means the floor wins. A bad value gets 400 `{detail}` from the existing handler. The connection string is **never** a setting and never appears here.
+`GET /settings` and `PUT /settings` (existing flat key/value object, validated per key in `settings.ts`) gain these keys, all strings: `keyword_optimizer_enabled` (`'true'|'false'`), `keyword_test_budget_share` (`'0'–'1'`), `keyword_min_confidence_p` (`'0'–'1'`, exclusive of 0), `inventory_allowed_spend_share` (`'0'–'1'`), `inventory_lead_to_sale_rate` (`'0'–'1'`). **3.5** adds `keyword_optimizer_run_time` (default `'06:00'`, `HH:MM` in WIB, validated exactly like `daily_run_time`): when the keyword optimizer runs by itself each day. `keyword_optimizer_enabled` is that automatic run's on/off switch (default `'true'`): independent of `auto_reports_enabled`, and "Run now" works whichever way it is set. **3.4** adds `campaign_daily_budget_floor_idr` (default `'20000'`) and `campaign_daily_budget_ceiling_idr` (default `'100000'`): whole rupiah, digits only (surrounding spaces ignored), a safe integer above 0. Nothing checks the floor against the ceiling: a ceiling below the floor means the floor wins. A bad value gets 400 `{detail}` from the existing handler. The connection string is **never** a setting and never appears here.
 
 **Existing endpoints that need no change but whose consumers must handle the new run type:** `GET /pipeline/runs` and the Run Inspector will return `run_type: 'keyword_optimizer'`. The System Health page renders `run.run_type.replace('_', ' ')`, so it displays "keyword optimizer" with no code change; check any place that filters or colors by run type.
 
@@ -339,7 +339,7 @@ Each side works one step at a time, stops, and reports before the next. The back
 | Risk | Mitigation |
 |---|---|
 | Claims outrun reality (live path untested) | Say "demo / API-shaped" everywhere; keep the test-access caveat in the case study |
-| Backend and frontend disagree on the API contract | The contract exists in one place only (scope doc section 13, version 3.4); both implementers treat it as binding and report conflicts instead of improvising |
+| Backend and frontend disagree on the API contract | The contract exists in one place only (scope doc section 13, version 3.5); both implementers treat it as binding and report conflicts instead of improvising |
 
 ## 19. Open questions
 
