@@ -12,6 +12,7 @@ export default {
     dashboard: 'Dasbor',
     campaigns: 'Kampanye',
     keywordOptimizer: 'Pengoptimal Kata Kunci',
+    inventory: 'Inventaris',
     reports: 'Laporan',
     systemHealth: 'Kondisi Sistem',
     learning: 'Pembelajaran',
@@ -297,6 +298,21 @@ export default {
     },
     inventory: {
       title: 'Inventaris',
+      hide: 'Sembunyikan inventaris',
+      show: 'Tampilkan inventaris',
+      openPage: 'Buka halaman Inventaris lengkap',
+      empty: 'Tidak ada mobil di inventaris.',
+      filters: {
+        make: 'Merek',
+        showing: 'Menampilkan {n} dari {total} model',
+        clear: 'Hapus filter',
+        theseFilters: 'filter ini',
+        stock: { in: 'Ada stok', out: 'Tanpa stok', out_advertised: 'Tanpa stok tetapi diiklankan' },
+        days: { '0-30': '0-30 hari', '31-60': '31-60 hari', '61-90': '61-90 hari', '90+': '90+ hari', unknown: 'Tidak diketahui' },
+        price: { under150: 'Di bawah Rp 150 juta', '150-250': 'Rp 150-250 juta', '250-400': 'Rp 250-400 juta', over400: 'Di atas Rp 400 juta', unknown: 'Tidak diketahui' },
+        margin: { under10: 'Di bawah Rp 10 juta', '10-15': 'Rp 10-15 juta', over15: 'Di atas Rp 15 juta', unknown: 'Tidak diketahui' },
+        ads: { yes: 'Diiklankan', no: 'Tidak diiklankan' },
+      },
       loadFailed: 'Tidak dapat memuat inventaris: {error}',
       unavailable: 'Inventaris tidak tersedia',
       unavailableEffect: 'Saran yang bergantung pada stok dilewati sampai inventaris kembali.',
@@ -304,7 +320,6 @@ export default {
       search: {
         label: 'Cari inventaris',
         placeholder: 'Cari merek atau model…',
-        count: '{n} dari {total} model',
         none: 'Tidak ada model mobil yang cocok dengan "{q}".',
       },
       available: 'Tersedia',
@@ -480,6 +495,9 @@ export default {
   assetGroupChart: {
     title: 'Grup Aset berdasarkan Konversi',
     noData: 'Belum ada data grup aset.',
+  },
+  inventoryPage: {
+    subtitle: 'Mobil yang Anda punya di stok, per model. Ini stok yang dicocokkan oleh pengoptimal kata kunci dengan kata kunci dan usulan kampanye: filter kolom mana pun, urutkan menurut kolom mana pun, dan lihat model mana yang diiklankan dan mana yang tidak.',
   },
   campaignsList: {
     title: 'Kampanye',

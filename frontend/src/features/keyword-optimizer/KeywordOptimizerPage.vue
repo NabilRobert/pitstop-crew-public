@@ -236,7 +236,7 @@ function runStatusClass(status: string): string {
         </template>
       </template>
 
-      <InventoryPanel />
+      <InventoryPanel collapse-key="pitstop-inventory-optimizer" link />
     </template>
 
   </main>

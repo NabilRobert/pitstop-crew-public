@@ -12,6 +12,7 @@ export default {
     dashboard: 'Dashboard',
     campaigns: 'Campaigns',
     keywordOptimizer: 'Keyword Optimizer',
+    inventory: 'Inventory',
     reports: 'Reports',
     systemHealth: 'System Health',
     learning: 'Learning',
@@ -297,6 +298,21 @@ export default {
     },
     inventory: {
       title: 'Inventory',
+      hide: 'Hide inventory',
+      show: 'Show inventory',
+      openPage: 'Open the full Inventory page',
+      empty: 'No cars in the inventory.',
+      filters: {
+        make: 'Make',
+        showing: 'Showing {n} of {total} models',
+        clear: 'Clear filters',
+        theseFilters: 'these filters',
+        stock: { in: 'In stock', out: 'No stock', out_advertised: 'No stock but advertised' },
+        days: { '0-30': '0-30 days', '31-60': '31-60 days', '61-90': '61-90 days', '90+': '90+ days', unknown: 'Unknown' },
+        price: { under150: 'Under Rp 150 juta', '150-250': 'Rp 150-250 juta', '250-400': 'Rp 250-400 juta', over400: 'Over Rp 400 juta', unknown: 'Unknown' },
+        margin: { under10: 'Under Rp 10 juta', '10-15': 'Rp 10-15 juta', over15: 'Over Rp 15 juta', unknown: 'Unknown' },
+        ads: { yes: 'Advertised', no: 'Not advertised' },
+      },
       loadFailed: 'Could not load inventory: {error}',
       unavailable: 'Inventory is unavailable',
       unavailableEffect: 'Suggestions that depend on stock are skipped until it is back.',
@@ -304,7 +320,6 @@ export default {
       search: {
         label: 'Search inventory',
         placeholder: 'Search make or model…',
-        count: '{n} of {total} models',
         none: 'No car model matches "{q}".',
       },
       available: 'Available',
@@ -480,6 +495,9 @@ export default {
   assetGroupChart: {
     title: 'Asset Groups by Conversions',
     noData: 'No asset group data yet.',
+  },
+  inventoryPage: {
+    subtitle: 'The cars you have in stock, by model. This is the stock the keyword optimizer matches keywords and campaign proposals to: filter any column, sort by any column, and see which models are advertised and which are not.',
   },
   campaignsList: {
     title: 'Campaigns',
