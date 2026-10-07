@@ -47,6 +47,13 @@ export default {
       showLess: 'Show fewer',
       noVerdicts: "The server didn't send keyword verdicts, so the stickers and the two money numbers are hidden.",
       numbersFailed: "Couldn't load the keyword numbers: {error}",
+      search: {
+        label: 'Search keywords',
+        placeholder: 'Search keywords, campaigns, ad groups…',
+        clear: 'Clear search',
+        results: '{n} of {total} keywords',
+        none: 'No keyword matches "{q}".',
+      },
       view: { label: 'View', board: 'Board', list: 'List' },
       filters: {
         campaign: 'Filter by campaign',
@@ -137,6 +144,21 @@ export default {
         noAdvice: 'Nothing is suggested for this keyword.',
         paused: 'This keyword is paused in Google Ads. It is not spending, so it stays on the board only so you can see it.',
       },
+    },
+    lanes: {
+      proposed: {
+        title: 'New campaigns the AI proposes',
+        hint: 'Built from the cars you have in stock. Nothing has been created in Google Ads: plan one to keep it, then create it there yourself.',
+        stamp: 'Proposed',
+      },
+      planned: {
+        title: 'Planned campaigns',
+        hint: 'Approved here, but not in Google Ads yet. Pitstop cannot create campaigns there yet: take the brief to Google Ads (or Google Ads Editor), create it, then mark it created.',
+        stamp: 'Planned',
+      },
+      facts: '{cars} cars in stock · {groups} ad groups · {keywords} keywords · {budget} a day',
+      showKeywords: 'Show the {n} keywords',
+      details: 'Details',
     },
     proposal: {
       basis: {
@@ -279,6 +301,12 @@ export default {
       unavailable: 'Inventory is unavailable',
       unavailableEffect: 'Suggestions that depend on stock are skipped until it is back.',
       source: { demo: 'Demo inventory', connected: 'Connected inventory', unavailable: 'Inventory unavailable' },
+      search: {
+        label: 'Search inventory',
+        placeholder: 'Search make or model…',
+        count: '{n} of {total} models',
+        none: 'No car model matches "{q}".',
+      },
       available: 'Available',
       reserved: 'Reserved',
       sold30: 'Sold, last 30 days',
@@ -457,14 +485,6 @@ export default {
     title: 'Campaigns',
     subtitle: 'Last {period} · click a campaign for its keyword board, ad groups and ads',
     loading: 'Loading campaigns…',
-    proposalsWaiting: '1 new campaign proposal is waiting for your decision. | {n} new campaign proposals are waiting for your decision.',
-    reviewProposals: 'Review in the Keyword Optimizer',
-    planned: {
-      title: 'Planned campaigns',
-      hint: 'Approved here, but not in Google Ads yet. Pitstop cannot create campaigns there yet: take the brief to Google Ads (or Google Ads Editor), create it, then mark it created.',
-      summary: '{groups} ad groups · {keywords} keywords · {budget} a day',
-      viewBrief: 'View brief',
-    },
     card: {
       clicks: '{n} clicks',
       keywords: '1 keyword | {n} keywords',
@@ -472,6 +492,9 @@ export default {
       keywordsUnavailable: "Keyword details aren't available from the server right now.",
       waiting: '1 suggestion waiting | {n} suggestions waiting',
       nothingWaiting: 'Nothing waiting',
+      keywordList: 'Keywords in this campaign',
+      showAllKeywords: 'Show all {n} keywords',
+      showFewer: 'Show fewer',
       open: 'Open campaign',
     },
   },

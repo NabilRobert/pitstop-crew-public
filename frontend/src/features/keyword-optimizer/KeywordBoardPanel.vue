@@ -7,6 +7,7 @@ import BoardLegend from './BoardLegend.vue'
 import CorkBoard from './CorkBoard.vue'
 import NoteDrawer from './NoteDrawer.vue'
 import NegativesExportPanel from './NegativesExportPanel.vue'
+import SearchBox from './SearchBox.vue'
 import {
   boardNumbers, buildNotes, campaignsOf, headline as buildHeadline, looseIdeas, visibleNotes,
   type BoardFilter, type BoardNote,
@@ -57,7 +58,12 @@ const appliedCount = computed(() => scoped.value.filter((s) => s.status === 'app
 const dismissedCount = computed(() => scoped.value.filter((s) => s.status === 'dismissed').length)
 const negativeCount = computed(() => scoped.value.filter((s) => s.type === 'negative_keyword' && s.status === 'open').length)
 
-const filter = ref<BoardFilter>({ campaignId: null, verdict: 'all', showAll: false })
+const filter = ref<BoardFilter>({ campaignId: null, verdict: 'all', showAll: false, query: '' })
+const query = computed({
+  get: () => filter.value.query ?? '',
+  set: (v: string) => (filter.value = { ...filter.value, query: v }),
+})
+const searching = computed(() => query.value.trim() !== '')
 const visible = computed(() => visibleNotes(notes.value, filter.value))
 const hasVerdicts = computed(() => notes.value.some((n) => n.verdict !== null))
 const periodNote = computed(() => props.periodDays != null && props.periodDays !== 90)
@@ -85,7 +91,7 @@ watch([drawerNote, drawerSuggestions], () => {
 watch(
   () => props.campaignId,
   () => {
-    filter.value = { campaignId: null, verdict: 'all', showAll: false }
+    filter.value = { campaignId: null, verdict: 'all', showAll: false, query: '' }
     drawer.value = null
   }
 )
@@ -107,6 +113,20 @@ function openIdea(s: Suggestion) {
     <p v-if="summaryMissing" class="mb-3 text-sm text-ink-soft">{{ t('keywordOptimizer.board.noVerdicts') }}</p>
     <BoardLegend />
     <p v-if="periodNote" class="-mt-2 mb-3 text-xs text-ink-faint">{{ t('keywordOptimizer.board.periodNote') }}</p>
+
+    <div class="mb-3">
+      <SearchBox
+        v-model="query"
+        :label="t('keywordOptimizer.board.search.label')"
+        :placeholder="t('keywordOptimizer.board.search.placeholder')"
+        :clear-label="t('keywordOptimizer.board.search.clear')"
+      />
+      <p v-if="searching" class="mt-1 text-xs text-ink-soft" role="status">
+        {{ visible.shown.length === 0
+          ? t('keywordOptimizer.board.search.none', { q: query.trim() })
+          : t('keywordOptimizer.board.search.results', { n: visible.shown.length, total: notes.length }) }}
+      </p>
+    </div>
 
     <!-- Campaign chips only make sense account-wide; on a campaign's own page everything is already that campaign. -->
     <div v-if="campaignId === null" class="mb-2 flex flex-wrap items-center gap-2" role="group" :aria-label="t('keywordOptimizer.board.filters.campaign')">

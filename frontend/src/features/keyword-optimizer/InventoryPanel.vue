@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDate, formatNumber } from '../../shared/utils/format'
 import { formatIdr } from './suggestionView'
+import { matchesAllWords } from './boardModel'
+import SearchBox from './SearchBox.vue'
 import { useInventorySummary } from './useInventorySummary'
 
 const { t } = useI18n()
 const { inventory, loading, error } = useInventorySummary()
+
+const query = ref('')
+/** Every word of the search must appear in "make model" (see matchesAllWords). */
+const models = computed(() => (inventory.value?.by_model ?? []).filter((m) => matchesAllWords(`${m.make} ${m.model}`, query.value)))
+const searching = computed(() => query.value.trim() !== '')
 
 const maxAging = computed(() => Math.max(1, ...(inventory.value?.aging ?? []).map((a) => a.count)))
 </script>
@@ -63,6 +70,17 @@ const maxAging = computed(() => Math.max(1, ...(inventory.value?.aging ?? []).ma
           </div>
         </div>
 
+        <div v-if="inventory.by_model.length" class="mb-2">
+          <SearchBox
+            v-model="query"
+            :label="t('keywordOptimizer.inventory.search.label')"
+            :placeholder="t('keywordOptimizer.inventory.search.placeholder')"
+            :clear-label="t('keywordOptimizer.board.search.clear')"
+          />
+          <p v-if="searching" class="mt-1 text-xs text-ink-soft" role="status">
+            {{ t('keywordOptimizer.inventory.search.count', { n: models.length, total: inventory.by_model.length }) }}
+          </p>
+        </div>
         <div v-if="inventory.by_model.length" class="overflow-x-auto rounded-lg border border-border bg-surface">
           <table class="w-full min-w-max border-collapse text-left">
             <thead>
@@ -76,7 +94,7 @@ const maxAging = computed(() => Math.max(1, ...(inventory.value?.aging ?? []).ma
               </tr>
             </thead>
             <tbody>
-              <tr v-for="m in inventory.by_model" :key="`${m.make}-${m.model}`" class="border-b border-border last:border-b-0">
+              <tr v-for="m in models" :key="`${m.make}-${m.model}`" class="border-b border-border last:border-b-0">
                 <td class="px-4 py-3 font-medium text-ink">{{ m.make }} {{ m.model }}</td>
                 <td class="px-4 py-3 text-right tabular-nums" :class="m.available === 0 && m.linked_keyword_count > 0 ? 'font-bold text-flag-critical' : 'text-ink'">
                   {{ m.available }}
@@ -86,6 +104,9 @@ const maxAging = computed(() => Math.max(1, ...(inventory.value?.aging ?? []).ma
                 <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ formatIdr(m.avg_price_idr) }}</td>
                 <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ formatIdr(m.avg_margin_idr) }}</td>
                 <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ m.linked_keyword_count }}</td>
+              </tr>
+              <tr v-if="searching && models.length === 0">
+                <td colspan="6" class="px-4 py-6 text-center text-ink-faint">{{ t('keywordOptimizer.inventory.search.none', { q: query.trim() }) }}</td>
               </tr>
             </tbody>
           </table>

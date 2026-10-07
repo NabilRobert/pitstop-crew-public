@@ -7,6 +7,7 @@ import SuggestionCard from './SuggestionCard.vue'
 import NegativesExportPanel from './NegativesExportPanel.vue'
 import InventoryPanel from './InventoryPanel.vue'
 import KeywordBoardPanel from './KeywordBoardPanel.vue'
+import ProposalsSection from './ProposalsSection.vue'
 import { SUGGESTION_TYPES } from './suggestionView'
 import { USE_FIXTURES } from './keywordOptimizerApi'
 import { useKeywordOptimizer, type StatusFilter } from './useKeywordOptimizer'
@@ -149,6 +150,8 @@ function runStatusClass(status: string): string {
 
       <!-- ===================== BOARD ===================== -->
       <template v-if="view === 'board'">
+        <!-- Whole-campaign proposals first, in their own clearly different lane. -->
+        <ProposalsSection :suggestions="items" :can-edit="canEdit" :busy-ids="busyIds" @status="(id, status) => setStatus(id, status)" />
         <div v-if="board.loading.value" class="py-10 text-center text-ink-faint">{{ t('common.loading') }}</div>
         <div v-else-if="board.error.value" class="rounded-lg border border-flag-critical/40 bg-flag-critical-soft px-5 py-4 text-sm text-flag-critical">
           {{ t('keywordOptimizer.board.numbersFailed', { error: board.error.value }) }}

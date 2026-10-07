@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatMicrosAsIDR, formatNumber } from '../../shared/utils/format'
 import type { CampaignRollup } from '../keyword-optimizer/boardModel'
@@ -20,6 +20,11 @@ const costPerEnquiry = computed(() => (props.row.conversions > 0 ? props.row.cos
 const verdictChips = computed(() =>
   props.rollup ? LEGEND_ORDER.map((v) => ({ v, n: props.rollup!.verdicts[v] })).filter((c) => c.n > 0) : []
 )
+// The campaign's own keywords, written out: the first few always, the rest one click away.
+const SHOWN = 6
+const expanded = ref(false)
+const listed = computed(() => (props.rollup ? (expanded.value ? props.rollup.keywordList : props.rollup.keywordList.slice(0, SHOWN)) : []))
+const moreCount = computed(() => (props.rollup ? Math.max(0, props.rollup.keywordList.length - SHOWN) : 0))
 const steady = computed(() => (props.rollup ? props.rollup.verdicts.steady : 0))
 </script>
 
@@ -67,6 +72,26 @@ const steady = computed(() => (props.rollup ? props.rollup.verdicts.steady : 0))
             {{ steady }} {{ t('keywordOptimizer.board.verdict.steady') }}
           </li>
         </ul>
+        <ul v-if="listed.length" class="mt-3 flex flex-wrap gap-1.5" :class="{ 'max-h-40 overflow-y-auto': expanded }" :aria-label="t('campaignsList.card.keywordList')">
+          <li
+            v-for="k in listed"
+            :key="k.keywordId"
+            class="border px-1.5 py-0.5 text-xs"
+            :class="k.status === 'paused' ? 'border-dashed border-border-strong text-ink-faint' : 'border-border text-ink'"
+          >
+            {{ k.text }}
+            <span v-if="k.status === 'paused'" class="font-mono text-[9px] font-bold uppercase">{{ t('keywordOptimizer.board.note.paused') }}</span>
+          </li>
+        </ul>
+        <button
+          v-if="moreCount > 0"
+          type="button"
+          class="mt-1 font-mono text-[11px] font-bold uppercase tracking-wide text-link underline"
+          :aria-expanded="expanded"
+          @click="expanded = !expanded"
+        >
+          {{ expanded ? t('campaignsList.card.showFewer') : t('campaignsList.card.showAllKeywords', { n: rollup.keywordList.length }) }}
+        </button>
         <p class="mt-2 text-sm" :class="rollup.openSuggestions > 0 ? 'font-bold text-ink' : 'text-ink-faint'">
           {{ rollup.openSuggestions > 0 ? t('campaignsList.card.waiting', { n: rollup.openSuggestions }, rollup.openSuggestions) : t('campaignsList.card.nothingWaiting') }}
         </p>

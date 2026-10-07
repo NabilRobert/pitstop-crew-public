@@ -119,25 +119,51 @@ export function buildNotes(
   })
 }
 
-/** Suggestions that belong to no single keyword (campaign ideas, campaign-wide negatives, brand-new keyword ideas). */
+/** Suggestions that belong to no single keyword (campaign ideas, campaign-wide negatives, brand-new keyword ideas).
+ * Whole-campaign proposals are NOT here: they have their own, much more visible lane (see `proposalsByStatus`). */
 export function looseIdeas(suggestions: Suggestion[]): Suggestion[] {
-  return suggestions.filter((s) => s.keyword === null && s.status === 'open').sort(byRank)
+  return suggestions.filter((s) => s.keyword === null && s.status === 'open' && s.type !== 'new_campaign').sort(byRank)
+}
+
+/** New-campaign proposals in one status ('open' = proposed by the AI and waiting, 'planned' = approved). */
+export function proposalsByStatus(suggestions: Suggestion[], status: 'open' | 'planned'): Suggestion[] {
+  return suggestions.filter((s) => s.type === 'new_campaign' && s.status === status).sort(byRank)
 }
 
 export interface BoardFilter {
   campaignId: number | null
   verdict: KeywordVerdict | 'all'
   showAll: boolean
+  /** Free-text search over keyword, campaign and ad group. Empty = no search. Searching always shows every match. */
+  query?: string
+}
+
+/** Every whitespace-separated word of the query must appear, case-insensitively, as plain text (no regex).
+ * An empty or blank query matches everything. Shared by the board search and the inventory search. */
+export function matchesAllWords(haystack: string, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  const h = haystack.toLowerCase()
+  return words.every((w) => h.includes(w))
+}
+
+/** Board search: the keyword, its campaign or its ad group. */
+export function matchesQuery(n: Pick<BoardNote, 'text' | 'adGroup' | 'campaign'>, query: string): boolean {
+  return matchesAllWords(`${n.text} ${n.campaign.name} ${n.adGroup}`, query)
 }
 
 export const BOARD_LIMIT = 24
 
 /** What the board actually draws: filters first, then the biggest spenders plus anything with advice. */
 export function visibleNotes(notes: BoardNote[], filter: BoardFilter, limit = BOARD_LIMIT): { shown: BoardNote[]; hidden: number } {
+  const searching = !!filter.query && filter.query.trim() !== ''
   const filtered = notes.filter(
-    (n) => (filter.campaignId === null || n.campaign.id === filter.campaignId) && (filter.verdict === 'all' || n.verdict === filter.verdict)
+    (n) =>
+      (filter.campaignId === null || n.campaign.id === filter.campaignId) &&
+      (filter.verdict === 'all' || n.verdict === filter.verdict) &&
+      (!searching || matchesQuery(n, filter.query as string))
   )
-  if (filter.showAll || filtered.length <= limit) return { shown: filtered, hidden: 0 }
+  // A search is a request to see the matches, all of them: the "biggest 24" trim does not apply.
+  if (searching || filter.showAll || filtered.length <= limit) return { shown: filtered, hidden: 0 }
   const withAdvice = filtered.filter((n) => n.open.length > 0)
   const adviceIds = new Set(withAdvice.map((n) => n.keywordId))
   const room = Math.max(0, limit - withAdvice.length)
@@ -195,8 +221,19 @@ export function costPerConversionMicros(n: Pick<BoardNote, 'spendMicros' | 'conv
   return n.conversions > 0 ? n.spendMicros / n.conversions : null
 }
 
+export interface CampaignKeyword {
+  keywordId: number
+  text: string
+  matchType: KeywordMatchType
+  status: 'enabled' | 'paused' | null
+  verdict: KeywordVerdict | null
+  spendMicros: number
+}
+
 export interface CampaignRollup {
   keywords: number
+  /** The campaign's keywords by spend, biggest first (paused and idle ones included, contract 3.2). */
+  keywordList: CampaignKeyword[]
   /** Keyword count per verdict. Keywords without a verdict (older backend) are counted under `none`. */
   verdicts: Record<KeywordVerdict | 'none', number>
   /** Open suggestions that belong to this campaign (keyword-level or campaign-level). */
@@ -224,16 +261,37 @@ export function campaignRollup(
   const get = (campaignId: number): CampaignRollup => {
     let r = out.get(campaignId)
     if (!r) {
-      r = { keywords: 0, verdicts: EMPTY_VERDICTS(), openSuggestions: 0 }
+      r = { keywords: 0, keywordList: [], verdicts: EMPTY_VERDICTS(), openSuggestions: 0 }
       out.set(campaignId, r)
     }
     return r
   }
+  const rowInfo = new Map<number, { text: string; matchType: KeywordMatchType; spend: number }>()
+  for (const r of rows) {
+    const e = rowInfo.get(r.keyword_id)
+    if (e) e.spend += r.cost_micros
+    else rowInfo.set(r.keyword_id, { text: r.text, matchType: r.match_type, spend: r.cost_micros })
+  }
+  const summaryOf = new Map(summaries.map((s) => [s.keyword_id, s]))
   for (const [keywordId, campaignId] of campaignOfKeyword) {
     const r = get(campaignId)
     r.keywords++
     r.verdicts[verdictOf.get(keywordId) ?? 'none']++
+    const sm = summaryOf.get(keywordId)
+    const info = rowInfo.get(keywordId)
+    const text = info?.text ?? sm?.text
+    if (text) {
+      r.keywordList.push({
+        keywordId,
+        text,
+        matchType: info?.matchType ?? sm?.match_type ?? 'phrase',
+        status: sm?.status ?? null,
+        verdict: sm?.verdict ?? null,
+        spendMicros: info?.spend ?? 0,
+      })
+    }
   }
+  for (const r of out.values()) r.keywordList.sort((a, b) => b.spendMicros - a.spendMicros || a.keywordId - b.keywordId)
   for (const s of suggestions) {
     if (s.status !== 'open' || !s.campaign) continue
     get(s.campaign.id).openSuggestions++

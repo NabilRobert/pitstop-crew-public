@@ -47,6 +47,13 @@ export default {
       showLess: 'Tampilkan lebih sedikit',
       noVerdicts: 'Server tidak mengirim penilaian kata kunci, jadi stiker dan dua angka biaya disembunyikan.',
       numbersFailed: 'Tidak dapat memuat angka kata kunci: {error}',
+      search: {
+        label: 'Cari kata kunci',
+        placeholder: 'Cari kata kunci, kampanye, grup iklan…',
+        clear: 'Hapus pencarian',
+        results: '{n} dari {total} kata kunci',
+        none: 'Tidak ada kata kunci yang cocok dengan "{q}".',
+      },
       view: { label: 'Tampilan', board: 'Papan', list: 'Daftar' },
       filters: {
         campaign: 'Filter berdasarkan kampanye',
@@ -137,6 +144,21 @@ export default {
         noAdvice: 'Tidak ada saran untuk kata kunci ini.',
         paused: 'Kata kunci ini dijeda di Google Ads. Ia tidak mengeluarkan biaya, dan tetap ada di papan agar Anda bisa melihatnya.',
       },
+    },
+    lanes: {
+      proposed: {
+        title: 'Kampanye baru yang diusulkan AI',
+        hint: 'Disusun dari mobil yang Anda punya di stok. Belum ada yang dibuat di Google Ads: rencanakan satu untuk menyimpannya, lalu buat sendiri di sana.',
+        stamp: 'Diusulkan',
+      },
+      planned: {
+        title: 'Kampanye yang direncanakan',
+        hint: 'Disetujui di sini, tetapi belum ada di Google Ads. Pitstop belum bisa membuat kampanye di sana: bawa brief ke Google Ads (atau Google Ads Editor), buat kampanyenya, lalu tandai sudah dibuat.',
+        stamp: 'Direncanakan',
+      },
+      facts: '{cars} mobil di stok · {groups} grup iklan · {keywords} kata kunci · {budget} per hari',
+      showKeywords: 'Tampilkan {n} kata kunci',
+      details: 'Detail',
     },
     proposal: {
       basis: {
@@ -279,6 +301,12 @@ export default {
       unavailable: 'Inventaris tidak tersedia',
       unavailableEffect: 'Saran yang bergantung pada stok dilewati sampai inventaris kembali.',
       source: { demo: 'Inventaris demo', connected: 'Inventaris terhubung', unavailable: 'Inventaris tidak tersedia' },
+      search: {
+        label: 'Cari inventaris',
+        placeholder: 'Cari merek atau model…',
+        count: '{n} dari {total} model',
+        none: 'Tidak ada model mobil yang cocok dengan "{q}".',
+      },
       available: 'Tersedia',
       reserved: 'Dipesan',
       sold30: 'Terjual, 30 hari terakhir',
@@ -457,14 +485,6 @@ export default {
     title: 'Kampanye',
     subtitle: '{period} terakhir · klik kampanye untuk melihat papan kata kunci, grup iklan, dan iklan',
     loading: 'Memuat kampanye…',
-    proposalsWaiting: '1 usulan kampanye baru menunggu keputusan Anda. | {n} usulan kampanye baru menunggu keputusan Anda.',
-    reviewProposals: 'Tinjau di Pengoptimal Kata Kunci',
-    planned: {
-      title: 'Kampanye yang direncanakan',
-      hint: 'Disetujui di sini, tetapi belum ada di Google Ads. Pitstop belum bisa membuat kampanye di sana: bawa brief ke Google Ads (atau Google Ads Editor), buat kampanyenya, lalu tandai sudah dibuat.',
-      summary: '{groups} grup iklan · {keywords} kata kunci · {budget} per hari',
-      viewBrief: 'Lihat brief',
-    },
     card: {
       clicks: '{n} klik',
       keywords: '1 kata kunci | {n} kata kunci',
@@ -472,6 +492,9 @@ export default {
       keywordsUnavailable: 'Detail kata kunci belum tersedia dari server saat ini.',
       waiting: '1 saran menunggu | {n} saran menunggu',
       nothingWaiting: 'Tidak ada yang menunggu',
+      keywordList: 'Kata kunci di kampanye ini',
+      showAllKeywords: 'Tampilkan semua {n} kata kunci',
+      showFewer: 'Tampilkan lebih sedikit',
       open: 'Buka kampanye',
     },
   },

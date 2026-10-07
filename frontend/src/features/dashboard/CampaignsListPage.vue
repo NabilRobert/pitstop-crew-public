@@ -2,11 +2,9 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CampaignCard from './CampaignCard.vue'
-import PlannedCampaigns from './PlannedCampaigns.vue'
-import NoteDrawer from '../keyword-optimizer/NoteDrawer.vue'
+import ProposalsSection from '../keyword-optimizer/ProposalsSection.vue'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 import { isDemo } from '../../shared/composables/auth'
-import type { Suggestion } from '../../shared/api/types'
 import PeriodSelector from './PeriodSelector.vue'
 import { PERIOD_OPTIONS } from './useDashboard'
 import { useCampaignsList } from './useCampaignsList'
@@ -22,15 +20,10 @@ const periodSubtitleKey = computed(
 const { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable, suggestions, reload } = useCampaignsList(days)
 const idByName = computed(() => new Map(campaigns.value.map((c) => [c.name, c.id])))
 
-// --- campaign proposals (contract 3.3) ---
-const planned = computed(() => suggestions.value.filter((s) => s.type === 'new_campaign' && s.status === 'planned'))
-const openProposals = computed(() => suggestions.value.filter((s) => s.type === 'new_campaign' && s.status === 'open').length)
+// --- campaign proposals (contract 3.3): the lanes and their detail panel live in ProposalsSection ---
 const canEdit = computed(() => !isDemo.value)
 const busyIds = ref<Set<number>>(new Set())
 const actionError = ref<string | null>(null)
-const openId = ref<number | null>(null)
-// Re-read from the loaded list so the panel always shows the current status, and closes if the row is gone.
-const openSuggestion = computed<Suggestion | null>(() => suggestions.value.find((s) => s.id === openId.value) ?? null)
 
 async function setStatus(id: number, status: 'open' | 'applied' | 'dismissed' | 'planned') {
   if (busyIds.value.has(id)) return
@@ -77,19 +70,8 @@ watch(loading, (isLoading) => {
     </div>
 
     <template v-else>
-      <!-- Where the AI's whole-campaign proposals surface: waiting ones point to the optimizer, approved ones live here. -->
-      <p v-if="openProposals > 0" class="mb-4 border border-border bg-surface px-4 py-3 text-sm text-ink">
-        {{ t('campaignsList.proposalsWaiting', { n: openProposals }, openProposals) }}
-        <router-link to="/keyword-optimizer" class="ml-1 font-bold text-link underline">{{ t('campaignsList.reviewProposals') }}</router-link>
-      </p>
-      <PlannedCampaigns
-        v-if="planned.length"
-        :items="planned"
-        :can-edit="canEdit"
-        :busy-ids="busyIds"
-        @open="(s) => (openId = s.id)"
-        @created="(s) => setStatus(s.id, 'applied')"
-      />
+      <!-- The AI's whole-campaign ideas come first, in their own lanes, clearly not real campaigns yet. -->
+      <ProposalsSection :suggestions="suggestions" :can-edit="canEdit" :busy-ids="busyIds" @status="(id, status) => setStatus(id, status)" />
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" :class="{ 'opacity-60 transition-opacity': loading }" :aria-busy="loading">
       <CampaignCard
@@ -103,14 +85,5 @@ watch(loading, (isLoading) => {
     </div>
     </template>
 
-    <NoteDrawer
-      v-if="openSuggestion"
-      :note="null"
-      :suggestions="[openSuggestion]"
-      :can-edit="canEdit"
-      :busy-ids="busyIds"
-      @close="openId = null"
-      @status="(id, status) => setStatus(id, status)"
-    />
   </main>
 </template>
