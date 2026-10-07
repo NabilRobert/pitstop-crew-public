@@ -157,6 +157,11 @@ export default {
       noTargetCost: 'Data margin belum cukup untuk menghitungnya',
       assumptions: 'Mengasumsikan hingga {share}% margin mobil boleh dipakai untuk iklan dan {rate}% prospek menjadi penjualan. Rasio penjualan hanyalah perkiraan sampai ada data penjualan nyata.',
       linked: 'Kini aktif di Google Ads sebagai "{name}"',
+      bound: {
+        ceiling: 'Ditahan pada batas atas harian Anda. Stok sebenarnya membenarkan lebih banyak.',
+        floor: 'Dinaikkan ke batas bawah harian Anda. Stok sebenarnya membenarkan lebih sedikit.',
+        change: 'Ubah di Pengaturan',
+      },
       briefCsv: 'Unduh brief (CSV)',
       briefTxt: 'Unduh ringkasan (teks)',
       notCreatedNote: 'Pitstop belum bisa membuat kampanye di Google Ads. Bawa brief ini ke sana, atau ke Google Ads Editor, lalu buat sendiri.',
@@ -647,6 +652,14 @@ export default {
     monthlyCostCap: 'Batas biaya bulanan (USD)',
     monthlyCostCapHelp:
       'Memblokir run pipeline baru begitu total biaya AI bulan ini mencapai jumlah ini — batas keamanan terhadap bug penjadwalan atau loop yang macet, bukan anggaran rutin. Kosongkan untuk menonaktifkan.',
+    campaignBudget: {
+      title: 'Usulan kampanye: anggaran harian',
+      floor: 'Batas bawah anggaran harian (Rp)',
+      floorHelp: 'Kampanye yang diusulkan tidak pernah diberi kurang dari ini per hari. Rupiah utuh.',
+      ceiling: 'Batas atas anggaran harian (Rp)',
+      ceilingHelp: 'Kampanye yang diusulkan tidak pernah diberi lebih dari ini per hari, sebanyak apa pun stok yang dicakup. Rupiah utuh.',
+      note: 'Jika batas atas di bawah batas bawah, batas bawah yang berlaku.',
+    },
     keywordOptimizer: {
       title: 'Pengoptimal kata kunci',
       enabledTitle: 'Jalankan pengoptimal kata kunci mingguan',
@@ -662,6 +675,8 @@ export default {
       inventoryStatus: 'Sumber inventaris: {source}.',
       inventoryNote: 'Koneksi inventaris diatur di server dan tidak pernah ditampilkan di sini.',
       invalid: {
+        budgetFloor: 'Batas bawah anggaran harian harus berupa rupiah utuh di atas 0 (hanya angka).',
+        budgetCeiling: 'Batas atas anggaran harian harus berupa rupiah utuh di atas 0 (hanya angka).',
         testBudgetShare: 'Porsi anggaran uji harus berupa angka dari 0 sampai 1.',
         minConfidenceP: 'Tingkat signifikansi harus berupa angka di atas 0 dan maksimal 1.',
         allowedSpendShare: 'Porsi margin harus berupa angka dari 0 sampai 1.',

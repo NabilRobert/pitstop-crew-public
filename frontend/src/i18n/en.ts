@@ -157,6 +157,11 @@ export default {
       noTargetCost: 'Not enough margin data to work this out',
       assumptions: 'Assumes up to {share}% of a car’s margin may go on ads and {rate}% of enquiries become sales. The sales rate is a guess until real sales data exists.',
       linked: 'Now live in Google Ads as "{name}"',
+      bound: {
+        ceiling: 'Held at your daily ceiling. The stock could justify more.',
+        floor: 'Raised to your daily minimum. The stock would justify less.',
+        change: 'Change it in Settings',
+      },
       briefCsv: 'Download brief (CSV)',
       briefTxt: 'Download outline (text)',
       notCreatedNote: 'Pitstop cannot create campaigns in Google Ads yet. Take the brief there, or into Google Ads Editor, and create it yourself.',
@@ -647,6 +652,14 @@ export default {
     monthlyCostCap: 'Monthly spend cap (USD)',
     monthlyCostCapHelp:
       "Blocks new pipeline runs once this month's total AI cost reaches this amount — a safety limit against a scheduling bug or a stuck loop, not a routine budget. Leave blank to disable.",
+    campaignBudget: {
+      title: 'Campaign proposals: daily budget',
+      floor: 'Daily budget minimum (Rp)',
+      floorHelp: 'A proposed campaign is never given less than this per day. Whole rupiah.',
+      ceiling: 'Daily budget ceiling (Rp)',
+      ceilingHelp: 'A proposed campaign is never given more than this per day, however much stock it covers. Whole rupiah.',
+      note: 'If the ceiling is below the minimum, the minimum wins.',
+    },
     keywordOptimizer: {
       title: 'Keyword optimizer',
       enabledTitle: 'Run the weekly keyword optimizer',
@@ -662,6 +675,8 @@ export default {
       inventoryStatus: 'Inventory source: {source}.',
       inventoryNote: 'The inventory connection is configured on the server and is never shown here.',
       invalid: {
+        budgetFloor: 'Daily budget minimum must be a whole number of rupiah above 0 (digits only).',
+        budgetCeiling: 'Daily budget ceiling must be a whole number of rupiah above 0 (digits only).',
         testBudgetShare: 'Test budget share must be a number from 0 to 1.',
         minConfidenceP: 'Significance level must be a number above 0 and at most 1.',
         allowedSpendShare: 'Share of margin must be a number from 0 to 1.',

@@ -302,7 +302,8 @@ export const FIXTURE_SUGGESTIONS: Suggestion[] = [
         { text: 'bengkel', match_type: 'phrase' },
       ],
       budget: {
-        daily_micros: 120_000 * RP,
+        daily_micros: 100_000 * RP,
+        bound: 'ceiling',
         target_cpa_micros: 48_000 * RP,
         assumptions: { allowed_spend_share: 0.2, lead_to_sale_rate: 0.02 },
       },
@@ -342,6 +343,7 @@ export const FIXTURE_SUGGESTIONS: Suggestion[] = [
       starter_negatives: [{ text: 'lowongan', match_type: 'phrase' }, { text: 'sparepart', match_type: 'phrase' }],
       budget: {
         daily_micros: 90_000 * RP,
+        bound: null,
         target_cpa_micros: null, // no margin data for these units: the UI must say so, not show 0
         assumptions: { allowed_spend_share: 0.2, lead_to_sale_rate: 0.02 },
       },
@@ -386,7 +388,7 @@ export const FIXTURE_SUGGESTIONS: Suggestion[] = [
         },
       ],
       starter_negatives: [{ text: 'lowongan', match_type: 'phrase' }, { text: 'gratis', match_type: 'broad' }],
-      budget: { daily_micros: 220_000 * RP, target_cpa_micros: 64_000 * RP, assumptions: { allowed_spend_share: 0.2, lead_to_sale_rate: 0.02 } },
+      budget: { daily_micros: 20_000 * RP, bound: 'floor', target_cpa_micros: 64_000 * RP, assumptions: { allowed_spend_share: 0.2, lead_to_sale_rate: 0.02 } },
       stock: { units: 3, avg_days_listed: 41, avg_margin_idr: 16_000_000, total_value_idr: 1_155_000_000, snapshot_on: SNAPSHOT },
       overlaps: [{ campaign_id: 2, name: 'Search — Used Cars Generic', shared_keywords: 4 }],
     },
@@ -417,7 +419,7 @@ export const FIXTURE_SUGGESTIONS: Suggestion[] = [
       theme: null,
       ad_groups: [{ name: 'Honda HR-V', keywords: [{ text: 'honda hr-v bekas', match_type: 'phrase', source: 'existing_keyword' }, { text: 'hrv se bekas', match_type: 'exact', source: 'stock' }], vehicle_ids: [401, 402, 403, 404] }],
       starter_negatives: [{ text: 'lowongan', match_type: 'phrase' }],
-      budget: { daily_micros: 110_000 * RP, target_cpa_micros: 44_000 * RP, assumptions: { allowed_spend_share: 0.2, lead_to_sale_rate: 0.02 } },
+      budget: { daily_micros: 100_000 * RP, bound: 'ceiling', target_cpa_micros: 44_000 * RP, assumptions: { allowed_spend_share: 0.2, lead_to_sale_rate: 0.02 } },
       stock: { units: 4, avg_days_listed: 62, avg_margin_idr: 11_000_000, total_value_idr: 1_240_000_000, snapshot_on: SNAPSHOT },
       overlaps: [],
     },

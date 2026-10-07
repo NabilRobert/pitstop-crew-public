@@ -16,6 +16,9 @@ const {
   monthlyCostCapUsd,
   problemKey,
   keywordSettingsSupported,
+  campaignBudgetSupported,
+  campaignBudgetFloor,
+  campaignBudgetCeiling,
   keywordOptimizerEnabled,
   keywordTestBudgetShare,
   keywordMinConfidenceP,
@@ -113,6 +116,43 @@ const {
           <p class="mt-1 text-xs text-ink-faint">
             {{ t('settings.monthlyCostCapHelp') }}
           </p>
+        </div>
+
+        <div v-if="campaignBudgetSupported" class="mt-5 border-t border-border pt-5">
+          <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
+            {{ t('settings.campaignBudget.title') }}
+          </h2>
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="cb-floor">
+                {{ t('settings.campaignBudget.floor') }}
+              </label>
+              <input
+                id="cb-floor"
+                v-model="campaignBudgetFloor"
+                type="text"
+                inputmode="numeric"
+                placeholder="20000"
+                class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
+              />
+              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.campaignBudget.floorHelp') }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="cb-ceiling">
+                {{ t('settings.campaignBudget.ceiling') }}
+              </label>
+              <input
+                id="cb-ceiling"
+                v-model="campaignBudgetCeiling"
+                type="text"
+                inputmode="numeric"
+                placeholder="100000"
+                class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
+              />
+              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.campaignBudget.ceilingHelp') }}</p>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-ink-faint">{{ t('settings.campaignBudget.note') }}</p>
         </div>
 
         <div v-if="keywordSettingsSupported" class="mt-5 border-t border-border pt-5">

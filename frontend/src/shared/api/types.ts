@@ -305,6 +305,9 @@ export interface Settings {
   keyword_min_confidence_p?: string
   inventory_allowed_spend_share?: string
   inventory_lead_to_sale_rate?: string
+  // Contract 3.4: whole-rupiah strings bounding a proposed campaign's daily budget; optional until the backend sends them.
+  campaign_daily_budget_floor_idr?: string
+  campaign_daily_budget_ceiling_idr?: string
 }
 
 export interface TriggerRunResponse {
@@ -465,6 +468,8 @@ export interface NewCampaignPayload {
   starter_negatives: { text: string; match_type: KeywordMatchType }[]
   budget: {
     daily_micros: number
+    /** 3.4: which settings bound clamped daily_micros (floor / ceiling), or null when it was not clamped. Optional until seen live. */
+    bound?: 'floor' | 'ceiling' | null
     target_cpa_micros: number | null
     /** Shown to the reader: the lead-to-sale rate is a guess until real sales data exists. */
     assumptions: { allowed_spend_share: number; lead_to_sale_rate: number }

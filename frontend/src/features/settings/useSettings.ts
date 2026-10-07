@@ -3,6 +3,12 @@ import { api } from '../../shared/api/api'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 import type { InventorySummary, Settings } from '../../shared/api/types'
 
+/** Whole rupiah typed as a string: digits only (surrounding spaces ignored), a safe integer, above 0. Matches the backend. */
+export function isWholeRupiah(value: string): boolean {
+  const v = value.trim()
+  return /^\d+$/.test(v) && Number.isSafeInteger(Number(v)) && Number(v) > 0
+}
+
 /** A 0-1 share/rate typed as a string. `exclusiveZero` rejects 0 itself (a p-value of 0 means nothing). */
 export function isUnitInterval(value: string, exclusiveZero = false): boolean {
   if (value.trim() === '') return false
@@ -37,10 +43,19 @@ export function useSettings() {
   const keywordMinConfidenceP = ref('')
   const inventoryAllowedSpendShare = ref('')
   const inventoryLeadToSaleRate = ref('')
+  // Contract 3.4: the daily budget bounds for proposed campaigns, in whole rupiah. Hidden until the backend sends them.
+  const campaignBudgetSupported = ref(false)
+  const campaignBudgetFloor = ref('')
+  const campaignBudgetCeiling = ref('')
   // Read-only status; the inventory connection string is never shown, edited or fetched here.
   const inventory = ref<InventorySummary | null>(null)
 
   function applyKeywordSettings(settings: Settings) {
+    campaignBudgetSupported.value = settings.campaign_daily_budget_floor_idr !== undefined
+    if (campaignBudgetSupported.value) {
+      campaignBudgetFloor.value = settings.campaign_daily_budget_floor_idr ?? ''
+      campaignBudgetCeiling.value = settings.campaign_daily_budget_ceiling_idr ?? ''
+    }
     keywordSettingsSupported.value = settings.keyword_optimizer_enabled !== undefined
     if (!keywordSettingsSupported.value) return
     keywordOptimizerEnabled.value = settings.keyword_optimizer_enabled === 'true'
@@ -52,6 +67,10 @@ export function useSettings() {
 
   /** Returns an i18n key for the first invalid keyword setting, or null. */
   function keywordSettingsProblem(): string | null {
+    if (campaignBudgetSupported.value) {
+      if (!isWholeRupiah(campaignBudgetFloor.value)) return 'settings.keywordOptimizer.invalid.budgetFloor'
+      if (!isWholeRupiah(campaignBudgetCeiling.value)) return 'settings.keywordOptimizer.invalid.budgetCeiling'
+    }
     if (!keywordSettingsSupported.value) return null
     if (!isUnitInterval(keywordTestBudgetShare.value)) return 'settings.keywordOptimizer.invalid.testBudgetShare'
     if (!isUnitInterval(keywordMinConfidenceP.value, true)) return 'settings.keywordOptimizer.invalid.minConfidenceP'
@@ -102,6 +121,12 @@ export function useSettings() {
         report_language: reportLanguage.value,
         auto_reports_enabled: String(autoReportsEnabled.value),
         monthly_cost_cap_usd: monthlyCostCapUsd.value.trim(),
+        ...(campaignBudgetSupported.value
+          ? {
+              campaign_daily_budget_floor_idr: campaignBudgetFloor.value.trim(),
+              campaign_daily_budget_ceiling_idr: campaignBudgetCeiling.value.trim(),
+            }
+          : {}),
         ...(keywordSettingsSupported.value
           ? {
               keyword_optimizer_enabled: String(keywordOptimizerEnabled.value),
@@ -140,6 +165,9 @@ export function useSettings() {
     monthlyCostCapUsd,
     problemKey,
     keywordSettingsSupported,
+    campaignBudgetSupported,
+    campaignBudgetFloor,
+    campaignBudgetCeiling,
     keywordOptimizerEnabled,
     keywordTestBudgetShare,
     keywordMinConfidenceP,

@@ -5,6 +5,7 @@ import type { NewCampaignPayload, Suggestion } from '../../shared/api/types'
 import { downloadBlob, safeFilename } from '../../shared/utils/download'
 import { formatDate, formatMicrosAsIDR } from '../../shared/utils/format'
 import { keywordOptimizerApi } from './keywordOptimizerApi'
+import { isDemo } from '../../shared/composables/auth'
 import { formatIdr } from './suggestionView'
 
 // The body of a new-campaign proposal (contract 3.3): why, the stock behind it, the ad groups and
@@ -92,6 +93,11 @@ async function download(format: 'csv' | 'txt') {
           <dd v-else class="text-sm text-ink-faint">{{ t('keywordOptimizer.proposal.noTargetCost') }}</dd>
         </div>
       </dl>
+      <!-- Why the number is what it is: held by a setting, not a model's opinion (contract 3.4). -->
+      <p v-if="payload.budget.bound" class="mt-1 text-sm text-ink">
+        {{ t(`keywordOptimizer.proposal.bound.${payload.budget.bound}`) }}
+        <router-link v-if="!isDemo" to="/settings" class="font-bold text-link underline">{{ t('keywordOptimizer.proposal.bound.change') }}</router-link>
+      </p>
       <p class="mt-1 text-xs text-ink-faint">
         {{ t('keywordOptimizer.proposal.assumptions', {
           share: Math.round(payload.budget.assumptions.allowed_spend_share * 100),
