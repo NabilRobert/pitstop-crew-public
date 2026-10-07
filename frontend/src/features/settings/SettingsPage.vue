@@ -20,6 +20,8 @@ const {
   campaignBudgetFloor,
   campaignBudgetCeiling,
   keywordOptimizerEnabled,
+  keywordRunTimeSupported,
+  keywordRunTime,
   keywordTestBudgetShare,
   keywordMinConfidenceP,
   inventoryAllowedSpendShare,
@@ -166,6 +168,19 @@ const {
               {{ t('settings.keywordOptimizer.enabledDesc') }}
             </span>
           </label>
+
+          <div v-if="keywordRunTimeSupported" class="mt-4 max-w-xs">
+            <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ko-run-time">
+              {{ t('settings.keywordOptimizer.runTime') }}
+            </label>
+            <input
+              id="ko-run-time"
+              v-model="keywordRunTime"
+              type="time"
+              class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent-ink focus:outline-none"
+            />
+            <p class="mt-1 text-xs text-ink-faint">{{ t('settings.keywordOptimizer.runTimeHelp') }}</p>
+          </div>
 
           <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>

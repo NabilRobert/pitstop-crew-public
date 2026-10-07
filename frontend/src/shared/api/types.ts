@@ -300,7 +300,10 @@ export interface Settings {
   monthly_cost_cap_usd: string
   // Overhaul v3 (contract 3.0) — all strings like the rest; optional until
   // the backend ships. Never includes the inventory connection string.
+  /** The automatic run's on/off switch (independent of auto_reports_enabled). */
   keyword_optimizer_enabled?: string
+  /** Contract 3.5: HH:MM in WIB, default 06:00; when the optimizer runs by itself each day. */
+  keyword_optimizer_run_time?: string
   keyword_test_budget_share?: string
   keyword_min_confidence_p?: string
   inventory_allowed_spend_share?: string

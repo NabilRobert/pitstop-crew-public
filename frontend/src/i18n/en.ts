@@ -35,7 +35,7 @@ export default {
       raise_bid_candidate: 'Consider a higher bid on "{keyword}"',
       new_campaign: 'Start a new campaign: "{name}"',
     },
-    subtitle: 'Weekly suggestions for your keywords, each backed by the account data behind it. These are suggestions only: nothing here changes your Google Ads account.',
+    subtitle: 'Suggestions for your keywords, each backed by the account data behind it. These are suggestions only: nothing here changes your Google Ads account.',
     backendMissing: {
       title: 'The backend has no keyword optimizer yet',
       body: 'The server answered, but it does not know the keyword optimizer endpoints (404). It is probably running an older version. Deploy the backend that includes them, or set VITE_KEYWORD_OPTIMIZER_FIXTURES=true in frontend/.env.local to preview this page with sample data.',
@@ -84,7 +84,7 @@ export default {
         title: '1 thing to do this week | {n} things to do this week',
         nothing: 'Nothing to do this week',
         noRun: 'Nothing to do yet',
-        noRunDetail: 'Advice appears after the first weekly check. The keywords below are already sorted by what they cost.',
+        noRunDetail: 'Advice appears after the first run. The keywords below are already sorted by what they cost.',
         stop: '{n} to stop wasting money',
         grow: '{n} to do more of what works',
         fresh: '{n} new to try',
@@ -146,6 +146,11 @@ export default {
         paused: 'This keyword is paused in Google Ads. It is not spending, so it stays on the board only so you can see it.',
       },
     },
+    schedule: {
+      on: 'Runs automatically every day at {time} WIB.',
+      off: 'Automatic runs are off. Use Run now to run it yourself.',
+      change: 'Change in Settings',
+    },
     lanes: {
       proposed: {
         title: 'New campaigns the AI proposes',
@@ -204,7 +209,7 @@ export default {
     runStatus: { running: 'Running', success: 'Succeeded', failure: 'Failed', partial: 'Partly succeeded' },
     noRunYet: {
       title: 'No keyword optimizer run yet',
-      body: 'Suggestions appear after the first weekly run. Until then there is nothing to show; this is expected, not an error.',
+      body: 'Suggestions appear after the first run. Until then there is nothing to show; this is expected, not an error.',
     },
     filters: {
       statusLabel: 'Filter by status',
@@ -703,8 +708,10 @@ export default {
     },
     keywordOptimizer: {
       title: 'Keyword optimizer',
-      enabledTitle: 'Run the weekly keyword optimizer',
-      enabledDesc: 'When off, the weekly keyword run is skipped. Existing suggestions stay visible. "Run now" on the Keyword Optimizer page still works.',
+      enabledTitle: 'Run the keyword optimizer automatically',
+      enabledDesc: 'When off, it no longer runs on its own at the time below, whatever the report settings are. Existing suggestions stay visible. "Run now" on the Keyword Optimizer page still works.',
+      runTime: 'Automatic run time (WIB)',
+      runTimeHelp: 'Every day at this time, like the daily report. The default is 06:00.',
       testBudgetShare: 'Test budget share (0 to 1)',
       testBudgetShareHelp: 'The slice of suggested spend kept for new, unproven keywords. Default 0.2 means about 20%.',
       minConfidenceP: 'Significance level (above 0, up to 1)',
@@ -716,6 +723,7 @@ export default {
       inventoryStatus: 'Inventory source: {source}.',
       inventoryNote: 'The inventory connection is configured on the server and is never shown here.',
       invalid: {
+        runTime: 'Run time must be a time like 06:00.',
         budgetFloor: 'Daily budget minimum must be a whole number of rupiah above 0 (digits only).',
         budgetCeiling: 'Daily budget ceiling must be a whole number of rupiah above 0 (digits only).',
         testBudgetShare: 'Test budget share must be a number from 0 to 1.',
@@ -972,7 +980,7 @@ export default {
     },
     keywordOptimizer: {
       title: 'Keyword Optimizer page',
-      body: "A weekly list of concrete keyword suggestions, each backed by the data behind it. Nothing here changes your Google Ads account: you read a suggestion, apply it yourself in Google Ads if you agree, then mark it applied here.",
+      body: "A list of concrete keyword suggestions, refreshed automatically every day at a time you choose in Settings (06:00 by default, and you can turn it off), each backed by the data behind it. Nothing here changes your Google Ads account: you read a suggestion, apply it yourself in Google Ads if you agree, then mark it applied here.",
       item1: "Each card shows what to do, the numbers it is based on, how confident it is, and whether it is backed by this account's data or only by general rules (marked unverified). Negatives that would also block a converting search say so before you apply them.",
       item2: "The suggestions are tied to the cars currently in stock, so a keyword for a model you have none of is called out, and new keyword ideas come from what is actually listed. The inventory panel at the bottom shows stock, how long cars have been listed, and margin.",
       item3: "Negative keywords can be downloaded or copied as a list to paste into Google Ads Editor. The page works for the read-only demo account too, but only the owner can mark suggestions applied or dismissed or start a run.",
@@ -1030,7 +1038,7 @@ export default {
     },
     keywordOptimizer: {
       title: 'The keyword optimizer: code decides, the model explains',
-      p1: "Google Ads is keyword-driven, so there is a dedicated keyword optimizer. It runs weekly as its own agent in the same pipeline (same run lock, spend cap and Run Inspector trace as the daily report), and its output is suggestions only, like everything else here. The design rule is the same one as the critic: the thing that decides must not be the thing that is allowed to be creative.",
+      p1: "Google Ads is keyword-driven, so there is a dedicated keyword optimizer. It runs on its own schedule (every day at a time you set, 06:00 by default, and you can switch it off) as its own agent in the same pipeline (same run lock, spend cap and Run Inspector trace as the daily report), and its output is suggestions only, like everything else here. The design rule is the same one as the critic: the thing that decides must not be the thing that is allowed to be creative.",
       item1: "Code finds the candidates, not the model. Negative keywords, search terms worth promoting, keywords to pause, match-type changes, new keywords and campaign ideas are all computed from the data with the numbers attached. The model (Kai) can only rank and explain candidates the engine produced; anything it invents is rejected, and every number on screen comes from the stored fields, never from the model's sentences. Ciri then grades the result like any other agent.",
       item2: "\"Not enough data\" is a real answer. A keyword with no conversions is only called wasted after enough clicks that the account's own conversion rate makes zero results unlikely by chance; below that it is a hint, not a finding. With no history at all, negatives come from general rules and are labelled unverified rather than dressed up as evidence.",
       item3: "A suggestion is checked against its own side effects: a proposed negative is tested against the search terms that actually converted, and any it would also block are shown on the card before anyone applies it.",

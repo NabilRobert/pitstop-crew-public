@@ -35,7 +35,7 @@ export default {
       raise_bid_candidate: 'Pertimbangkan bid lebih tinggi untuk "{keyword}"',
       new_campaign: 'Mulai kampanye baru: "{name}"',
     },
-    subtitle: 'Saran mingguan untuk kata kunci Anda, masing-masing didukung data akun di baliknya. Ini hanya saran: tidak ada yang berubah di akun Google Ads Anda.',
+    subtitle: 'Saran untuk kata kunci Anda, masing-masing didukung data akun di baliknya. Ini hanya saran: tidak ada yang berubah di akun Google Ads Anda.',
     backendMissing: {
       title: 'Backend belum memiliki pengoptimal kata kunci',
       body: 'Server menjawab, tetapi tidak mengenal endpoint pengoptimal kata kunci (404). Kemungkinan server masih menjalankan versi lama. Deploy backend yang menyertakannya, atau setel VITE_KEYWORD_OPTIMIZER_FIXTURES=true di frontend/.env.local untuk mencoba halaman ini dengan data contoh.',
@@ -84,7 +84,7 @@ export default {
         title: '1 hal yang perlu dilakukan minggu ini | {n} hal yang perlu dilakukan minggu ini',
         nothing: 'Tidak ada yang perlu dilakukan minggu ini',
         noRun: 'Belum ada yang perlu dilakukan',
-        noRunDetail: 'Saran muncul setelah pemeriksaan mingguan pertama. Kata kunci di bawah sudah diurutkan berdasarkan biayanya.',
+        noRunDetail: 'Saran muncul setelah proses pertama. Kata kunci di bawah sudah diurutkan berdasarkan biayanya.',
         stop: '{n} untuk menghentikan pemborosan',
         grow: '{n} untuk menambah yang berhasil',
         fresh: '{n} baru untuk dicoba',
@@ -146,6 +146,11 @@ export default {
         paused: 'Kata kunci ini dijeda di Google Ads. Ia tidak mengeluarkan biaya, dan tetap ada di papan agar Anda bisa melihatnya.',
       },
     },
+    schedule: {
+      on: 'Berjalan otomatis setiap hari pukul {time} WIB.',
+      off: 'Proses otomatis mati. Gunakan Jalankan sekarang untuk menjalankannya sendiri.',
+      change: 'Ubah di Pengaturan',
+    },
     lanes: {
       proposed: {
         title: 'Kampanye baru yang diusulkan AI',
@@ -204,7 +209,7 @@ export default {
     runStatus: { running: 'Berjalan', success: 'Berhasil', failure: 'Gagal', partial: 'Sebagian berhasil' },
     noRunYet: {
       title: 'Belum ada proses pengoptimal kata kunci',
-      body: 'Saran muncul setelah proses mingguan pertama. Sebelum itu belum ada yang ditampilkan; ini wajar, bukan kesalahan.',
+      body: 'Saran muncul setelah proses pertama. Sebelum itu belum ada yang ditampilkan; ini wajar, bukan kesalahan.',
     },
     filters: {
       statusLabel: 'Filter berdasarkan status',
@@ -703,8 +708,10 @@ export default {
     },
     keywordOptimizer: {
       title: 'Pengoptimal kata kunci',
-      enabledTitle: 'Jalankan pengoptimal kata kunci mingguan',
-      enabledDesc: 'Jika mati, proses kata kunci mingguan dilewati. Saran yang sudah ada tetap terlihat. Tombol "Jalankan sekarang" di halaman Pengoptimal Kata Kunci tetap berfungsi.',
+      enabledTitle: 'Jalankan pengoptimal kata kunci secara otomatis',
+      enabledDesc: 'Jika mati, ia tidak lagi berjalan sendiri pada jam di bawah, apa pun pengaturan laporan. Saran yang sudah ada tetap terlihat. Tombol "Jalankan sekarang" di halaman Pengoptimal Kata Kunci tetap berfungsi.',
+      runTime: 'Jam proses otomatis (WIB)',
+      runTimeHelp: 'Setiap hari pada jam ini, seperti laporan harian. Bawaannya 06:00.',
       testBudgetShare: 'Porsi anggaran uji (0 sampai 1)',
       testBudgetShareHelp: 'Bagian dari biaya yang disarankan untuk kata kunci baru yang belum terbukti. Default 0.2 berarti sekitar 20%.',
       minConfidenceP: 'Tingkat signifikansi (di atas 0, maksimal 1)',
@@ -716,6 +723,7 @@ export default {
       inventoryStatus: 'Sumber inventaris: {source}.',
       inventoryNote: 'Koneksi inventaris diatur di server dan tidak pernah ditampilkan di sini.',
       invalid: {
+        runTime: 'Jam proses harus berupa waktu seperti 06:00.',
         budgetFloor: 'Batas bawah anggaran harian harus berupa rupiah utuh di atas 0 (hanya angka).',
         budgetCeiling: 'Batas atas anggaran harian harus berupa rupiah utuh di atas 0 (hanya angka).',
         testBudgetShare: 'Porsi anggaran uji harus berupa angka dari 0 sampai 1.',
@@ -972,7 +980,7 @@ export default {
     },
     keywordOptimizer: {
       title: 'Halaman Pengoptimal Kata Kunci',
-      body: "Daftar saran kata kunci yang konkret setiap minggu, masing-masing didukung data di baliknya. Tidak ada yang mengubah akun Google Ads Anda di sini: Anda membaca saran, menerapkannya sendiri di Google Ads jika setuju, lalu menandainya diterapkan di sini.",
+      body: "Daftar saran kata kunci yang konkret, diperbarui otomatis setiap hari pada jam yang Anda pilih di Pengaturan (06:00 secara bawaan, dan bisa dimatikan), masing-masing didukung data di baliknya. Tidak ada yang mengubah akun Google Ads Anda di sini: Anda membaca saran, menerapkannya sendiri di Google Ads jika setuju, lalu menandainya diterapkan di sini.",
       item1: "Setiap kartu menampilkan apa yang harus dilakukan, angka yang mendasarinya, tingkat keyakinannya, dan apakah ia didukung data akun ini atau hanya aturan umum (ditandai belum terverifikasi). Kata kunci negatif yang juga akan memblokir pencarian berkonversi menyebutkannya sebelum Anda menerapkannya.",
       item2: "Saran dikaitkan dengan mobil yang sedang tersedia, jadi kata kunci untuk model yang tidak Anda punya akan ditandai, dan ide kata kunci baru berasal dari yang benar-benar terpasang. Panel inventaris di bawah menampilkan stok, lama mobil terpasang, dan margin.",
       item3: "Kata kunci negatif dapat diunduh atau disalin sebagai daftar untuk ditempel ke Google Ads Editor. Halaman ini juga berfungsi untuk akun demo baca-saja, tetapi hanya pemilik yang dapat menandai saran diterapkan atau diabaikan atau memulai proses.",
@@ -1030,7 +1038,7 @@ export default {
     },
     keywordOptimizer: {
       title: 'Pengoptimal kata kunci: kode yang memutuskan, model yang menjelaskan',
-      p1: "Google Ads digerakkan oleh kata kunci, jadi ada pengoptimal kata kunci tersendiri. Ia berjalan mingguan sebagai agent terpisah di pipeline yang sama (kunci proses, batas biaya, dan jejak Run Inspector yang sama dengan laporan harian), dan keluarannya hanya saran, seperti yang lain di sini. Aturan desainnya sama dengan kritikus: yang memutuskan tidak boleh sekaligus yang boleh berkreasi.",
+      p1: "Google Ads digerakkan oleh kata kunci, jadi ada pengoptimal kata kunci tersendiri. Ia berjalan sesuai jadwalnya sendiri (setiap hari pada jam yang Anda atur, 06:00 secara bawaan, dan bisa dimatikan) sebagai agent terpisah di pipeline yang sama (kunci proses, batas biaya, dan jejak Run Inspector yang sama dengan laporan harian), dan keluarannya hanya saran, seperti yang lain di sini. Aturan desainnya sama dengan kritikus: yang memutuskan tidak boleh sekaligus yang boleh berkreasi.",
       item1: "Kode yang menemukan kandidat, bukan model. Kata kunci negatif, istilah pencarian yang layak dipromosikan, kata kunci yang perlu dijeda, perubahan tipe pencocokan, kata kunci baru, dan ide kampanye semuanya dihitung dari data lengkap dengan angkanya. Model (Kai) hanya boleh mengurutkan dan menjelaskan kandidat yang dihasilkan mesin; apa pun yang ia karang ditolak, dan setiap angka di layar berasal dari data tersimpan, bukan dari kalimat model. Ciri lalu menilai hasilnya seperti agent lain.",
       item2: "\"Data belum cukup\" adalah jawaban yang sah. Kata kunci tanpa konversi baru disebut boros setelah klik yang cukup, sehingga tanpa hasil tidak mungkin sekadar kebetulan menurut tingkat konversi akun itu sendiri; di bawah itu hanya petunjuk, bukan temuan. Tanpa riwayat sama sekali, negatif berasal dari aturan umum dan diberi label belum terverifikasi, bukan disamarkan sebagai bukti.",
       item3: "Setiap saran diperiksa terhadap efek sampingnya sendiri: kata kunci negatif yang diusulkan diuji terhadap istilah pencarian yang benar-benar berkonversi, dan yang ikut terblokir ditampilkan di kartu sebelum ada yang menerapkannya.",

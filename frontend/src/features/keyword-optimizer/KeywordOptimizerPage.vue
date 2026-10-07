@@ -12,6 +12,7 @@ import { SUGGESTION_TYPES } from './suggestionView'
 import { USE_FIXTURES } from './keywordOptimizerApi'
 import { useKeywordOptimizer, type StatusFilter } from './useKeywordOptimizer'
 import { useBoardData } from './useBoardData'
+import { useKeywordSchedule } from './useKeywordSchedule'
 
 const { t } = useI18n()
 const {
@@ -19,6 +20,7 @@ const {
   typeCounts, visibleItems, truncated, busyIds, actionError, runMessage, runStarting, setStatus, runNow,
 } = useKeywordOptimizer()
 const board = useBoardData()
+const schedule = useKeywordSchedule()
 
 // --- view toggle (remembered per browser; the page works without storage) ---
 type View = 'board' | 'list'
@@ -65,6 +67,11 @@ function runStatusClass(status: string): string {
       <div>
         <h1 class="font-display text-2xl font-bold text-ink">{{ t('keywordOptimizer.title.page') }}</h1>
         <p class="mt-1 max-w-2xl text-sm text-ink-soft">{{ t('keywordOptimizer.subtitle') }}</p>
+        <!-- When it runs by itself (or that it doesn't): the answer to "will this update without me?" -->
+        <p v-if="schedule.time.value" class="mt-1 font-mono text-[11px] font-bold uppercase tracking-wide" :class="schedule.enabled.value ? 'text-ink-soft' : 'text-flag-caution'">
+          {{ schedule.enabled.value ? t('keywordOptimizer.schedule.on', { time: schedule.time.value }) : t('keywordOptimizer.schedule.off') }}
+          <router-link v-if="!isDemo" to="/settings" class="ml-1 text-link underline">{{ t('keywordOptimizer.schedule.change') }}</router-link>
+        </p>
       </div>
       <button
         v-if="canRun"

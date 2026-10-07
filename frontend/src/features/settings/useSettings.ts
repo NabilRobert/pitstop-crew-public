@@ -3,6 +3,11 @@ import { api } from '../../shared/api/api'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 import type { InventorySummary, Settings } from '../../shared/api/types'
 
+/** HH:MM, 24-hour, like the backend's isValidTime. */
+export function isValidRunTime(value: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value)
+}
+
 /** Whole rupiah typed as a string: digits only (surrounding spaces ignored), a safe integer, above 0. Matches the backend. */
 export function isWholeRupiah(value: string): boolean {
   const v = value.trim()
@@ -39,6 +44,9 @@ export function useSettings() {
   // ignores unknown keys), so the section is hidden rather than showing fields that save nothing.
   const keywordSettingsSupported = ref(false)
   const keywordOptimizerEnabled = ref(true)
+  // Contract 3.5: when the optimizer runs by itself. Hidden until the server sends it.
+  const keywordRunTimeSupported = ref(false)
+  const keywordRunTime = ref('06:00')
   const keywordTestBudgetShare = ref('')
   const keywordMinConfidenceP = ref('')
   const inventoryAllowedSpendShare = ref('')
@@ -59,6 +67,8 @@ export function useSettings() {
     keywordSettingsSupported.value = settings.keyword_optimizer_enabled !== undefined
     if (!keywordSettingsSupported.value) return
     keywordOptimizerEnabled.value = settings.keyword_optimizer_enabled === 'true'
+    keywordRunTimeSupported.value = settings.keyword_optimizer_run_time !== undefined
+    if (keywordRunTimeSupported.value) keywordRunTime.value = settings.keyword_optimizer_run_time ?? '06:00'
     keywordTestBudgetShare.value = settings.keyword_test_budget_share ?? ''
     keywordMinConfidenceP.value = settings.keyword_min_confidence_p ?? ''
     inventoryAllowedSpendShare.value = settings.inventory_allowed_spend_share ?? ''
@@ -72,6 +82,7 @@ export function useSettings() {
       if (!isWholeRupiah(campaignBudgetCeiling.value)) return 'settings.keywordOptimizer.invalid.budgetCeiling'
     }
     if (!keywordSettingsSupported.value) return null
+    if (keywordRunTimeSupported.value && !isValidRunTime(keywordRunTime.value)) return 'settings.keywordOptimizer.invalid.runTime'
     if (!isUnitInterval(keywordTestBudgetShare.value)) return 'settings.keywordOptimizer.invalid.testBudgetShare'
     if (!isUnitInterval(keywordMinConfidenceP.value, true)) return 'settings.keywordOptimizer.invalid.minConfidenceP'
     if (!isUnitInterval(inventoryAllowedSpendShare.value)) return 'settings.keywordOptimizer.invalid.allowedSpendShare'
@@ -130,6 +141,7 @@ export function useSettings() {
         ...(keywordSettingsSupported.value
           ? {
               keyword_optimizer_enabled: String(keywordOptimizerEnabled.value),
+              ...(keywordRunTimeSupported.value ? { keyword_optimizer_run_time: keywordRunTime.value } : {}),
               keyword_test_budget_share: keywordTestBudgetShare.value.trim(),
               keyword_min_confidence_p: keywordMinConfidenceP.value.trim(),
               inventory_allowed_spend_share: inventoryAllowedSpendShare.value.trim(),
@@ -169,6 +181,8 @@ export function useSettings() {
     campaignBudgetFloor,
     campaignBudgetCeiling,
     keywordOptimizerEnabled,
+    keywordRunTimeSupported,
+    keywordRunTime,
     keywordTestBudgetShare,
     keywordMinConfidenceP,
     inventoryAllowedSpendShare,
