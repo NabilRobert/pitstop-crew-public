@@ -1,6 +1,6 @@
 # Overhaul v3: Keyword optimizer. BACKEND
 
-**Status:** planned, not started. Written 2026-10-06. Companion to `overhaul-v3.md` (scope and API contract).
+**Status (2026-10-07):** steps 1-8 and contract 3.1-3.4 are built and live on the VPS, with the model steps tested only with stubs (no real Kai or Ciri run yet, blocked on credits). Companion to `overhaul-v3.md` (scope and API contract). Sections 11.6 and the "As built" notes in 11.7 were written by the backend session and merged here.
 
 ---
 
@@ -9,7 +9,7 @@
 You are implementing **only the backend** of Overhaul v3. You need **two files**: this one and `overhaul-v3.md` (the scope doc). Read the scope doc first. Its sections 1-5 (goal, decisions, phasing, the current code, API feasibility) and 13 (the API contract) are binding and live only there. Section numbers are global across the files.
 
 - **Do not touch `frontend/`.** Another file covers it. Do not touch `.env` (the `INVENTORY_DB_STRING` line already exists, empty).
-- **The API contract (scope doc section 13, version 3.3) is binding.** Match field names, nullability and status codes exactly. If the codebase or the data makes it impossible, **stop and report it**; do not improvise a different shape.
+- **The API contract (scope doc section 13, version 3.4) is binding.** Match field names, nullability and status codes exactly. If the codebase or the data makes it impossible, **stop and report it**; do not improvise a different shape.
 - **Work one build step at a time** (section 17 below). After each step, report what changed, how you verified it, and anything unexpected, then wait.
 - **Deliver full file contents** for every changed or new file (there is no git access on your side; the owner commits first, then you commit your copy). List the files per step.
 - **Verify, don't assume.** Every **VERIFY** item is unconfirmed. Resolve each before building on it and report the answer. **STARTING DEFAULT** items are tunable, not rules.
@@ -303,6 +303,25 @@ Run inside the weekly job *before* the engine (section 8 and 10). Both are cache
 - Optional: extend the dead-man's-switch to the keyword run with a longer stale window (it is weekly, not daily; the existing `STALE_HOURS = 30` is wrong for it).
 - **Cost:** estimate, not measured: one batched intent job (small, mostly one-off), one rank/explain call, and one to three critic calls. Expect a low-tens-of-cents weekly run; measure the first real runs in the Run Inspector and confirm it stays well inside `monthly_cost_cap_usd` (default $20, existing usage about $4–7/month).
 
+### 11.6 Keyword verdict (contract 3.1)
+
+`GET /keywords/summary` gives each keyword one `verdict`, computed in `src/optimizer/verdict.ts` from the engine's own evidence window (`windowDays` = 90, ending `conversionLagDays` = 3 days before the newest data), its ad-group baseline and its thresholds, so a label and a suggestion can't disagree. The verdict ignores the request's `days`; the other summary fields follow it. First match wins:
+
+| # | Verdict | Rule | Threshold (all from `ENGINE_DEFAULTS` / settings) |
+|---|---|---|---|
+| 1 | `no_stock` | cost > 0 in the window and `stock_count === 0` (the same value the item shows; `null` never matches) | none |
+| 2 | `testing` | the keyword matches an **applied** `new_keyword` suggestion with `is_test: true` (same normalized text; same ad group, or the suggestion had none), and has fewer than `n_min` clicks | `n_min` |
+| 3 | `wasting` | `n_min`+ clicks and zero conversions (the significance rule), **or** an open `pause_keyword` suggestion on it | `n_min` at p = `keyword_min_confidence_p` (0.05) |
+| 4 | `winner` | `n_min`+ clicks, at least `promoteMinConversions` conversions, and CPA at or below its ad group's CPA (the comparison `raise_bid_candidate` uses). An open pause always lands in 3 first | `n_min`, `promoteMinConversions` = 2 |
+| 5 | `needs_data` | fewer than `n_min` clicks (includes a keyword with no spend, and one outside the engine's input, e.g. paused) | `n_min` |
+| 6 | `steady` | everything else | none |
+
+`n_min = ceil(ln(p) / ln(1 - p0))` with `p0` = the keyword's ad-group conversion rate over the window (floored at 0.005), exactly as in 11.1. A test keyword that reaches `n_min` leaves `testing`: zero conversions makes it `wasting` (killed), beating its ad group makes it `winner` (graduated).
+
+**Paused keywords (contract 3.2).** The engine reads enabled keywords only; paused ones are read over the same window (`loadKeywordWindow(..., 'paused')`) and judged against their ad group's enabled keywords. A paused keyword never reads `winner` or `wasting` (both imply acting on something already switched off): it reads `steady` instead. `no_stock`, `testing` and `needs_data` apply as above. Status comes from `keywords.status`, case-insensitive: `paused` is paused, `removed` is left out of the summary, anything else (or NULL) is enabled.
+
+Open `negative_keyword` suggestions don't change a keyword's verdict: they target one search term under the keyword, not the keyword itself (its waste exposure shows that share).
+
 ### 11.7 Campaign proposals: the `new_campaign` suggestion (contract 3.3)
 
 The owner wants the AI to look at the inventory and propose **whole new campaigns**, which, when approved, appear as **Planned** campaigns with a paste-ready brief (and, much later, can be created in Google Ads, see scope doc 3.1; that write path is **not** part of this task). Code decides; the model only explains, exactly as for every other suggestion. All thresholds are **STARTING DEFAULTS**, settings-backed where it makes sense, and tuned with the scoring harness.
@@ -332,6 +351,22 @@ The owner wants the AI to look at the inventory and propose **whole new campaign
 **Demo data and harness:** plant ground truth for each basis (at least: 3 models in stock with no coverage, an aging group, a price-band theme, plus a **decoy**: stock that is already well covered and must NOT produce a proposal) and score them like every other plant.
 
 **Tests:** each basis fires; the decoy does not; name uniqueness; budget clamp (floor, ceiling, zero margin); keyword cap and de-duplication against existing keywords and negatives; overlap counting; dedupe and per-run cap; `planned -> applied` auto-link on a matching campaign name (case and whitespace insensitive); brief CSV neutralization; `planned` rejected for any other suggestion type.
+
+**As built (2026-10-07)**: `src/optimizer/campaigns.ts`, called from `runEngine`; thresholds in `src/optimizer/thresholds.ts`, all **STARTING DEFAULTS**:
+- **`proven_cluster` is not emitted.** A strong cluster stays a `spin_out_campaign`, and a make/model with a spin-out in the same run gets no `new_campaign` of any basis, so a cluster is never proposed twice.
+- **Coverage** is per make/model: enabled keywords whose vehicle parse names it, or a campaign whose name parses to it. **Thin** = at most `thinCoverageMaxKeywords` (1) enabled keywords, **or** only `needs_data` / `steady` verdicts with fewer than `promoteMinConversions` (2) conversions between them. The conversion clause was added after the harness: a converting cluster under `n_min` clicks reads `steady`, and must not count as thin.
+- **`uncovered_stock`**: `uncoveredMinUnits` (2) available units, coverage zero. **`aging_stock`**: thin coverage and `agingMinUnits` (2) units that are aging (`agingDays`, 60) or top-quartile margin. Top quartile = margin at or above the 75th percentile (nearest rank) of all available units' known margins **and** above their median, so equal margins don't make every unit "top". The ad group holds all the model's available units.
+- **`theme`**: price bands only (the inventory has no body type): under Rp 150 juta, 150-250, 250-400, over 400. Thin models are not proposed on their own this run; up to `campaignMaxAdGroups` (4) models, most units x margin first; needs `themeMinUnits` (4) and `themeMinModels` (2). Confidence `low`; the model-level bases `medium`; all `basis: 'prior'`.
+- **Keywords** per model, best first: `<model> bekas` (phrase), `<make> <model> bekas` (exact), `harga <model> bekas` (phrase), `<model> bekas <place>` (phrase, the place word the account's keywords use most, from jakarta / bekasi / tangerang / depok / bogor / jabodetabek), `<model> second` (phrase), `<model> <commonest year> bekas` (phrase). Round-robin across ad groups up to `campaignMaxKeywords` (12). Dropped: any text an enabled keyword already has, any text equal to an existing negative, anything a starter negative or a shared-set negative blocks. `source` is always `stock`.
+- **Starter negatives**: `JUNK_NEGATIVES` plus every campaign-level negative in the account, de-duplicated by text and match type.
+- **Budget**: `daily_micros` as specified, in whole rupiah; no known margin gets the floor. **3.4** `bound` = `'floor'` / `'ceiling'` when clamped, `null` otherwise (a value exactly on a bound is not clamped; a ceiling below the floor yields the floor, `bound: 'floor'`). The bounds are the settings `campaign_daily_budget_floor_idr` (default `'20000'`) and `campaign_daily_budget_ceiling_idr` (default `'100000'`): whole rupiah, digits only, above 0; nothing checks the floor against the ceiling.
+- **Overlaps**: campaigns holding an enabled keyword on any of the proposal's models (`shared_keywords` = how many), or named after one; most shared first.
+- **Name**: `Search - <Make> <Model>` or `Search - <band label>` (with the same em dash the rest of the account uses); on a clash with a campaign, an open or planned proposal with another fingerprint, or an earlier proposal of the same run, ` 2`, ` 3`, ... is appended. Fingerprint: `model:<make>|<model>` or `theme:price:<band>`, so a dismissed model stays away even if its basis changes.
+- **Cap**: proposals over `campaignCap` (3) are skipped with reason `cap` and returned in `EngineResult.capped` (not stored); the next run offers them again.
+- **Brief** (`src/reporting/campaignBrief.ts`): CSV header row `Campaign,Campaign daily budget,Ad group,Keyword,Criterion type,Status`, pinned by a test; the campaign row has Status Paused so an import never starts spending; campaign negatives use `Campaign Negative Exact/Phrase/Broad`. The CSV is **UNVERIFIED** until matched to a real Editor export, and the response carries `X-Editor-Columns: UNVERIFIED` (CORS exposes it and `Content-Disposition`). 400 for a bad id, a bad format or any non-`new_campaign` type; 404 for an unknown id.
+- **LLM step**: Kai's prompt has one line on `new_campaign`. For `new_campaign` only, an explanation quoting a number not in the proposal's own fields (payload and evidence; it has no campaign, keyword or term names) is **dropped**, not just flagged (`STRICT_NUMBER_TYPES` in `ranking.ts`); the rank still applies, Ciri sees "(no usable explanation this run)", and the row asks again next run. Other types keep the flag-only default. Known weakness: the shared number check reads "1,493" the Indonesian way as 1.493, which passes its 0.51 tolerance against a proposal's 2 (the 2% rate), so small borrowed figures can slip through. Tested with the model stubbed; no real model call yet.
+- **Demo and harness**: plants `UNCOVERED_VEHICLES` (Wuling Almaz, Wuling Cortez, Hyundai Stargazer; Cortez and Stargazer added to the demo stock), the aging Rush and HR-V, the under-Rp-150-juta theme, and two decoys (Avanza, well covered; Xpander, the spin-out cluster). A capped proposal counts as found. 10 seeds: every campaign plant found from week 1, decoys 0% flagged; the older plants unchanged.
+- **Deploy lesson**: a restart onto a build that needs a schema migration returned 500 until the migration was applied. Check `db/schema.sql` against the live database before restarting.
 
 ## 12. Scoring harness and tests
 
