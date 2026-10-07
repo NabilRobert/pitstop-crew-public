@@ -44,7 +44,9 @@ function byRank(a: Suggestion, b: Suggestion): number {
   if (a.rank === null && b.rank !== null) return 1
   if (a.rank !== null && b.rank === null) return -1
   if (a.rank !== null && b.rank !== null && a.rank !== b.rank) return a.rank - b.rank
-  return b.created_at.localeCompare(a.created_at)
+  const byTime = b.created_at.localeCompare(a.created_at)
+  // One run's rows share a timestamp: fall back to id ascending, which is the engine's own order.
+  return byTime !== 0 ? byTime : a.id - b.id
 }
 
 export function buildNotes(

@@ -214,7 +214,7 @@ interface Suggestion {
     [extra: string]: unknown             // type-specific numbers, e.g. parent_keyword_cpa_micros
   }
   expected_impact: { wasted_spend_micros_per_week?: number; extra_conversions_per_week?: number } | null
-  inventory: {                           // null when no stock link applies or inventory is unavailable
+  inventory: {                           // null when no stock link applies or inventory is unavailable. `new_campaign` rows always have null here: their stock figures are in payload.stock (one place, so the two can't disagree)
     snapshot_on: string; stock_count: number; avg_days_listed: number | null; avg_margin_idr: number | null
   } | null
   created_at: string                     // ISO timestamp
@@ -238,7 +238,7 @@ type SuggestionPayload =
 
 `GET /keyword-suggestions`
 - Query: `status` (default `open`; one of the statuses or `all`), `type`, `campaign_id`, `limit` (default 50, 1–200, else 400), `offset` (default 0).
-- Order: `rank` ascending with nulls last, then `created_at` descending.
+- Order: `rank` ascending with nulls last, then `created_at` descending, then `id` ascending (one run's rows share a timestamp, and id ascending is the engine's own order).
 - 200:
   ```ts
   { items: Suggestion[]; total: number

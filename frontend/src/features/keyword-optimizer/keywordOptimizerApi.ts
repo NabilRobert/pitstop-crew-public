@@ -37,7 +37,7 @@ function filterFixtures(query: SuggestionsQuery): SuggestionsResponse {
       if (a.rank === null && b.rank !== null) return 1
       if (a.rank !== null && b.rank === null) return -1
       if (a.rank !== null && b.rank !== null && a.rank !== b.rank) return a.rank - b.rank
-      return b.created_at.localeCompare(a.created_at)
+      return b.created_at.localeCompare(a.created_at) || a.id - b.id
     })
   const offset = query.offset ?? 0
   const limit = query.limit ?? 50
