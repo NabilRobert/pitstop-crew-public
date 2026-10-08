@@ -12,9 +12,9 @@ export const router = Router()
 router.post(
   '/launches',
   asyncHandler(async (req, res) => {
-    const { http, launch } = await performLaunch(req.body)
-    if (http === 200 || http === 201) res.status(http).json(launch)
-    else res.status(http).json({ detail: launch.problems.join('; ') })
+    const { http, launch, detail } = await performLaunch(req.body)
+    if (launch) res.status(http).json(launch)
+    else res.status(http).json({ detail })
   })
 )
 

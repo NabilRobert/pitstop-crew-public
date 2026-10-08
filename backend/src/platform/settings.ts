@@ -68,13 +68,10 @@ export function isValidAdText(min: number, max: number): (value: string) => bool
   }
 }
 
-// Empty (not used), or 9-15 digits with an optional leading '+', spaces and
-// dashes — dealer_whatsapp.
+// Empty (not used), or digits, spaces, '-' and '+', at most 20 characters —
+// dealer_whatsapp (contract 3.6).
 export function isValidPhone(value: string): boolean {
-  if (value === '') return true
-  if (!/^\+?[\d -]+$/.test(value)) return false
-  const digits = value.replace(/\D/g, '').length
-  return digits >= 9 && digits <= 15
+  return value.length <= 20 && /^[\d +-]*$/.test(value)
 }
 
 // Empty (not set), or an absolute http(s) URL — dealer_landing_url.
@@ -168,16 +165,16 @@ const VALIDATORS: Record<SettingKey, (value: string) => boolean> = {
   inventory_lead_to_sale_rate: isValidShare,
   campaign_daily_budget_floor_idr: isValidRupiah,
   campaign_daily_budget_ceiling_idr: isValidRupiah,
-  dealer_name: isValidAdText(1, 30),
-  dealer_city: isValidAdText(1, 30),
-  dealer_area: isValidAdText(0, 30),
+  dealer_name: isValidAdText(1, 40),
+  dealer_city: isValidAdText(0, 40),
+  dealer_area: isValidAdText(0, 40),
   dealer_whatsapp: isValidPhone,
   dealer_landing_url: isValidLandingUrl,
   ads_claim_installments: isValidBoolean,
   ads_claim_trade_in: isValidBoolean,
   ads_claim_test_drive: isValidBoolean,
   ads_claim_inspection: isValidBoolean,
-  ads_inspection_wording: isValidAdText(1, 90),
+  ads_inspection_wording: isValidAdText(0, 60),
   ads_write_enabled: isValidBoolean,
   ads_write_mode: isValidWriteMode,
 }

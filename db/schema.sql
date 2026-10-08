@@ -823,3 +823,11 @@ CREATE TABLE IF NOT EXISTS launches (
 CREATE INDEX IF NOT EXISTS idx_launches_suggestion ON launches(suggestion_id);
 -- A proposal is launched at most once, even under concurrent calls.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_launches_one_created ON launches(suggestion_id) WHERE status = 'created';
+
+-- Contract 3.6 master text: the simulated campaign's daily budget, and the
+-- launches columns the master names (campaign_id, request, result). Additive:
+-- the earlier columns stay; `result` holds the Launch the API returned.
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS daily_budget_micros BIGINT;
+ALTER TABLE launches ADD COLUMN IF NOT EXISTS campaign_id INTEGER;
+ALTER TABLE launches ADD COLUMN IF NOT EXISTS request JSONB;
+ALTER TABLE launches ADD COLUMN IF NOT EXISTS result JSONB;

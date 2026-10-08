@@ -81,18 +81,21 @@ describe('3.6 ad settings', () => {
     for (const [k, v] of defaults) expect(isValidSettingValue(k as SettingKey, v), k).toBe(true)
   })
 
-  it('keeps dealer text to one headline-safe line', () => {
-    expect(isValidSettingValue('dealer_name', 'x'.repeat(30))).toBe(true)
-    for (const v of ['', ' ', 'x'.repeat(31), 'Pitstop!', 'Pitstop\nUsed']) expect(isValidSettingValue('dealer_name', v), v).toBe(false)
-    expect(isValidSettingValue('dealer_area', '')).toBe(true)
-    expect(isValidSettingValue('dealer_city', '')).toBe(false)
-    expect(isValidSettingValue('ads_inspection_wording', 'x'.repeat(90))).toBe(true)
-    expect(isValidSettingValue('ads_inspection_wording', 'x'.repeat(91))).toBe(false)
+  it('keeps the dealer profile to the contract lengths, one line, no "!"', () => {
+    expect(isValidSettingValue('dealer_name', 'x'.repeat(40))).toBe(true)
+    for (const v of ['', ' ', 'x'.repeat(41), 'Pitstop!', 'Pitstop\nUsed']) expect(isValidSettingValue('dealer_name', v), v).toBe(false)
+    for (const key of ['dealer_city', 'dealer_area'] as const) {
+      expect(isValidSettingValue(key, '')).toBe(true)
+      expect(isValidSettingValue(key, 'x'.repeat(40))).toBe(true)
+      expect(isValidSettingValue(key, 'x'.repeat(41))).toBe(false)
+    }
+    expect(isValidSettingValue('ads_inspection_wording', 'x'.repeat(60))).toBe(true)
+    expect(isValidSettingValue('ads_inspection_wording', 'x'.repeat(61))).toBe(false)
   })
 
-  it('takes an empty or 9-15 digit WhatsApp number', () => {
-    for (const v of ['', '0812-5550-0123', '+62 812 5550 0123', '081255500123']) expect(isValidSettingValue('dealer_whatsapp', v), v).toBe(true)
-    for (const v of ['0812', '0812-5550-0123-4567', 'call me', '0812/5550']) expect(isValidSettingValue('dealer_whatsapp', v), v).toBe(false)
+  it('takes a WhatsApp number of digits, spaces, "-" and "+", at most 20 characters, or empty', () => {
+    for (const v of ['', '0812-5550-0123', '+62 812 5550 0123', '081255500123', '0812']) expect(isValidSettingValue('dealer_whatsapp', v), v).toBe(true)
+    for (const v of ['+62 812-5550-0123 456', 'call me', '0812/5550', '0812.5550']) expect(isValidSettingValue('dealer_whatsapp', v), v).toBe(false)
   })
 
   it('takes an empty or absolute http(s) landing URL', () => {
