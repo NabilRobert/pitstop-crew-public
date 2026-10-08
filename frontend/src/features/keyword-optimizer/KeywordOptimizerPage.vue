@@ -19,7 +19,7 @@ const { t } = useI18n()
 const {
   data, loading, error, backendMissing, items, openCount, appliedCount, dismissedCount, statusFilter, typeFilter,
   typeCounts, visibleItems, truncated, busyIds, actionError, runMessage, runStarting, setStatus, runNow, reload,
-} = useKeywordOptimizer()
+} = useKeywordOptimizer(() => board.reload())
 const board = useBoardData()
 const schedule = useKeywordSchedule()
 

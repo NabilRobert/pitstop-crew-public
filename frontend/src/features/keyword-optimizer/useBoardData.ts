@@ -16,14 +16,22 @@ export function useBoardData() {
   /** True when the performance rows loaded but the summary (verdicts) did not, e.g. an older backend. */
   const summaryMissing = ref(false)
 
-  onMounted(async () => {
+  /** Loads (or reloads) the numbers. A reload keeps the old ones on screen until the new ones arrive, so the board
+   * does not flash a spinner when a new run finishes. */
+  async function reload() {
     const [r, s] = await Promise.allSettled([keywordOptimizerApi.keywordRows(DAYS), keywordOptimizerApi.summary(DAYS)])
-    if (r.status === 'fulfilled') rows.value = r.value
-    else error.value = r.reason instanceof Error ? r.reason.message : String(r.reason)
-    if (s.status === 'fulfilled') summaries.value = s.value.items
-    else summaryMissing.value = true
+    if (r.status === 'fulfilled') {
+      rows.value = r.value
+      error.value = null
+    } else error.value = r.reason instanceof Error ? r.reason.message : String(r.reason)
+    if (s.status === 'fulfilled') {
+      summaries.value = s.value.items
+      summaryMissing.value = false
+    } else summaryMissing.value = true
     loading.value = false
-  })
+  }
 
-  return { rows, summaries, loading, error, summaryMissing }
+  onMounted(reload)
+
+  return { rows, summaries, loading, error, summaryMissing, reload }
 }
