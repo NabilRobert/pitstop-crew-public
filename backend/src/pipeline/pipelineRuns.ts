@@ -7,7 +7,7 @@ import { traceRun } from '../platform/trace.js'
 import { redactSecrets } from '../platform/redact.js'
 import { getSettings } from '../platform/settings.js'
 
-export const VALID_RUN_TYPES = ['daily', 'weekly', 'weekly_feedback', 'backup'] as const
+export const VALID_RUN_TYPES = ['daily', 'weekly', 'weekly_feedback', 'backup', 'keyword_optimizer'] as const
 export type RunType = (typeof VALID_RUN_TYPES)[number]
 
 /** Thrown by startRun() when another run is already in flight — the
@@ -123,17 +123,22 @@ function summarizeUsage(usage: UsageByModel): { llmUsage: unknown; costUsdMicros
 /** Usage:
  *   const handle = { costUsdMicros: null as number | null }
  *   await trackRun('daily', async () => { ...pipeline work...; handle.costUsdMicros = 12_000 }, handle)
- * On success, marks 'success'. On any exception, marks 'failure' with the
+ * On success, marks 'success' — or 'partial' when fn set handle.partial to
+ * why (the run finished, but a step degraded: e.g. the keyword optimizer
+ * stored its suggestions but the model step that ranks them was
+ * unavailable). The reason is stored as error_message. On any exception, marks 'failure' with the
  * exception message and re-raises — this never swallows errors, it only
  * makes sure they get logged before propagating (per docs/PROJECT.md's
  * failure-alerting principle: surfaced, never silently skipped). */
 export async function trackRun<T>(
   runType: RunType,
-  fn: (handle: { costUsdMicros: number | null; runId: number }) => Promise<T>,
+  fn: (handle: { costUsdMicros: number | null; runId: number; partial: string | null; notes: string[] }) => Promise<T>,
   existingRunId?: number
 ): Promise<T> {
   const runId = existingRunId ?? (await startRun(runType))
-  const handle = { costUsdMicros: null as number | null, runId }
+  // notes: what the run wants said in its summary (the trace root the Run
+  // Inspector shows), e.g. "no changes since the last run" (3.5).
+  const handle = { costUsdMicros: null as number | null, runId, partial: null as string | null, notes: [] as string[] }
   // Every complete()/completeJson() call made inside fn (however deep) is
   // attributed to this run — see platform/llmUsage.ts.
   const tracker = createUsageTracker()
@@ -158,14 +163,14 @@ export async function trackRun<T>(
             tokensIn,
             tokensOut,
             costUsd: costUsdMicros == null ? null : costUsdMicros / 1e6,
-            summary: `${runType} run: ${calls} LLM call${calls === 1 ? '' : 's'}, ${tokensIn} tokens in / ${tokensOut} out`,
+            summary: `${handle.notes.map((n) => `${n}. `).join('')}${runType} run: ${calls} LLM call${calls === 1 ? '' : 's'}, ${tokensIn} tokens in / ${tokensOut} out`,
           })
         }
       })
     )
     const { llmUsage, costUsdMicros } = summarizeUsage(tracker.usage)
     // An explicit handle.costUsdMicros set by fn still wins over the computed one.
-    await finishRun(runId, 'success', handle.costUsdMicros ?? costUsdMicros, null, llmUsage)
+    await finishRun(runId, handle.partial === null ? 'success' : 'partial', handle.costUsdMicros ?? costUsdMicros, handle.partial, llmUsage)
     return result
   } catch (err) {
     // Calls made before the failure were still billed — keep their usage.
@@ -185,6 +190,17 @@ export async function getLastSuccessfulRun(runType: RunType) {
   // against any future writer that sets 'success' before 'finished_at'.
   return queryOne(
     `SELECT * FROM pipeline_runs WHERE run_type = $1 AND status = 'success' AND finished_at IS NOT NULL
+     ORDER BY finished_at DESC LIMIT 1`,
+    [runType]
+  )
+}
+
+/** Like getLastSuccessfulRun, but a 'partial' run counts too: it finished,
+ * one step degraded. Used where re-running would repeat the same degraded
+ * step on every cron tick (the keyword optimizer when Kai is unreachable). */
+export async function getLastCompletedRun(runType: RunType) {
+  return queryOne(
+    `SELECT * FROM pipeline_runs WHERE run_type = $1 AND status IN ('success', 'partial') AND finished_at IS NOT NULL
      ORDER BY finished_at DESC LIMIT 1`,
     [runType]
   )

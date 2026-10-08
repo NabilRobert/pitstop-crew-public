@@ -189,12 +189,8 @@ router.post('/pipeline/run', async (req, res) => {
         const { subject, body } = await formatReportEmail(result, today, period)
         emitEvent(`Emil: emailing ${period} report…`, 'info', runId)
         const outcome = await deliverReport(period, subject, body, runId)
-        // Tells the frontend the run is really over (its reports table
-        // refreshes on these) — the report itself exists earlier, at "run complete".
         emitEvent(
-          outcome === 'sent'
-            ? `Emil: ${period} report email sent`
-            : `Emil: no recipient configured — ${period} report not emailed`,
+          outcome === 'sent' ? `Emil: ${period} report email sent` : `Emil: no recipient configured — ${period} report not emailed`,
           'info',
           runId
         )

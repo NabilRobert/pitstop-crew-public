@@ -1,7 +1,7 @@
 // Two pre-set accounts, in-memory session tokens. No user table, no password
-// hashing — see PROJECT.md / the auth plan for why: the trust boundary is .env,
-// same as every other secret in this app, and an in-memory Map means every
-// backend restart forces a fresh login for free.
+// hashing — the trust boundary is .env, same as every other secret in this
+// app, and an in-memory Map means every backend restart forces a fresh login
+// for free.
 //
 //   owner — AUTH_USERNAME / AUTH_PASSWORD: full access.
 //   demo  — DEMO_USERNAME / DEMO_PASSWORD (optional; the demo account does not

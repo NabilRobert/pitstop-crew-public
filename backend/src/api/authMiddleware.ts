@@ -22,7 +22,15 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 // GET routes that return the owner's private state rather than dashboard
 // data. Demo tokens can't read them (the rest of the GETs are read-only views
 // of the same data the demo shows).
-const DEMO_BLOCKED_GET = [/^\/assistant(\/|$)/, /^\/outputs\/[^/]+\/ask-conversations(\/|$)/, /^\/ask-conversations(\/|$)/]
+const DEMO_BLOCKED_GET = [
+  /^\/assistant(\/|$)/,
+  /^\/outputs\/[^/]+\/ask-conversations(\/|$)/,
+  /^\/ask-conversations(\/|$)/,
+  // The Run Inspector's stored prompts, responses and built context. Already
+  // redacted of secrets, but it is the full prompt design and the raw data
+  // context; a demo viewer keeps the run list and the trace steps.
+  /^\/trace\/events\/[^/]+\/payloads(\/|$)/,
+]
 
 /** Mounted right after authMiddleware. A demo token is read-only: anything
  * other than GET/HEAD is refused (deny-by-default, so a write endpoint added

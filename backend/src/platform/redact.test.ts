@@ -27,6 +27,9 @@ process.env.TEST_DB_STRING = 'postgres://user:hunter2@db.example.internal:6432/a
 // short password that happens to prefix a fake token below) would mangle it
 // before the pattern under test even gets a chance to run.
 process.env.TEST_PASSWORD = 'zqx9'
+// Same shape as the keyword optimizer's INVENTORY_DB_STRING (a *_STRING key),
+// set the same way the real one is: from .env, before the first redaction.
+process.env.INVENTORY_DB_STRING = 'postgresql://inv_ro:inventoryPw77@inventory.dealer.example:5432/stock'
 
 describe('redactSecrets — pattern-based (no env dependency)', () => {
   it('redacts a Bearer token — the token itself must be gone, whatever the surrounding text ends up as', () => {
@@ -75,6 +78,12 @@ describe('redactSecrets — literal env-var values', () => {
     const out = redactSecrets(`db error: ${process.env.TEST_DB_STRING}`)
     expect(out).not.toContain('hunter2')
     expect(out).not.toContain('db.example.internal')
+  })
+
+  it('redacts INVENTORY_DB_STRING (password and host) even when quoted without its scheme', () => {
+    const out = redactSecrets('inventory connect to inventory.dealer.example failed (pw inventoryPw77)')
+    expect(out).not.toContain('inventory.dealer.example')
+    expect(out).not.toContain('inventoryPw77')
   })
 })
 

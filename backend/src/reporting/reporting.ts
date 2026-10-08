@@ -2,6 +2,8 @@
 // context.ts, which formats the same data as prompt text for agents.
 
 import { query } from '../data/db.js'
+import { loadIntentDetails } from '../optimizer/intentJob.js'
+import { normalizeTerm } from '../optimizer/intent.js'
 import {
   getByAgentAndDate,
   getByAgentAndRunId,
@@ -49,7 +51,8 @@ function addDays(dateStr: string, days: number): string {
 }
 
 export async function listCampaigns() {
-  return query('SELECT id, name, status, data_source FROM campaigns ORDER BY name')
+  // 3.6: simulated = created by a simulated launch (no performance rows).
+  return query('SELECT id, name, status, data_source, simulated FROM campaigns ORDER BY name')
 }
 
 /** Aggregate segment_performance over a window — backs the dashboard's
@@ -136,7 +139,9 @@ export async function getKeywordPerformance(days = 30, endDate?: string, adGroup
     `SELECT kp.date, k.id AS keyword_id, k.text, k.match_type, ag.id AS ad_group_id, ag.name AS ad_group,
             c.id AS campaign_id, c.name AS campaign,
             kp.impressions, kp.clicks, kp.cost_micros, kp.conversions,
-            kp.quality_score, kp.expected_ctr, kp.ad_relevance, kp.landing_page_experience
+            kp.quality_score, kp.expected_ctr, kp.ad_relevance, kp.landing_page_experience,
+            k.cpc_bid_micros, kp.search_impression_share, kp.search_rank_lost_impression_share,
+            kp.conversions_value_micros
      FROM keyword_performance kp
      JOIN keywords k ON k.id = kp.keyword_id
      JOIN ad_groups ag ON ag.id = k.ad_group_id
@@ -159,11 +164,11 @@ export async function getSearchTermPerformance(days = 30, endDate?: string, keyw
     params.push(keywordId)
     keywordFilter = `AND st.keyword_id = $${params.length}`
   }
-  return query(
+  const rows = await query<{ search_term: string } & Record<string, unknown>>(
     `SELECT stp.date, st.id AS search_term_id, st.text AS search_term, st.match_flavor,
             k.id AS keyword_id, k.text AS keyword, ag.id AS ad_group_id, ag.name AS ad_group,
             c.id AS campaign_id, c.name AS campaign,
-            stp.impressions, stp.clicks, stp.cost_micros, stp.conversions
+            stp.impressions, stp.clicks, stp.cost_micros, stp.conversions, stp.conversions_value_micros
      FROM search_term_performance stp
      JOIN search_terms st ON st.id = stp.search_term_id
      JOIN ad_groups ag ON ag.id = st.ad_group_id
@@ -173,6 +178,14 @@ export async function getSearchTermPerformance(days = 30, endDate?: string, keyw
      ORDER BY stp.date, c.name, ag.name, st.text`,
     params
   )
+  // v3 — intent per row. The cache is keyed by normalizeTerm(text), which
+  // SQL can't reproduce exactly, so the join happens here. A term not
+  // classified yet gets null for all three (contract 3.0: null = no data).
+  const intents = await loadIntentDetails()
+  return rows.map((r) => {
+    const i = intents.get(normalizeTerm(r.search_term))
+    return { ...r, intent: i?.intent ?? null, intent_confidence: i?.confidence ?? null, intent_method: i?.method ?? null }
+  })
 }
 
 // v2 Stage 3 — ads/creatives.

@@ -1,4 +1,4 @@
-// Ciri — Critic agent, cross-cutting, not a pipeline step. See agents/critic.md.
+// Ciri — Critic agent, cross-cutting, not a pipeline step. See docs/agents/critic.md.
 
 import { MODEL_FULL, completeJson, LlmJsonError } from './llm.js'
 import { SHARED_GUARDRAILS, languageInstruction } from './prompts.js'

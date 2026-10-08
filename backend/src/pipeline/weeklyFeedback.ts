@@ -1,7 +1,7 @@
 // Weekly feedback job — reads the past week's critic critiques and drafts
 // a suggested prompt patch. NOT auto-applied; the returned text is meant
 // to be surfaced via the reporting channels (frontend + email) for manual
-// review. See PROJECT.md → "Critic feedback loop" and agents/critic.md →
+// review. See docs/PROJECT.md → "Critic feedback loop" and docs/agents/critic.md →
 // "Feedback loop".
 
 import { query } from '../data/db.js'
@@ -45,6 +45,10 @@ async function getWeekCritiques(asOf: string): Promise<WeekCritique[]> {
      FROM ai_outputs critic
      JOIN ai_outputs reviewed ON reviewed.id = critic.critiques_id
      WHERE critic.agent_type = 'critic'
+       -- The report agents only: Kai (keyword_optimizer) writes a ranked
+       -- suggestion list, not a report, and her reviews would skew the
+       -- prompt-patch suggestions this job makes for Anna, Rico and Sammy.
+       AND reviewed.agent_type IN ('analysis', 'recommendation', 'summary')
        AND critic.content != '(no issues found)'
        AND critic.grade IS NOT NULL
        AND critic.created_at >= $1

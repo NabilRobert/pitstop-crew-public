@@ -1,5 +1,5 @@
 // Ties an agent's generate function to the Critic, enforcing the max-2-
-// revisions-per-agent-per-run cap from PROJECT.md's cost guardrails.
+// revisions-per-agent-per-run cap from docs/PROJECT.md's cost guardrails.
 
 import { critique as realCritique, decideApproval, normalizeVerdict, findUnverifiedQuotes, type CriticVerdict } from './critic.js'
 import { buildRevisionInput, type RevisionInput } from './revision.js'
@@ -50,7 +50,7 @@ export function runWithCritic(args: RunWithCriticArgs): Promise<number> {
   })
 }
 
-const AGENT_LABELS: Record<string, string> = { analysis: 'Anna', recommendation: 'Rico', summary: 'Sammy' }
+const AGENT_LABELS: Record<string, string> = { analysis: 'Anna', recommendation: 'Rico', summary: 'Sammy', keyword_optimizer: 'Kai' }
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 

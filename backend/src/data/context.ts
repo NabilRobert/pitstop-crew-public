@@ -12,7 +12,7 @@ function addDays(dateStr: string, days: number): string {
 
 // cost_micros/cpc_micros carry no currency label of their own — without
 // this, a model defaults to assuming USD and writes "$" figures, which is
-// wrong for this account (IDR, per dummy.md/research.md; see also
+// wrong for this account (IDR, per docs/dummy.md/docs/research.md; see also
 // format.js's formatMicrosAsIDR). Anna is the only agent that reads this
 // raw data directly — Rico and Sammy only ever see Anna's already-written
 // text — so a wrong currency here silently propagates through the whole
@@ -258,8 +258,8 @@ export async function buildImpressionShareContext(
   )
   return (
     CURRENCY_NOTE +
-    'Impression share only exists for Search-type campaigns (Brand, Search — Used Cars Generic, Search — ' +
-    'Model + Suburb) — Performance Max and Display have no rows here. search_rank_lost_impression_share is ' +
+    'Impression share only exists for Search-type campaigns — Performance Max and Display have no rows here. ' +
+    'search_rank_lost_impression_share is ' +
     'derived (1 - impression share - budget-lost share, clamped at 0), not a directly reported metric: a ' +
     'rising budget-lost share alongside a flat/unchanged rank-lost share means impressions are being missed ' +
     'due to budget constraints, not ad quality or bid competitiveness.\n\n' +

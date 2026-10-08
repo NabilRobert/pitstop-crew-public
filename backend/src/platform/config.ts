@@ -9,13 +9,13 @@ import dotenv from 'dotenv'
 // whether this runs as source (src/config.ts, tsx) or compiled output
 // (dist/src/config.js, node) — the extra dist/ nesting shifted the repo
 // root by one level and silently loaded zero env vars in production.
-// Walk up looking for schema.sql (a reliable, unique repo-root marker for
-// this project) instead of guessing a depth.
+// Walk up looking for db/schema.sql (a reliable, unique repo-root marker
+// for this project) instead of guessing a depth.
 function findRepoRoot(startDir: string): string {
   let dir = startDir
-  while (!existsSync(path.join(dir, 'schema.sql'))) {
+  while (!existsSync(path.join(dir, 'db', 'schema.sql'))) {
     const parent = path.dirname(dir)
-    if (parent === dir) throw new Error(`Could not locate repo root (schema.sql) above ${startDir}`)
+    if (parent === dir) throw new Error(`Could not locate repo root (db/schema.sql) above ${startDir}`)
     dir = parent
   }
   return dir
@@ -27,6 +27,11 @@ dotenv.config({ path: path.join(REPO_ROOT, '.env') })
 
 // Postgres, hosted on Sumopod (Sumobase).
 export const DATABASE_URL = process.env.PITSTOP_DB_STRING
+
+// The dealer's own inventory DB (keyword optimizer, docs/overhaul-v3-backend.md
+// section 10). Empty = demo inventory. A secret like DATABASE_URL: redact.ts
+// already catches it (literal value and host) via its *_STRING env-key match.
+export const INVENTORY_DB_STRING = process.env.INVENTORY_DB_STRING || undefined
 
 // Google Ads credentials — keys match what's already in the repo's .env.
 export const GADS_DEVELOPER_TOKEN = process.env['gads-api-token']
@@ -48,7 +53,7 @@ export const GADS_TARGET_CUSTOMER_ID =
 export const SUMOPOD_API_KEY = process.env['sumopod-api-key']
 export const SUMOPOD_BASE_URL = process.env.SUMOPOD_BASE_URL || 'https://ai.sumopod.com/v1'
 
-// Email — Resend primary, Gmail SMTP fallback (PROJECT.md → Automation).
+// Email — Resend primary, Gmail SMTP fallback (docs/PROJECT.md → Automation).
 export const RESEND_API_KEY = process.env.RESEND_API_KEY
 export const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'reports@example.com'
 export const REPORT_RECIPIENT_EMAIL = process.env.REPORT_RECIPIENT_EMAIL
@@ -73,5 +78,7 @@ export const AUTH_PASSWORD = process.env.AUTH_PASSWORD
 export const DEMO_USERNAME = process.env.DEMO_USERNAME
 export const DEMO_PASSWORD = process.env.DEMO_PASSWORD
 
-// ElevenLabs — TTS/STT for the voice assistant (see platform/elevenlabs.ts).
+// ElevenLabs — STT/TTS for the voice assistant (docs/VOICE_ASSISTANT.md).
+// Direct integration, not routed through Sumopod (STT/TTS support there
+// was unconfirmed at decision time).
 export const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY

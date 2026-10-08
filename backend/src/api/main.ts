@@ -1,6 +1,6 @@
 // REST API — what the Vue frontend calls. Every route except /health, /config
 // and /auth/login needs a session token (owner, or the optional read-only demo
-// account — see platform/auth.ts and authMiddleware.ts). CORS locked to
+// account — see platform/auth.ts and authMiddleware.ts). CORS is locked to
 // FRONTEND_ORIGINS (one or more, from FRONTEND_ORIGIN). Error responses use
 // {detail: "..."} to match the FastAPI version's shape, so the frontend's
 // error handling (which reads body.detail) didn't need to change for this port.
@@ -32,6 +32,8 @@ import { router as conversionActionsRoutes } from './routes/conversionActions.js
 import { router as assetGroupsRoutes } from './routes/assetGroups.js'
 import { router as recommendationsRoutes } from './routes/recommendations.js'
 import { router as changeEventsRoutes } from './routes/changeEvents.js'
+import { router as keywordOptimizerRoutes } from './routes/keywordOptimizer.js'
+import { router as launchesRoutes, auditDemoLaunch } from './routes/launches.js'
 
 const app = express()
 // Caddy is the only proxy in front of the API (and the API only listens on
@@ -45,6 +47,8 @@ app.use(
     origin: FRONTEND_ORIGINS,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    // Download names, and the 3.3 brief's "columns not yet verified" flag.
+    exposedHeaders: ['Content-Disposition', 'X-Editor-Columns'],
   })
 )
 
@@ -52,13 +56,14 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
-/** Backs the Demo Mode badge — always visible when active, per PROJECT.md. */
+/** Backs the Demo Mode badge — always visible when active, per docs/PROJECT.md. */
 app.get('/config', (_req, res) => {
   res.json({ data_source: DATA_SOURCE })
 })
 
 app.use(authRoutes)
 app.use(authMiddleware)
+app.use(auditDemoLaunch()) // 3.6: a demo launch attempt is audited, then refused below
 app.use(demoReadOnly)
 
 app.use(settingsRoutes)
@@ -78,6 +83,8 @@ app.use(conversionActionsRoutes)
 app.use(assetGroupsRoutes)
 app.use(recommendationsRoutes)
 app.use(changeEventsRoutes)
+app.use(keywordOptimizerRoutes)
+app.use(launchesRoutes)
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
@@ -85,9 +92,9 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ detail: err instanceof Error ? err.message : String(err) })
 })
 
-// Fire-and-forget — not awaited, so a DB hiccup here doesn't block /health
-// from coming up. Cleans up any pipeline_runs row left status='running' by
-// a prior crash/restart (see reconcileOrphanedRuns' own docstring).
+// Fire-and-forget, not awaited at module top level: a DB hiccup here
+// shouldn't block /health from coming up. Cleans up any pipeline_runs row
+// left status='running' by a crash/restart before this boot.
 reconcileOrphanedRuns()
   .then((count) => {
     if (count > 0) console.log(`Reconciled ${count} orphaned pipeline run(s) from a prior crash/restart`)

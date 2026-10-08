@@ -26,8 +26,12 @@ function secretLiterals(): string[] {
     // A connection string leaks through its host as well as its password.
     if (/_STRING$|_URL$|DSN$/i.test(key)) {
       try {
-        const host = new URL(value).hostname
+        const url = new URL(value)
+        const host = url.hostname
         if (host.length >= MIN_SECRET_LENGTH) out.add(host)
+        // ...and through its password on its own, should a driver ever quote it.
+        const password = decodeURIComponent(url.password)
+        if (password.length >= MIN_PASSWORD_LENGTH) out.add(password)
       } catch {
         // not a URL
       }

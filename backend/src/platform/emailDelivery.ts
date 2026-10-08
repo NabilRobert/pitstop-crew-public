@@ -1,5 +1,5 @@
 // Emil — Email delivery agent, not an LLM, cross-cutting like Damon and
-// Orca. Resend primary, Gmail SMTP fallback — see PROJECT.md → Automation:
+// Orca. Resend primary, Gmail SMTP fallback — see docs/PROJECT.md → Automation:
 // "either works fine at single-user volume." This module only knows how
 // to send an email; reports.ts decides what to send.
 
@@ -27,20 +27,14 @@ export async function sendEmail(to: string, subject: string, body: string): Prom
  * Prints instead of sending when no recipient is configured, matching
  * this project's existing "surfaced, never silently skipped" principle
  * for anything report-related. */
-export async function deliverReport(
-  runType: string,
-  subject: string,
-  body: string,
-  runId?: number | null
-): Promise<'sent' | 'skipped'> {
+export async function deliverReport(runType: string, subject: string, body: string, runId?: number | null): Promise<'sent' | 'skipped'> {
   // With a runId the send is recorded on that run's trace (never the
-  // recipient's address, only that one was configured). Resolves 'skipped'
-  // when no recipient is configured (the report is printed instead).
+  // recipient's address, only that one was configured).
   return withRunTrace(runId, () =>
     span(
       'email',
       `Send ${runType} email`,
-      async (s): Promise<'sent' | 'skipped'> => {
+      async (s) => {
         const settings = await getSettings()
         const recipient = settings.report_recipient_email
         if (!recipient) {
@@ -48,11 +42,11 @@ export async function deliverReport(
           console.log(subject)
           console.log(body)
           s.set({ status: 'skipped', summary: 'no report recipient configured — printed to the log instead' })
-          return 'skipped'
+          return 'skipped' as const
         }
         await sendEmail(recipient, subject, body)
         s.set({ summary: `sent (${body.length} chars)` })
-        return 'sent'
+        return 'sent' as const
       },
       { run_type: runType, subject }
     )

@@ -1,7 +1,7 @@
 // Builds a Google Ads customer client from the credentials in .env.
 // Uses google-ads-api, an unofficial/community-maintained npm package —
 // there is no officially Google-maintained Node/TS client library. See
-// PROJECT.md for the trade-off this represents versus the Python version.
+// docs/PROJECT.md for the trade-off this represents versus the Python version.
 
 import { GoogleAdsApi } from 'google-ads-api'
 import {

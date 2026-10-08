@@ -12,8 +12,10 @@ import type { PoolClient } from 'pg'
 import { withTransaction } from './db.js'
 import { generateDay, type DayData } from './demo/generator.js'
 import * as profile from './demo/profile.js'
+import { linkPlannedCampaigns } from '../optimizer/suggestions.js'
 import { getOverrides } from './demo/timeMachine.js'
 import { getRecommendations, getChangeEvents } from './demo/scriptedEvents.js'
+import { DEMO_STOCK, PRICE_CUT_SHARE, type DemoVehicle } from './demo/inventory.js'
 import { GADS_TARGET_CUSTOMER_ID } from '../platform/config.js'
 
 function addDays(dateStr: string, days: number): string {
@@ -63,41 +65,180 @@ export async function syncTrailingWindow(
   if (dataSource === 'live') {
     const startDate = addDays(endDate, -(days - 1))
     const rowsUpserted = await syncLiveWindow(startDate, endDate)
+    // Contract 3.3 — a planned campaign proposal that now exists for real.
+    await linkPlannedCampaigns()
     return [{ date: endDate, rowsUpserted }]
   }
   const overrides = await getOverrides()
   const dayDatas = Array.from({ length: days }, (_, i) => generateDay(addDays(endDate, -i), seed, overrides))
-  await withTransaction(async (client) => {
-    const campaignIds = new Map<string, number>()
-    const segmentIds = new Map<string, number>()
-    const adGroupIds = new Map<string, number>()
-    const keywordIds = new Map<string, number>()
-    const searchTermIds = new Map<string, number>()
-    const adIds = new Map<string, number>()
-    const conversionActionIds = new Map<string, number>()
-    const assetGroupIds = new Map<string, number>()
-    for (const dayData of dayDatas) {
-      await upsertDay(
-        client,
-        dayData,
-        campaignIds,
-        segmentIds,
-        adGroupIds,
-        keywordIds,
-        searchTermIds,
-        adIds,
-        conversionActionIds,
-        assetGroupIds
-      )
-    }
-  })
+  await withTransaction((client) => upsertDemoDays(client, dayDatas))
   // v2 Stage 7/8 — Recommendations + change history. Unconditional, not
   // batched into the per-day loop above: these are static, episodic
   // lists (see profile.ts's RECOMMENDATIONS/CHANGE_EVENTS), idempotently
   // upserted every sync regardless of the requested window — cheap
   // (currently 4 + 4 rows).
   await syncScriptedEvents()
+  // v3 step 5 — the demo dealer's stock, re-anchored to the newest synced
+  // day so aging/fresh units stay aging/fresh as the demo moves forward.
+  await syncDemoInventory()
+  // Contract 3.2 — keyword status (paused / enabled) as of the newest day.
+  await syncDemoKeywordStatus()
+  // Contract 3.3 — a planned campaign proposal that now exists for real.
+  await linkPlannedCampaigns()
   return dayDatas
+}
+
+/** Contract 3.2 — keeps keywords.status in step with the catalog as of the
+ * newest synced demo day: 'paused' once a keyword's pausedFromDay has been
+ * reached, otherwise 'enabled'. Also creates catalog keywords that have no
+ * traffic yet (a keyword that starts serving later), so the keyword summary
+ * can list them; the per-day upsert only creates keywords that got a row.
+ * Demo keywords only. ~100 keywords: one SELECT each to resolve (cached ad
+ * groups), and an UPDATE only where the status actually changes. */
+export async function syncDemoKeywordStatus(): Promise<void> {
+  await withTransaction(async (client) => {
+    const { rows } = await client.query<{ last: string | null }>(
+      `SELECT to_char(MAX(cp.date), 'YYYY-MM-DD') AS last
+       FROM campaign_performance cp JOIN campaigns c ON c.id = cp.campaign_id
+       WHERE c.data_source = 'demo'`
+    )
+    const anchor = rows[0]?.last
+    if (!anchor) return
+    const dayOffset = Math.round((Date.parse(anchor + 'T00:00:00Z') - Date.parse(profile.START_DATE + 'T00:00:00Z')) / 86_400_000)
+    const adGroupIds = new Map<string, number>()
+    for (const k of profile.KEYWORDS) {
+      if (!adGroupIds.has(k.adGroupKey)) {
+        const ag = profile.AD_GROUPS.find((a) => a.key === k.adGroupKey)!
+        adGroupIds.set(k.adGroupKey, await getOrCreateAdGroup(client, ag.key, await getOrCreateCampaign(client, ag.campaignKey)))
+      }
+      const id = await getOrCreateKeyword(client, k.key, adGroupIds.get(k.adGroupKey)!)
+      const status = k.pausedFromDay !== undefined && dayOffset >= k.pausedFromDay ? 'paused' : 'enabled'
+      await client.query('UPDATE keywords SET status = $2 WHERE id = $1 AND status IS DISTINCT FROM $2', [id, status])
+    }
+  })
+}
+
+/** v3 step 5 — upserts the demo stock (src/data/demo/inventory.ts) into
+ * `vehicles`, keyed by its stable external_id so vehicle ids never churn
+ * (suggestions store them), with dates relative to the newest synced demo
+ * day — the max, so a backfill writing older chunks last can't drag the
+ * anchor back. The demo vehicles' events are rebuilt from the same seed.
+ * One transaction; ~57 vehicles, a few batched statements. */
+export async function syncDemoInventory(): Promise<void> {
+  await withTransaction((client) => upsertDemoInventory(client))
+}
+
+/** syncDemoInventory's body on the caller's transaction — exported so the
+ * backfill's --dry-run can run it inside a transaction it rolls back. */
+export async function upsertDemoInventory(client: PoolClient): Promise<void> {
+  const { rows } = await client.query<{ last: string | null }>(
+    `SELECT to_char(MAX(cp.date), 'YYYY-MM-DD') AS last
+     FROM campaign_performance cp JOIN campaigns c ON c.id = cp.campaign_id
+     WHERE c.data_source = 'demo'`
+  )
+  const anchor = rows[0]?.last
+  if (!anchor) return
+  const stock = DEMO_STOCK.map((v) => ({
+    ...v,
+    listedOn: addDays(anchor, -v.listedDaysAgo),
+    soldOn: v.soldDaysAgo === null ? null : addDays(anchor, -v.soldDaysAgo),
+  }))
+
+  const existing = await client.query<{ id: number; external_id: string }>(
+    'SELECT id, external_id FROM vehicles WHERE external_id = ANY($1::text[])',
+    [stock.map((v) => v.externalId)]
+  )
+  const idByExternal = new Map(existing.rows.map((r) => [r.external_id, r.id]))
+  const missing = stock.filter((v) => !idByExternal.has(v.externalId))
+  if (missing.length > 0) {
+    const inserted = await client.query<{ id: number; external_id: string }>(
+      `INSERT INTO vehicles (external_id, make, model, year, mileage_km, price_idr, acquisition_cost_idr, status, listed_on, sold_on)
+       SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::int[], $5::int[], $6::bigint[], $7::bigint[],
+                            $8::text[], $9::date[], $10::date[])
+       RETURNING id, external_id`,
+      vehicleColumns(missing)
+    )
+    for (const r of inserted.rows) idByExternal.set(r.external_id, r.id)
+  }
+  await client.query(
+    `UPDATE vehicles v SET make = u.make, model = u.model, year = u.year, mileage_km = u.mileage_km,
+            price_idr = u.price_idr, acquisition_cost_idr = u.acquisition_cost_idr, status = u.status,
+            listed_on = u.listed_on, sold_on = u.sold_on
+     FROM unnest($1::text[], $2::text[], $3::text[], $4::int[], $5::int[], $6::bigint[], $7::bigint[],
+                 $8::text[], $9::date[], $10::date[])
+          AS u(external_id, make, model, year, mileage_km, price_idr, acquisition_cost_idr, status, listed_on, sold_on)
+     WHERE v.external_id = u.external_id`,
+    vehicleColumns(stock)
+  )
+
+  // Events: listed (at the pre-markdown price when there was one), the
+  // markdown, a hold for reserved units, the sale for sold ones.
+  const ev = { vehicleId: [] as number[], type: [] as string[], date: [] as string[], oldPrice: [] as (number | null)[], newPrice: [] as (number | null)[] }
+  const push = (vehicleId: number, type: string, date: string, oldPrice: number | null, newPrice: number | null) => {
+    ev.vehicleId.push(vehicleId)
+    ev.type.push(type)
+    ev.date.push(date)
+    ev.oldPrice.push(oldPrice)
+    ev.newPrice.push(newPrice)
+  }
+  for (const v of stock) {
+    const id = idByExternal.get(v.externalId)!
+    const preCut = v.priceCutDaysAgo === null ? v.priceIdr : Math.round(v.priceIdr / (1 - PRICE_CUT_SHARE) / 500_000) * 500_000
+    push(id, 'listed', v.listedOn, null, preCut)
+    if (v.priceCutDaysAgo !== null) push(id, 'price_change', addDays(anchor, -v.priceCutDaysAgo), preCut, v.priceIdr)
+    if (v.status === 'reserved') push(id, 'reserved', addDays(anchor, -Math.min(3, v.listedDaysAgo)), null, null)
+    if (v.soldOn) push(id, 'sold', v.soldOn, null, v.priceIdr)
+  }
+  const ids = [...idByExternal.values()]
+  await client.query('DELETE FROM vehicle_events WHERE vehicle_id = ANY($1::int[])', [ids])
+  await client.query(
+    `INSERT INTO vehicle_events (vehicle_id, event_type, event_date, old_price_idr, new_price_idr)
+     SELECT * FROM unnest($1::int[], $2::text[], $3::date[], $4::bigint[], $5::bigint[])`,
+    [ev.vehicleId, ev.type, ev.date, ev.oldPrice, ev.newPrice]
+  )
+}
+
+function vehicleColumns(vs: (DemoVehicle & { listedOn: string; soldOn: string | null })[]): unknown[] {
+  return [
+    vs.map((v) => v.externalId),
+    vs.map((v) => v.make),
+    vs.map((v) => v.model),
+    vs.map((v) => v.year),
+    vs.map((v) => v.mileageKm),
+    vs.map((v) => v.priceIdr),
+    vs.map((v) => v.acquisitionCostIdr),
+    vs.map((v) => v.status),
+    vs.map((v) => v.listedOn),
+    vs.map((v) => v.soldOn),
+  ]
+}
+
+/** Upserts generated demo days on the caller's transaction, sharing one id
+ * cache across all of them. Exported so the keyword backfill can run it
+ * inside a transaction it rolls back (--dry-run). */
+export async function upsertDemoDays(client: PoolClient, dayDatas: DayData[]): Promise<void> {
+  const campaignIds = new Map<string, number>()
+  const segmentIds = new Map<string, number>()
+  const adGroupIds = new Map<string, number>()
+  const keywordIds = new Map<string, number>()
+  const searchTermIds = new Map<string, number>()
+  const adIds = new Map<string, number>()
+  const conversionActionIds = new Map<string, number>()
+  const assetGroupIds = new Map<string, number>()
+  for (const dayData of dayDatas) {
+    await upsertDay(
+      client,
+      dayData,
+      campaignIds,
+      segmentIds,
+      adGroupIds,
+      keywordIds,
+      searchTermIds,
+      adIds,
+      conversionActionIds,
+      assetGroupIds
+    )
+  }
 }
 
 /** v2 Stage 7/8 — idempotently upserts profile.ts's static Recommendations
@@ -388,42 +529,82 @@ async function upsertDay(
     )
   }
 
+  // v3 — ~100 keywords and ~200 search-term rows a day (up from 24 and
+  // 48), so these two tables are written as one multi-row upsert each per
+  // day instead of one round trip per row, and the ids of existing demo
+  // keywords/search terms are loaded in one query instead of one SELECT
+  // each (see prefetchDemoKeywordAndTermIds).
+  if (keywordIds.size === 0 && searchTermIds.size === 0) {
+    await prefetchDemoKeywordAndTermIds(client, adGroupIds, keywordIds, searchTermIds)
+  }
+
+  const kwIds: number[] = []
   for (const k of dayData.keywords) {
     // adGroupIds is already populated by the loop above (every keyword's
     // parent ad group is generated in the same DayData), so this is a
     // cache hit, not a second resolve-by-natural-key round trip.
     const adGroupId = adGroupIds.get(k.adGroupKey)!
-    const keywordId = await keywordIdFor(k.keywordKey, adGroupId)
-    await client.query(
-      `INSERT INTO keyword_performance
-          (keyword_id, date, impressions, clicks, cost_micros, conversions,
-           quality_score, expected_ctr, ad_relevance, landing_page_experience)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       ON CONFLICT(keyword_id, date) DO UPDATE SET
-          impressions = excluded.impressions,
-          clicks = excluded.clicks,
-          cost_micros = excluded.cost_micros,
-          conversions = excluded.conversions,
-          quality_score = excluded.quality_score,
-          expected_ctr = excluded.expected_ctr,
-          ad_relevance = excluded.ad_relevance,
-          landing_page_experience = excluded.landing_page_experience`,
-      [
-        keywordId,
-        dayData.date,
-        k.impressions,
-        k.clicks,
-        k.costMicros,
-        k.conversions,
-        k.qualityScore,
-        k.expectedCtr,
-        k.adRelevance,
-        k.landingPageExperience,
-      ]
-    )
+    kwIds.push(await keywordIdFor(k.keywordKey, adGroupId))
   }
+  const kw = dayData.keywords
+  await client.query(
+    `INSERT INTO keyword_performance
+        (keyword_id, date, impressions, clicks, cost_micros, conversions,
+         quality_score, expected_ctr, ad_relevance, landing_page_experience,
+         search_impression_share, search_rank_lost_impression_share, conversions_value_micros)
+     SELECT v.keyword_id, $1::date, v.impressions, v.clicks, v.cost_micros, v.conversions,
+            v.quality_score, v.expected_ctr, v.ad_relevance, v.landing_page_experience,
+            v.search_impression_share, v.search_rank_lost_impression_share, v.conversions_value_micros
+     FROM unnest($2::int[], $3::int[], $4::int[], $5::bigint[], $6::real[], $7::int[],
+                 $8::text[], $9::text[], $10::text[], $11::real[], $12::real[], $13::bigint[])
+          AS v(keyword_id, impressions, clicks, cost_micros, conversions, quality_score,
+               expected_ctr, ad_relevance, landing_page_experience,
+               search_impression_share, search_rank_lost_impression_share, conversions_value_micros)
+     ON CONFLICT(keyword_id, date) DO UPDATE SET
+        impressions = excluded.impressions,
+        clicks = excluded.clicks,
+        cost_micros = excluded.cost_micros,
+        conversions = excluded.conversions,
+        quality_score = excluded.quality_score,
+        expected_ctr = excluded.expected_ctr,
+        ad_relevance = excluded.ad_relevance,
+        landing_page_experience = excluded.landing_page_experience,
+        search_impression_share = excluded.search_impression_share,
+        search_rank_lost_impression_share = excluded.search_rank_lost_impression_share,
+        conversions_value_micros = excluded.conversions_value_micros`,
+    [
+      dayData.date,
+      kwIds,
+      kw.map((k) => k.impressions),
+      kw.map((k) => k.clicks),
+      kw.map((k) => k.costMicros),
+      kw.map((k) => k.conversions),
+      kw.map((k) => k.qualityScore),
+      kw.map((k) => k.expectedCtr),
+      kw.map((k) => k.adRelevance),
+      kw.map((k) => k.landingPageExperience),
+      kw.map((k) => k.searchImpressionShare),
+      kw.map((k) => k.searchRankLostImpressionShare),
+      kw.map((k) => k.conversionsValueMicros),
+    ]
+  )
+  // The bid is a property of the keyword, not the day — keep it in step
+  // with the profile, touching only rows whose value actually changed.
+  await client.query(
+    `UPDATE keywords k SET cpc_bid_micros = v.bid
+     FROM unnest($1::int[], $2::bigint[]) AS v(id, bid)
+     WHERE k.id = v.id AND k.cpc_bid_micros IS DISTINCT FROM v.bid`,
+    [kwIds, kw.map((k) => k.cpcBidMicros)]
+  )
 
-  // v2 Stage 2 — search term performance.
+  // v2 Stage 2 — search term performance. v3: long-tail terms appear on
+  // some days only, so the generator is authoritative for a demo day it
+  // regenerates — a demo row it no longer produces for that date (a term
+  // that didn't show up, or a pre-v3 row from the old every-term-every-day
+  // split) is removed, or it would linger and inflate the keyword's totals.
+  // Same for keywords not yet live on that date. Demo rows only; live
+  // data never goes through upsertDay.
+  const stIds: number[] = []
   for (const st of dayData.searchTerms) {
     // adGroupIds/keywordIds are already populated by the loops above (every
     // search term's parent ad group and keyword are generated in the same
@@ -431,19 +612,45 @@ async function upsertDay(
     // round trips.
     const adGroupId = adGroupIds.get(st.adGroupKey)!
     const keywordId = keywordIds.get(st.keywordKey) ?? null
-    const searchTermId = await searchTermIdFor(st.searchTermKey, adGroupId, keywordId)
-    await client.query(
-      `INSERT INTO search_term_performance
-          (search_term_id, date, impressions, clicks, cost_micros, conversions)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT(search_term_id, date) DO UPDATE SET
-          impressions = excluded.impressions,
-          clicks = excluded.clicks,
-          cost_micros = excluded.cost_micros,
-          conversions = excluded.conversions`,
-      [searchTermId, dayData.date, st.impressions, st.clicks, st.costMicros, st.conversions]
-    )
+    stIds.push(await searchTermIdFor(st.searchTermKey, adGroupId, keywordId))
   }
+  const sts = dayData.searchTerms
+  await client.query(
+    `INSERT INTO search_term_performance
+        (search_term_id, date, impressions, clicks, cost_micros, conversions, conversions_value_micros)
+     SELECT v.search_term_id, $1::date, v.impressions, v.clicks, v.cost_micros, v.conversions, v.conversions_value_micros
+     FROM unnest($2::int[], $3::int[], $4::int[], $5::bigint[], $6::real[], $7::bigint[])
+          AS v(search_term_id, impressions, clicks, cost_micros, conversions, conversions_value_micros)
+     ON CONFLICT(search_term_id, date) DO UPDATE SET
+        impressions = excluded.impressions,
+        clicks = excluded.clicks,
+        cost_micros = excluded.cost_micros,
+        conversions = excluded.conversions,
+        conversions_value_micros = excluded.conversions_value_micros`,
+    [
+      dayData.date,
+      stIds,
+      sts.map((s) => s.impressions),
+      sts.map((s) => s.clicks),
+      sts.map((s) => s.costMicros),
+      sts.map((s) => s.conversions),
+      sts.map((s) => s.conversionsValueMicros),
+    ]
+  )
+  await client.query(
+    `DELETE FROM search_term_performance stp
+     USING search_terms st
+     WHERE stp.search_term_id = st.id AND st.data_source = 'demo'
+       AND stp.date = $1::date AND NOT (stp.search_term_id = ANY($2::int[]))`,
+    [dayData.date, stIds]
+  )
+  await client.query(
+    `DELETE FROM keyword_performance kp
+     USING keywords k
+     WHERE kp.keyword_id = k.id AND k.data_source = 'demo'
+       AND kp.date = $1::date AND NOT (kp.keyword_id = ANY($2::int[]))`,
+    [dayData.date, kwIds]
+  )
 
   // v2 Stage 3 — ad performance.
   for (const a of dayData.ads) {
@@ -480,6 +687,64 @@ async function upsertDay(
     )
   }
 
+  // v3 step 4 — value settings are properties of the action, not the
+  // day: keep them in step with the profile, touching only rows that
+  // actually changed.
+  const actionKeys = [...new Set(dayData.conversionActions.map((ca) => ca.conversionActionKey))]
+  const actionIds: number[] = []
+  for (const key of actionKeys) actionIds.push(await conversionActionIdFor(key))
+  const actionProfiles = actionKeys.map((key) => profile.CONVERSION_ACTIONS.find((a) => a.key === key)!)
+  await client.query(
+    `UPDATE conversion_actions ca
+     SET default_value_micros = v.value, always_use_default_value = v.always, value_tier = v.tier
+     FROM unnest($1::int[], $2::bigint[], $3::bool[], $4::text[]) AS v(id, value, always, tier)
+     WHERE ca.id = v.id
+       AND (ca.default_value_micros IS DISTINCT FROM v.value
+            OR ca.always_use_default_value IS DISTINCT FROM v.always
+            OR ca.value_tier IS DISTINCT FROM v.tier)`,
+    [
+      actionIds,
+      actionProfiles.map((a) => a.defaultValueMicros),
+      actionProfiles.map((a) => a.alwaysUseDefaultValue),
+      actionProfiles.map((a) => a.valueTier),
+    ]
+  )
+
+  // v3 step 4 — keyword conversions by action, non-zero rows only. Same
+  // "generator is authoritative for the day" rule as search terms: a demo
+  // keyword×action row it no longer produces for this date is removed.
+  const kcaKeyword: number[] = []
+  const kcaAction: number[] = []
+  const kcaConversions: number[] = []
+  const kcaValue: number[] = []
+  dayData.keywords.forEach((k, i) => {
+    for (const [actionKey, conversions] of Object.entries(k.conversionsByAction)) {
+      const idx = actionKeys.indexOf(actionKey)
+      kcaKeyword.push(kwIds[i])
+      kcaAction.push(actionIds[idx])
+      kcaConversions.push(conversions)
+      kcaValue.push(Math.round(conversions * actionProfiles[idx].defaultValueMicros))
+    }
+  })
+  await client.query(
+    `INSERT INTO keyword_conversion_action_performance
+        (keyword_id, conversion_action_id, date, conversions, conversions_value_micros)
+     SELECT v.keyword_id, v.action_id, $1::date, v.conversions, v.value
+     FROM unnest($2::int[], $3::int[], $4::real[], $5::bigint[]) AS v(keyword_id, action_id, conversions, value)
+     ON CONFLICT (keyword_id, conversion_action_id, date) DO UPDATE SET
+        conversions = excluded.conversions,
+        conversions_value_micros = excluded.conversions_value_micros`,
+    [dayData.date, kcaKeyword, kcaAction, kcaConversions, kcaValue]
+  )
+  await client.query(
+    `DELETE FROM keyword_conversion_action_performance kca
+     USING keywords k
+     WHERE kca.keyword_id = k.id AND k.data_source = 'demo' AND kca.date = $1::date
+       AND (kca.keyword_id, kca.conversion_action_id) NOT IN (
+         SELECT * FROM unnest($2::int[], $3::int[]))`,
+    [dayData.date, kcaKeyword, kcaAction]
+  )
+
   // v2 Stage 6 — PMax asset group performance.
   for (const ag of dayData.assetGroups) {
     const campaignId = await campaignIdFor(ag.campaignKey)
@@ -502,7 +767,8 @@ async function upsertDay(
 async function getOrCreateCampaign(client: PoolClient, campaignKey: string): Promise<number> {
   const name = profile.CAMPAIGNS.find((c) => c.key === campaignKey)!.name
   const existing = await client.query<{ id: number }>(
-    "SELECT id FROM campaigns WHERE name = $1 AND data_source = 'demo'",
+    // 3.6: never a simulated launch's campaign, which has no performance rows.
+    "SELECT id FROM campaigns WHERE name = $1 AND data_source = 'demo' AND NOT simulated",
     [name]
   )
   if (existing.rows[0]) return existing.rows[0].id
@@ -548,11 +814,41 @@ async function getOrCreateKeyword(client: PoolClient, keywordKey: string, adGrou
   )
   if (existing.rows[0]) return existing.rows[0].id
   const inserted = await client.query<{ id: number }>(
-    `INSERT INTO keywords (ad_group_id, text, match_type, data_source, status)
-     VALUES ($1, $2, $3, 'demo', 'enabled') RETURNING id`,
-    [adGroupId, kw.text, kw.matchType]
+    `INSERT INTO keywords (ad_group_id, text, match_type, cpc_bid_micros, data_source, status)
+     VALUES ($1, $2, $3, $4, 'demo', 'enabled') RETURNING id`,
+    [adGroupId, kw.text, kw.matchType, kw.bidMicros]
   )
   return inserted.rows[0].id
+}
+
+/** v3 — fills the keyword and search-term id caches for every profile
+ * entry that already exists in the DB, in two queries, matching on the
+ * same natural keys getOrCreateKeyword/getOrCreateSearchTerm use. Anything
+ * not found (a brand-new keyword or term) is left for those to create. */
+async function prefetchDemoKeywordAndTermIds(
+  client: PoolClient,
+  adGroupIds: Map<string, number>,
+  keywordIds: Map<string, number>,
+  searchTermIds: Map<string, number>
+): Promise<void> {
+  const kwRows = await client.query<{ id: number; ad_group_id: number; text: string; match_type: string }>(
+    "SELECT id, ad_group_id, text, match_type FROM keywords WHERE data_source = 'demo'"
+  )
+  const kwByNaturalKey = new Map(kwRows.rows.map((r) => [`${r.ad_group_id}|${r.text}|${r.match_type}`, r.id]))
+  for (const k of profile.KEYWORDS) {
+    const adGroupId = adGroupIds.get(k.adGroupKey)
+    const id = adGroupId === undefined ? undefined : kwByNaturalKey.get(`${adGroupId}|${k.text}|${k.matchType}`)
+    if (id !== undefined) keywordIds.set(k.key, id)
+  }
+  const stRows = await client.query<{ id: number; ad_group_id: number; text: string }>(
+    "SELECT id, ad_group_id, text FROM search_terms WHERE data_source = 'demo'"
+  )
+  const stByNaturalKey = new Map(stRows.rows.map((r) => [`${r.ad_group_id}|${r.text}`, r.id]))
+  for (const st of profile.SEARCH_TERMS) {
+    const adGroupId = adGroupIds.get(st.adGroupKey)
+    const id = adGroupId === undefined ? undefined : stByNaturalKey.get(`${adGroupId}|${st.text}`)
+    if (id !== undefined) searchTermIds.set(st.key, id)
+  }
 }
 
 async function getOrCreateAd(client: PoolClient, adKey: string, adGroupId: number): Promise<number> {
@@ -606,9 +902,10 @@ async function getOrCreateConversionAction(client: PoolClient, conversionActionK
   )
   if (existing.rows[0]) return existing.rows[0].id
   const inserted = await client.query<{ id: number }>(
-    `INSERT INTO conversion_actions (name, category, counting_type, data_source, status)
-     VALUES ($1, $2, $3, 'demo', 'enabled') RETURNING id`,
-    [ca.name, ca.category, ca.countingType]
+    `INSERT INTO conversion_actions
+        (name, category, counting_type, default_value_micros, always_use_default_value, value_tier, data_source, status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'demo', 'enabled') RETURNING id`,
+    [ca.name, ca.category, ca.countingType, ca.defaultValueMicros, ca.alwaysUseDefaultValue, ca.valueTier]
   )
   return inserted.rows[0].id
 }

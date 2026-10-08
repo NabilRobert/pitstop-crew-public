@@ -1,5 +1,5 @@
 // Minimal in-process pub/sub backing the live console panel — realizes
-// PROJECT.md's never-built "Visible agent pipeline trace" Standout
+// docs/PROJECT.md's never-built "Visible agent pipeline trace" Standout
 // Feature as a real-time log instead of a step-by-step wizard UI. In-
 // memory and single-process is sufficient: this app already has no
 // multi-instance/horizontal-scaling concern anywhere else (plain

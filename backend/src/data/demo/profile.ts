@@ -1,10 +1,12 @@
-// Used-car-dealer demo profile — see dummy.md for the sourcing/reasoning.
-// Every number here traces back to dummy.md; change the profile there
+// Used-car-dealer demo profile — see docs/dummy.md for the sourcing/reasoning.
+// Every number here traces back to docs/dummy.md; change the profile there
 // first, then mirror it here.
 
-export const START_DATE = '2026-06-01' // ~10 weeks of history by "today"
+import type { ValueTier } from '../../optimizer/types.js'
 
-// Blended daily baseline across all 5 campaigns (dummy.md → Budget & Daily Volume).
+export const START_DATE = '2026-06-01'
+
+// Blended daily baseline across all 5 campaigns (docs/dummy.md → Budget & Daily Volume).
 export const BASELINE_IMPRESSIONS = 1500
 export const BASELINE_CLICKS = 57
 export const BASELINE_CONVERSIONS = 4.5
@@ -18,7 +20,7 @@ export interface CampaignProfile {
 }
 
 // name, share of the daily baseline, sensitivity to the day's Markov state
-// (see PROJECT.md → Standout Features: PMax/in-market swing hardest, Brand stays stable).
+// (see docs/PROJECT.md → Standout Features: PMax/in-market swing hardest, Brand stays stable).
 export const CAMPAIGNS: CampaignProfile[] = [
   { key: 'brand', name: 'Brand', weight: 0.1, sensitivity: 0.2 },
   { key: 'search_generic', name: 'Search — Used Cars Generic', weight: 0.2, sensitivity: 0.8 },
@@ -27,7 +29,7 @@ export const CAMPAIGNS: CampaignProfile[] = [
   { key: 'display', name: 'Display Remarketing', weight: 0.1, sensitivity: 0.7 },
 ]
 
-// The deliberate "clear declining trend" required by PROJECT.md's synthetic
+// The deliberate "clear declining trend" required by docs/PROJECT.md's synthetic
 // dataset spec — applied as a linear multiplier drift on top of the Markov
 // state, isolated to one campaign so it reads as a real, specific problem.
 export const DECLINING_CAMPAIGN = 'search_model'
@@ -71,7 +73,7 @@ export interface RemarketingProfile {
   value: string
   share: number
 }
-// Display Remarketing's own behavior segments (dummy.md → custom segment_type).
+// Display Remarketing's own behavior segments (docs/dummy.md → custom segment_type).
 export const REMARKETING_SEGMENTS: RemarketingProfile[] = [
   { value: 'Viewed VDP', share: 0.4 },
   { value: 'Started Credit App', share: 0.2 },
@@ -104,127 +106,19 @@ export const AD_GROUPS: AdGroupProfile[] = [
   { key: 'model_daihatsu', campaignKey: 'search_model', name: 'Model — Daihatsu', share: 0.15 },
 ]
 
-export interface KeywordProfile {
-  key: string
-  adGroupKey: string
-  text: string
-  matchType: 'exact' | 'phrase' | 'broad'
-  share: number // share of the parent ad group's daily totals
-  baseQualityScore: number // 1-10; search_model's keywords erode from this as the decline progresses
-}
-
-// 3-5 keywords per ad group, share of the parent ad group's totals. Base
-// QS 6-8 — realistic mid-to-good range, not universally excellent (leaves
-// room for the decline-tied erosion on search_model to read as a real drop
-// rather than a floor being hit).
-export const KEYWORDS: KeywordProfile[] = [
-  // Brand — Dealer Name
-  { key: 'kw_brand_name_exact', adGroupKey: 'brand_dealer_name', text: '[dealer name]', matchType: 'exact', share: 0.5, baseQualityScore: 8 },
-  { key: 'kw_brand_name_phrase', adGroupKey: 'brand_dealer_name', text: '"dealer name used cars"', matchType: 'phrase', share: 0.3, baseQualityScore: 8 },
-  { key: 'kw_brand_name_broad', adGroupKey: 'brand_dealer_name', text: 'dealer name', matchType: 'broad', share: 0.2, baseQualityScore: 7 },
-  // Brand — Location Variants
-  { key: 'kw_brand_loc_exact', adGroupKey: 'brand_location', text: '[dealer name jakarta]', matchType: 'exact', share: 0.45, baseQualityScore: 8 },
-  { key: 'kw_brand_loc_phrase', adGroupKey: 'brand_location', text: '"dealer name near me"', matchType: 'phrase', share: 0.35, baseQualityScore: 7 },
-  { key: 'kw_brand_loc_broad', adGroupKey: 'brand_location', text: 'dealer name location', matchType: 'broad', share: 0.2, baseQualityScore: 7 },
-  // Used Cars Generic
-  { key: 'kw_generic_cars_broad', adGroupKey: 'generic_used_cars', text: 'used cars for sale', matchType: 'broad', share: 0.4, baseQualityScore: 6 },
-  { key: 'kw_generic_cars_phrase', adGroupKey: 'generic_used_cars', text: '"used cars jakarta"', matchType: 'phrase', share: 0.35, baseQualityScore: 7 },
-  { key: 'kw_generic_cars_exact', adGroupKey: 'generic_used_cars', text: '[used cars near me]', matchType: 'exact', share: 0.25, baseQualityScore: 7 },
-  // Used SUVs Generic
-  { key: 'kw_generic_suvs_broad', adGroupKey: 'generic_used_suvs', text: 'used suvs for sale', matchType: 'broad', share: 0.45, baseQualityScore: 6 },
-  { key: 'kw_generic_suvs_phrase', adGroupKey: 'generic_used_suvs', text: '"used suv near me"', matchType: 'phrase', share: 0.3, baseQualityScore: 6 },
-  { key: 'kw_generic_suvs_exact', adGroupKey: 'generic_used_suvs', text: '[used suv jakarta]', matchType: 'exact', share: 0.25, baseQualityScore: 7 },
-  // Model — Toyota
-  { key: 'kw_toyota_exact', adGroupKey: 'model_toyota', text: '[used toyota jakarta]', matchType: 'exact', share: 0.4, baseQualityScore: 7 },
-  { key: 'kw_toyota_phrase', adGroupKey: 'model_toyota', text: '"used toyota for sale"', matchType: 'phrase', share: 0.35, baseQualityScore: 7 },
-  { key: 'kw_toyota_broad', adGroupKey: 'model_toyota', text: 'used toyota near me', matchType: 'broad', share: 0.25, baseQualityScore: 6 },
-  // Model — Honda
-  { key: 'kw_honda_exact', adGroupKey: 'model_honda', text: '[used honda jakarta]', matchType: 'exact', share: 0.4, baseQualityScore: 7 },
-  { key: 'kw_honda_phrase', adGroupKey: 'model_honda', text: '"used honda for sale"', matchType: 'phrase', share: 0.35, baseQualityScore: 6 },
-  { key: 'kw_honda_broad', adGroupKey: 'model_honda', text: 'used honda near me', matchType: 'broad', share: 0.25, baseQualityScore: 6 },
-  // Model — Suzuki
-  { key: 'kw_suzuki_exact', adGroupKey: 'model_suzuki', text: '[used suzuki jakarta]', matchType: 'exact', share: 0.4, baseQualityScore: 7 },
-  { key: 'kw_suzuki_phrase', adGroupKey: 'model_suzuki', text: '"used suzuki for sale"', matchType: 'phrase', share: 0.35, baseQualityScore: 6 },
-  { key: 'kw_suzuki_broad', adGroupKey: 'model_suzuki', text: 'used suzuki near me', matchType: 'broad', share: 0.25, baseQualityScore: 6 },
-  // Model — Daihatsu
-  { key: 'kw_daihatsu_exact', adGroupKey: 'model_daihatsu', text: '[used daihatsu jakarta]', matchType: 'exact', share: 0.4, baseQualityScore: 7 },
-  { key: 'kw_daihatsu_phrase', adGroupKey: 'model_daihatsu', text: '"used daihatsu for sale"', matchType: 'phrase', share: 0.35, baseQualityScore: 6 },
-  { key: 'kw_daihatsu_broad', adGroupKey: 'model_daihatsu', text: 'used daihatsu near me', matchType: 'broad', share: 0.25, baseQualityScore: 6 },
-]
+// v2 Stage 1/2 keywords and search terms; v3 grew them to ~100 keywords
+// with per-keyword CTR/CVR/CPC weights, bids, a long tail of search terms
+// and the planted optimizer ground truth. They live in keywordCatalog.ts
+// (too long to keep here); re-exported under the names everything already
+// imports from this module.
+export { KEYWORDS, SEARCH_TERMS, HIDDEN_TERM_SHARE } from './keywordCatalog.js'
+export type { KeywordProfile, SearchTermProfile, Intent, MatchType } from './keywordCatalog.js'
 
 // How much base Quality Score search_model's keywords can erode by the end
 // of the decline window (see generator.ts's declineMultiplier) — ties QS
 // drift causally to the existing decline story instead of being a second,
 // disconnected feature.
 export const QS_EROSION_MAX_POINTS = 3
-
-// v2 Stage 2 — search terms. See docs/v2-backend-plan.md. Anchored to
-// exactly one triggering keyword (a deliberate simplification vs. the real
-// API's looser attribution). Each keyword gets exactly 2: 1 close_variant
-// (a near-exact rewording of what was actually bid on, gets the larger
-// share — realistic, since close variants dominate search-term volume for
-// a well-targeted keyword) + 1 broader (a more generic/adjacent phrase,
-// smaller share — the kind of term worth reviewing as a negative-keyword
-// candidate if it's burning spend with nothing to show for it).
-export interface SearchTermProfile {
-  key: string
-  keywordKey: string
-  adGroupKey: string
-  text: string
-  matchFlavor: 'close_variant' | 'broader'
-  share: number // share of the parent keyword's daily totals
-}
-
-export const SEARCH_TERMS: SearchTermProfile[] = [
-  { key: 'st_brand_name_exact_close', keywordKey: 'kw_brand_name_exact', adGroupKey: 'brand_dealer_name', text: 'dealer name reviews', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_brand_name_exact_broad', keywordKey: 'kw_brand_name_exact', adGroupKey: 'brand_dealer_name', text: 'car dealer jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_brand_name_phrase_close', keywordKey: 'kw_brand_name_phrase', adGroupKey: 'brand_dealer_name', text: 'dealer name used car lot', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_brand_name_phrase_broad', keywordKey: 'kw_brand_name_phrase', adGroupKey: 'brand_dealer_name', text: 'used car dealership jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_brand_name_broad_close', keywordKey: 'kw_brand_name_broad', adGroupKey: 'brand_dealer_name', text: 'dealer name cars', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_brand_name_broad_broad', keywordKey: 'kw_brand_name_broad', adGroupKey: 'brand_dealer_name', text: 'car dealership near me', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_brand_loc_exact_close', keywordKey: 'kw_brand_loc_exact', adGroupKey: 'brand_location', text: 'dealer name jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_brand_loc_exact_broad', keywordKey: 'kw_brand_loc_exact', adGroupKey: 'brand_location', text: 'car dealer jakarta selatan', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_brand_loc_phrase_close', keywordKey: 'kw_brand_loc_phrase', adGroupKey: 'brand_location', text: 'dealer name close by', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_brand_loc_phrase_broad', keywordKey: 'kw_brand_loc_phrase', adGroupKey: 'brand_location', text: 'nearest used car dealer', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_brand_loc_broad_close', keywordKey: 'kw_brand_loc_broad', adGroupKey: 'brand_location', text: 'dealer name address', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_brand_loc_broad_broad', keywordKey: 'kw_brand_loc_broad', adGroupKey: 'brand_location', text: 'car dealership location jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_generic_cars_broad_close', keywordKey: 'kw_generic_cars_broad', adGroupKey: 'generic_used_cars', text: 'used cars for sale near me', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_generic_cars_broad_broad', keywordKey: 'kw_generic_cars_broad', adGroupKey: 'generic_used_cars', text: 'buy used car indonesia', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_generic_cars_phrase_close', keywordKey: 'kw_generic_cars_phrase', adGroupKey: 'generic_used_cars', text: 'used cars jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_generic_cars_phrase_broad', keywordKey: 'kw_generic_cars_phrase', adGroupKey: 'generic_used_cars', text: 'mobil bekas jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_generic_cars_exact_close', keywordKey: 'kw_generic_cars_exact', adGroupKey: 'generic_used_cars', text: 'used cars near me now', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_generic_cars_exact_broad', keywordKey: 'kw_generic_cars_exact', adGroupKey: 'generic_used_cars', text: 'cheap used cars jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_generic_suvs_broad_close', keywordKey: 'kw_generic_suvs_broad', adGroupKey: 'generic_used_suvs', text: 'used suvs for sale near me', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_generic_suvs_broad_broad', keywordKey: 'kw_generic_suvs_broad', adGroupKey: 'generic_used_suvs', text: 'buy used suv indonesia', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_generic_suvs_phrase_close', keywordKey: 'kw_generic_suvs_phrase', adGroupKey: 'generic_used_suvs', text: 'used suv near me now', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_generic_suvs_phrase_broad', keywordKey: 'kw_generic_suvs_phrase', adGroupKey: 'generic_used_suvs', text: 'mobil suv bekas jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_generic_suvs_exact_close', keywordKey: 'kw_generic_suvs_exact', adGroupKey: 'generic_used_suvs', text: 'used suv jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_generic_suvs_exact_broad', keywordKey: 'kw_generic_suvs_exact', adGroupKey: 'generic_used_suvs', text: 'cheap used suv jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_toyota_exact_close', keywordKey: 'kw_toyota_exact', adGroupKey: 'model_toyota', text: 'used toyota jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_toyota_exact_broad', keywordKey: 'kw_toyota_exact', adGroupKey: 'model_toyota', text: 'toyota bekas jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_toyota_phrase_close', keywordKey: 'kw_toyota_phrase', adGroupKey: 'model_toyota', text: 'used toyota for sale near me', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_toyota_phrase_broad', keywordKey: 'kw_toyota_phrase', adGroupKey: 'model_toyota', text: 'toyota dealer used cars', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_toyota_broad_close', keywordKey: 'kw_toyota_broad', adGroupKey: 'model_toyota', text: 'used toyota nearby', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_toyota_broad_broad', keywordKey: 'kw_toyota_broad', adGroupKey: 'model_toyota', text: 'toyota second jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_honda_exact_close', keywordKey: 'kw_honda_exact', adGroupKey: 'model_honda', text: 'used honda jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_honda_exact_broad', keywordKey: 'kw_honda_exact', adGroupKey: 'model_honda', text: 'honda bekas jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_honda_phrase_close', keywordKey: 'kw_honda_phrase', adGroupKey: 'model_honda', text: 'used honda for sale near me', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_honda_phrase_broad', keywordKey: 'kw_honda_phrase', adGroupKey: 'model_honda', text: 'honda dealer used cars', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_honda_broad_close', keywordKey: 'kw_honda_broad', adGroupKey: 'model_honda', text: 'used honda nearby', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_honda_broad_broad', keywordKey: 'kw_honda_broad', adGroupKey: 'model_honda', text: 'honda second jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_suzuki_exact_close', keywordKey: 'kw_suzuki_exact', adGroupKey: 'model_suzuki', text: 'used suzuki jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_suzuki_exact_broad', keywordKey: 'kw_suzuki_exact', adGroupKey: 'model_suzuki', text: 'suzuki bekas jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_suzuki_phrase_close', keywordKey: 'kw_suzuki_phrase', adGroupKey: 'model_suzuki', text: 'used suzuki for sale near me', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_suzuki_phrase_broad', keywordKey: 'kw_suzuki_phrase', adGroupKey: 'model_suzuki', text: 'suzuki dealer used cars', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_suzuki_broad_close', keywordKey: 'kw_suzuki_broad', adGroupKey: 'model_suzuki', text: 'used suzuki nearby', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_suzuki_broad_broad', keywordKey: 'kw_suzuki_broad', adGroupKey: 'model_suzuki', text: 'suzuki second jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_daihatsu_exact_close', keywordKey: 'kw_daihatsu_exact', adGroupKey: 'model_daihatsu', text: 'used daihatsu jakarta selatan', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_daihatsu_exact_broad', keywordKey: 'kw_daihatsu_exact', adGroupKey: 'model_daihatsu', text: 'daihatsu bekas jakarta', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_daihatsu_phrase_close', keywordKey: 'kw_daihatsu_phrase', adGroupKey: 'model_daihatsu', text: 'used daihatsu for sale near me', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_daihatsu_phrase_broad', keywordKey: 'kw_daihatsu_phrase', adGroupKey: 'model_daihatsu', text: 'daihatsu dealer used cars', matchFlavor: 'broader', share: 0.4 },
-  { key: 'st_daihatsu_broad_close', keywordKey: 'kw_daihatsu_broad', adGroupKey: 'model_daihatsu', text: 'used daihatsu nearby', matchFlavor: 'close_variant', share: 0.6 },
-  { key: 'st_daihatsu_broad_broad', keywordKey: 'kw_daihatsu_broad', adGroupKey: 'model_daihatsu', text: 'daihatsu second jakarta', matchFlavor: 'broader', share: 0.4 },
-]
 
 // v2 Stage 3 — ads/creatives. See docs/v2-backend-plan.md. 2 static
 // RSA-style ads per ad group (16 total — the low end of the plan's "2-3"
@@ -479,14 +373,34 @@ export interface ConversionActionProfile {
   name: string
   category: string
   countingType: 'ONE_PER_CLICK' | 'MANY_PER_CLICK'
-  share: number // share of every campaign's daily conversions total
+  share: number // relative share of every campaign's daily conversions, normalized over the actions live that day
+  // v3 — value tiers (docs/overhaul-v3-backend.md section 9). The values
+  // are STARTING DEFAULTS sized against the ~Rp 20,000 baseline CPA, not
+  // the dealer's real numbers (open question Q5), so anything that leans
+  // on them is basis 'prior'.
+  defaultValueMicros: number
+  alwaysUseDefaultValue: boolean
+  valueTier: ValueTier
+  // Days since START_DATE the action started recording; absent = from
+  // START_DATE. The three v3 actions start on day 122 (2026-10-01), after
+  // the last day already stored when v3 shipped, so no stored
+  // conversion_action_performance row changes.
+  startDay?: number
 }
 
+const idr = (rupiah: number) => rupiah * 1_000_000
+
 export const CONVERSION_ACTIONS: ConversionActionProfile[] = [
-  { key: 'test_drive_booked', name: 'Test Drive Booked', category: 'SUBMIT_LEAD_FORM', countingType: 'ONE_PER_CLICK', share: 0.3 },
-  { key: 'credit_app_started', name: 'Credit App Started', category: 'SUBMIT_LEAD_FORM', countingType: 'ONE_PER_CLICK', share: 0.2 },
-  { key: 'phone_call', name: 'Phone Call', category: 'PHONE_CALL_LEAD', countingType: 'ONE_PER_CLICK', share: 0.3 },
-  { key: 'financing_page_visit', name: 'Financing Page Visit', category: 'PAGE_VIEW', countingType: 'MANY_PER_CLICK', share: 0.2 },
+  { key: 'test_drive_booked', name: 'Test Drive Booked', category: 'SUBMIT_LEAD_FORM', countingType: 'ONE_PER_CLICK', share: 0.3, defaultValueMicros: idr(150_000), alwaysUseDefaultValue: true, valueTier: 'visit' },
+  { key: 'credit_app_started', name: 'Credit App Started', category: 'SUBMIT_LEAD_FORM', countingType: 'ONE_PER_CLICK', share: 0.2, defaultValueMicros: idr(60_000), alwaysUseDefaultValue: true, valueTier: 'lead' },
+  { key: 'phone_call', name: 'Phone Call', category: 'PHONE_CALL_LEAD', countingType: 'ONE_PER_CLICK', share: 0.3, defaultValueMicros: idr(40_000), alwaysUseDefaultValue: true, valueTier: 'lead' },
+  { key: 'financing_page_visit', name: 'Financing Page Visit', category: 'PAGE_VIEW', countingType: 'MANY_PER_CLICK', share: 0.2, defaultValueMicros: idr(5_000), alwaysUseDefaultValue: true, valueTier: 'micro' },
+  { key: 'whatsapp_click', name: 'WhatsApp Click', category: 'CONTACT', countingType: 'ONE_PER_CLICK', share: 0.25, defaultValueMicros: idr(30_000), alwaysUseDefaultValue: true, valueTier: 'lead', startDay: 122 },
+  { key: 'showroom_visit', name: 'Showroom Visit', category: 'STORE_VISIT', countingType: 'ONE_PER_CLICK', share: 0.08, defaultValueMicros: idr(120_000), alwaysUseDefaultValue: true, valueTier: 'visit', startDay: 122 },
+  // A simulation of what an offline sale upload would produce — Pitstop
+  // has no closed-loop attribution (phase 3). The name says so everywhere
+  // it is shown, and the UI must not present it as real attribution.
+  { key: 'sold', name: 'Sold (offline import, simulated)', category: 'PURCHASE', countingType: 'ONE_PER_CLICK', share: 0.02, defaultValueMicros: idr(12_000_000), alwaysUseDefaultValue: true, valueTier: 'sale', startDay: 122 },
 ]
 
 // v2 Stage 6 — PMax asset groups. See docs/v2-*-plan.md. Scoped to the
