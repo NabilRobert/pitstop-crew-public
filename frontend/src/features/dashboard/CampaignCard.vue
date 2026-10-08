@@ -46,7 +46,7 @@ const steady = computed(() => (props.rollup ? props.rollup.verdicts.steady : 0))
     </h2>
 
     <p v-if="row.noData" class="mt-3 text-sm text-ink-soft">{{ t('campaignsList.card.noData') }}</p>
-    <dl v-else class="mt-3 grid grid-cols-3 gap-3">
+    <dl v-else class="mt-3 flex flex-wrap gap-x-6 gap-y-3">
       <div>
         <dt class="font-mono text-[10px] font-bold uppercase tracking-wide text-ink-faint">{{ t('campaignDetail.scoreboard.spend') }}</dt>
         <dd class="font-display text-base font-bold tabular-nums text-ink">{{ formatMicrosAsIDR(row.cost_micros) }}</dd>
@@ -67,7 +67,7 @@ const steady = computed(() => (props.rollup ? props.rollup.verdicts.steady : 0))
     <!-- Keyword line: only when the keyword calls worked. "No keywords" only when we KNOW there are none. -->
     <div class="mt-4 border-t border-border pt-3">
       <p v-if="!keywordInfoAvailable" class="text-sm text-ink-faint">{{ t('campaignsList.card.keywordsUnavailable') }}</p>
-      <p v-else-if="!rollup" class="text-sm text-ink-soft">{{ t('campaignsList.card.noKeywords') }}</p>
+      <p v-else-if="!rollup" class="text-sm text-ink-soft">{{ simulated ? t('campaignsList.card.simulatedNoKeywords') : t('campaignsList.card.noKeywords') }}</p>
       <template v-else>
         <p class="text-sm text-ink-soft">{{ t('campaignsList.card.keywords', { n: rollup.keywords }, rollup.keywords) }}</p>
         <ul class="mt-2 flex flex-wrap gap-1.5">

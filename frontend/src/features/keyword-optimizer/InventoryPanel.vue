@@ -20,6 +20,7 @@ const { inventory, loading, error } = useInventorySummary()
         {{ t('keywordOptimizer.inventory.openPage') }}
       </router-link>
     </div>
+    <slot name="intro" />
 
     <div v-if="loading" class="py-6 text-ink-faint">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="rounded-lg border border-border bg-surface px-5 py-4 text-sm text-ink-soft">

@@ -573,6 +573,7 @@ export default {
       clicks: '{n} clicks',
       keywords: '1 keyword | {n} keywords',
       noKeywords: "No keywords: this campaign type doesn't use them.",
+      simulatedNoKeywords: 'No keyword data yet: this campaign only exists in the simulation.',
       keywordsUnavailable: "Keyword details aren't available from the server right now.",
       waiting: '1 suggestion waiting | {n} suggestions waiting',
       nothingWaiting: 'Nothing waiting',

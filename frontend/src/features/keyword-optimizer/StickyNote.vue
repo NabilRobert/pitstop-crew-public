@@ -36,7 +36,7 @@ function dragStart(e: DragEvent, s: Suggestion) {
 <template>
   <div
     class="note"
-    :class="[`note--${note.size}`, { 'note--paused': note.status === 'paused' }]"
+    :class="[`note--${note.size}`, { 'note--paused': note.status === 'paused', 'note--labelled': (stickered && style) || note.status === 'paused' }]"
     :style="{ '--tilt': `${tiltDegrees(note.keywordId)}deg`, '--paper': style?.paper ?? PAPER_FALLBACK }"
   >
     <span class="note__pin" aria-hidden="true" />
@@ -114,6 +114,8 @@ function dragStart(e: DragEvent, s: Suggestion) {
   background: #000;
   box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.35);
 }
+/* A verdict sticker or the paused label sits on its own row above the keyword, never over its text. */
+.note--labelled { padding-top: 30px; }
 .note--paused { opacity: 0.72; border-style: dashed; }
 .note--paused:hover, .note--paused:focus-within { opacity: 1; }
 .note__paused {

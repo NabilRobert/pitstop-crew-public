@@ -573,6 +573,7 @@ export default {
       clicks: '{n} klik',
       keywords: '1 kata kunci | {n} kata kunci',
       noKeywords: 'Tanpa kata kunci: jenis kampanye ini tidak memakainya.',
+      simulatedNoKeywords: 'Belum ada data kata kunci: kampanye ini hanya ada di simulasi.',
       keywordsUnavailable: 'Detail kata kunci belum tersedia dari server saat ini.',
       waiting: '1 saran menunggu | {n} saran menunggu',
       nothingWaiting: 'Tidak ada yang menunggu',
