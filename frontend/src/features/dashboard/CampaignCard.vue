@@ -16,6 +16,7 @@ const props = defineProps<{
   /** False when the keyword calls failed, so a missing roll-up means "unknown", not "no keywords". */
   keywordInfoAvailable: boolean
 }>()
+const emit = defineEmits<{ (e: 'open-keyword', keywordId: number): void }>()
 const { t } = useI18n()
 
 const costPerEnquiry = computed(() => (props.row.conversions > 0 ? props.row.cost_micros / props.row.conversions : null))
@@ -83,14 +84,17 @@ const steady = computed(() => (props.rollup ? props.rollup.verdicts.steady : 0))
           </li>
         </ul>
         <ul v-if="listed.length" class="mt-3 flex flex-wrap gap-1.5" :class="{ 'max-h-40 overflow-y-auto': expanded }" :aria-label="t('campaignsList.card.keywordList')">
-          <li
-            v-for="k in listed"
-            :key="k.keywordId"
-            class="border px-1.5 py-0.5 text-xs"
-            :class="k.status === 'paused' ? 'border-dashed border-border-strong text-ink-faint' : 'border-border text-ink'"
-          >
-            {{ k.text }}
-            <span v-if="k.status === 'paused'" class="font-mono text-[9px] font-bold uppercase">{{ t('keywordOptimizer.board.note.paused') }}</span>
+          <li v-for="k in listed" :key="k.keywordId">
+            <button
+              type="button"
+              class="border px-1.5 py-0.5 text-left text-xs hover:border-ink focus-visible:outline focus-visible:outline-2"
+              :class="k.status === 'paused' ? 'border-dashed border-border-strong text-ink-faint' : 'border-border text-ink'"
+              :aria-label="t('campaignsList.card.openKeyword', { keyword: k.text })"
+              @click="emit('open-keyword', k.keywordId)"
+            >
+              {{ k.text }}
+              <span v-if="k.status === 'paused'" class="font-mono text-[9px] font-bold uppercase">{{ t('keywordOptimizer.board.note.paused') }}</span>
+            </button>
           </li>
         </ul>
         <button

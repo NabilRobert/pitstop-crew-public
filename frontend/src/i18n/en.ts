@@ -576,6 +576,7 @@ export default {
       waiting: '1 suggestion waiting | {n} suggestions waiting',
       nothingWaiting: 'Nothing waiting',
       keywordList: 'Keywords in this campaign',
+      openKeyword: 'Open details for {keyword}',
       showAllKeywords: 'Show all {n} keywords',
       showFewer: 'Show fewer',
       open: 'Open campaign',

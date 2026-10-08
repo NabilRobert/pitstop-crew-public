@@ -576,6 +576,7 @@ export default {
       waiting: '1 saran menunggu | {n} saran menunggu',
       nothingWaiting: 'Tidak ada yang menunggu',
       keywordList: 'Kata kunci di kampanye ini',
+      openKeyword: 'Buka detail {keyword}',
       showAllKeywords: 'Tampilkan semua {n} kata kunci',
       showFewer: 'Tampilkan lebih sedikit',
       open: 'Buka kampanye',

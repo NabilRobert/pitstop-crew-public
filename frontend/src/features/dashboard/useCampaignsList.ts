@@ -1,9 +1,9 @@
-import { ref, watch, type Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 import { api } from '../../shared/api/api'
-import type { Campaign, Suggestion } from '../../shared/api/types'
+import type { Campaign, KeywordPerformanceRow, KeywordSummary, Suggestion } from '../../shared/api/types'
 import type { CampaignRow } from './useDashboard'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
-import { campaignRollup, type CampaignRollup } from '../keyword-optimizer/boardModel'
+import { buildNotes, campaignRollup, type CampaignRollup } from '../keyword-optimizer/boardModel'
 
 /** The campaigns index: totals per campaign for the chosen period (same 1W-5Y buttons as the dashboard), plus a
  * best-effort keyword roll-up per campaign. If the keyword calls fail (an older backend), the cards simply show
@@ -17,6 +17,10 @@ export function useCampaignsList(days: Ref<number>) {
   const keywordInfoAvailable = ref(false)
   // Every suggestion (any status): the Planned lane and the "proposals waiting" notice read from here.
   const suggestions = ref<Suggestion[]>([])
+  const keywordRows = ref<KeywordPerformanceRow[]>([])
+  const keywordSummaries = ref<KeywordSummary[]>([])
+  // The same notes the Keyword Optimizer board shows, so a keyword's side panel can open from a campaign card.
+  const notes = computed(() => buildNotes(keywordRows.value, keywordSummaries.value, suggestions.value))
 
   // A slow answer for an earlier period must not overwrite the latest one.
   let latest = 0
@@ -67,6 +71,8 @@ export function useCampaignsList(days: Ref<number>) {
         keywordOptimizerApi.suggestions({ status: 'all', limit: 200 }),
       ])
       if (mine !== latest) return
+      keywordRows.value = rows
+      keywordSummaries.value = summary.items
       rollups.value = campaignRollup(rows, summary.items, suggestionList.items)
       suggestions.value = suggestionList.items
       keywordInfoAvailable.value = true
@@ -74,6 +80,8 @@ export function useCampaignsList(days: Ref<number>) {
       if (mine === latest) {
         rollups.value = new Map()
         suggestions.value = []
+        keywordRows.value = []
+        keywordSummaries.value = []
         keywordInfoAvailable.value = false
       }
     } finally {
@@ -83,5 +91,5 @@ export function useCampaignsList(days: Ref<number>) {
 
   watch(days, load, { immediate: true })
 
-  return { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable, suggestions, reload: load }
+  return { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable, suggestions, notes, reload: load }
 }

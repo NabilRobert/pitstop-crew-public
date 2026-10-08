@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import CampaignCard from './CampaignCard.vue'
 import ProposalsSection from '../keyword-optimizer/ProposalsSection.vue'
 import LaunchHost from '../keyword-optimizer/LaunchHost.vue'
+import NoteDrawer from '../keyword-optimizer/NoteDrawer.vue'
 import LaunchesLog from '../keyword-optimizer/LaunchesLog.vue'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 import { isDemo } from '../../shared/composables/auth'
@@ -19,7 +20,7 @@ const periodSubtitleKey = computed(
   () => PERIOD_OPTIONS.find((opt) => opt.days === days.value)?.subtitleKey ?? PERIOD_OPTIONS[2].subtitleKey
 )
 
-const { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable, suggestions, reload } = useCampaignsList(days)
+const { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable, suggestions, notes, reload } = useCampaignsList(days)
 const idByName = computed(() => new Map(campaigns.value.map((c) => [c.name, c.id])))
 const simulatedByName = computed(() => new Map(campaigns.value.map((c) => [c.name, c.simulated === true])))
 // The log re-reads after something is created.
@@ -49,6 +50,14 @@ async function setStatus(id: number, status: 'open' | 'applied' | 'dismissed' | 
     busyIds.value = next
   }
 }
+
+// --- a keyword's side panel, opened right from its campaign card (the same panel the board uses) ---
+const openKeywordId = ref<number | null>(null)
+const drawerNote = computed(() => notes.value.find((n) => n.keywordId === openKeywordId.value) ?? null)
+// If the keyword disappears (a reload, a different period), close the panel rather than show a stale one.
+watch(drawerNote, (n) => {
+  if (openKeywordId.value !== null && !n) openKeywordId.value = null
+})
 
 // Only the very first load shows a spinner; changing the period refreshes in place.
 const hasLoaded = ref(false)
@@ -91,10 +100,21 @@ watch(loading, (isLoading) => {
         :rollup="rollups.get(idByName.get(row.campaign) ?? -1) ?? null"
         :keyword-info-available="keywordInfoAvailable"
         :simulated="simulatedByName.get(row.campaign) ?? false"
+        @open-keyword="(id) => (openKeywordId = id)"
       />
     </div>
       <LaunchesLog :key="logKey" />
     </template>
+
+    <NoteDrawer
+      v-if="drawerNote"
+      :note="drawerNote"
+      :suggestions="drawerNote.all"
+      :can-edit="canEdit"
+      :busy-ids="busyIds"
+      @close="openKeywordId = null"
+      @status="(id, status) => setStatus(id, status)"
+    />
 
     <LaunchHost :suggestions="suggestions" :can-edit="canEdit" @done="afterLaunch" />
   </main>
