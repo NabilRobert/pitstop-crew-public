@@ -23,6 +23,8 @@ interface Totals {
 export interface CampaignRow extends Totals {
   campaign: string
   ctr: number
+  /** True for a campaign that exists but has no performance rows in the period (for example a brand-new simulated one). It must read "no data yet", never zero. */
+  noData?: boolean
 }
 
 // labelKey is the short button label ("3M"); subtitleKey is the fuller

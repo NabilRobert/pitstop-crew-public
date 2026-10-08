@@ -566,6 +566,9 @@ export default {
     subtitle: '{period} terakhir · klik kampanye untuk melihat papan kata kunci, grup iklan, dan iklan',
     loading: 'Memuat kampanye…',
     card: {
+      simulated: 'Simulasi',
+      simulatedHelp: 'Dibuat oleh simulasi demo. Tidak ada di Google Ads.',
+      noData: 'Belum ada data.',
       clicks: '{n} klik',
       keywords: '1 kata kunci | {n} kata kunci',
       noKeywords: 'Tanpa kata kunci: jenis kampanye ini tidak memakainya.',
@@ -576,6 +579,18 @@ export default {
       showAllKeywords: 'Tampilkan semua {n} kata kunci',
       showFewer: 'Tampilkan lebih sedikit',
       open: 'Buka kampanye',
+    },
+    launches: {
+      title: 'Peluncuran',
+      hint: 'Setiap percobaan membuat kampanye, termasuk pemeriksaan yang tidak membuat apa pun. Saat ini simulasi: tidak ada yang dikirim ke Google Ads.',
+      show: 'Tampilkan catatan',
+      hide: 'Sembunyikan catatan',
+      empty: 'Belum ada yang diluncurkan.',
+      simulated: 'Simulasi',
+      validateOnly: 'hanya pemeriksaan',
+      suggestion: 'Saran #{id}',
+      objects: '{n} objek',
+      status: { validated: 'Diperiksa', created: 'Dibuat', failed: 'Gagal' },
     },
   },
   campaignDetail: {

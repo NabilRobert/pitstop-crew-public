@@ -11,6 +11,8 @@ const props = defineProps<{
   /** null when the campaign link is unknown (the campaigns call and the performance rows disagree). */
   campaignId: number | null
   rollup: CampaignRollup | null
+  /** Contract 3.6: created by a simulated launch; it does not exist in Google Ads. */
+  simulated?: boolean
   /** False when the keyword calls failed, so a missing roll-up means "unknown", not "no keywords". */
   keywordInfoAvailable: boolean
 }>()
@@ -30,12 +32,20 @@ const steady = computed(() => (props.rollup ? props.rollup.verdicts.steady : 0))
 
 <template>
   <article class="rounded-lg border border-border bg-surface p-5">
+    <span
+      v-if="simulated"
+      class="mb-2 inline-block border border-border-strong bg-giallo px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-black"
+      :title="t('campaignsList.card.simulatedHelp')"
+    >
+      {{ t('campaignsList.card.simulated') }}
+    </span>
     <h2 class="font-display text-lg font-bold leading-tight text-ink">
       <router-link v-if="campaignId !== null" :to="`/campaigns/${campaignId}`" class="hover:underline">{{ row.campaign }}</router-link>
       <template v-else>{{ row.campaign }}</template>
     </h2>
 
-    <dl class="mt-3 grid grid-cols-3 gap-3">
+    <p v-if="row.noData" class="mt-3 text-sm text-ink-soft">{{ t('campaignsList.card.noData') }}</p>
+    <dl v-else class="mt-3 grid grid-cols-3 gap-3">
       <div>
         <dt class="font-mono text-[10px] font-bold uppercase tracking-wide text-ink-faint">{{ t('campaignDetail.scoreboard.spend') }}</dt>
         <dd class="font-display text-base font-bold tabular-nums text-ink">{{ formatMicrosAsIDR(row.cost_micros) }}</dd>
@@ -49,7 +59,7 @@ const steady = computed(() => (props.rollup ? props.rollup.verdicts.steady : 0))
         <dd class="font-display text-base font-bold tabular-nums text-ink">{{ costPerEnquiry === null ? '—' : formatMicrosAsIDR(costPerEnquiry) }}</dd>
       </div>
     </dl>
-    <p class="mt-1 font-mono text-[11px] text-ink-faint">
+    <p v-if="!row.noData" class="mt-1 font-mono text-[11px] text-ink-faint">
       {{ t('campaignsList.card.clicks', { n: formatNumber(row.clicks) }) }}
     </p>
 

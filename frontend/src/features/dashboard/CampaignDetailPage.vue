@@ -31,6 +31,7 @@ const {
   loading,
   error,
   campaignName,
+  campaignSimulated,
   adGroupRows,
   keywordRows,
   searchTermRows,
@@ -94,6 +95,7 @@ const costPerEnquiry = computed(() => (totals.value.conversions > 0 ? totals.val
     <div v-else :class="{ 'opacity-60 transition-opacity': loading }" :aria-busy="loading">
       <div class="mb-6 mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
+          <span v-if="campaignSimulated" class="mb-1 mr-2 inline-block border border-border-strong bg-giallo px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-black" :title="t('campaignsList.card.simulatedHelp')">{{ t('campaignsList.card.simulated') }}</span>
           <h1 class="mb-1 font-display text-2xl font-bold text-ink">{{ campaignName }}</h1>
           <p class="font-mono text-xs text-ink-faint">{{ t('campaignDetail.subtitle', { period: t(periodSubtitleKey) }) }}</p>
         </div>

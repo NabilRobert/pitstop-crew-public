@@ -45,6 +45,14 @@ export function useCampaignsList(days: Ref<number>) {
       campaignRows.value = Array.from(byCampaign.values())
         .map((c) => ({ ...c, ctr: c.impressions ? (c.clicks / c.impressions) * 100 : 0 }))
         .sort((a, b) => b.cost_micros - a.cost_micros)
+      // A campaign that exists but has no rows in this period (a new or simulated one) still gets a card, marked
+      // as having no data, so it is never silently missing and never shown as zeros.
+      const seen = new Set(campaignRows.value.map((r) => r.campaign))
+      for (const c of campaignList) {
+        if (!seen.has(c.name)) {
+          campaignRows.value.push({ campaign: c.name, impressions: 0, clicks: 0, cost_micros: 0, conversions: 0, ctr: 0, noData: true })
+        }
+      }
     } catch (e) {
       if (mine === latest) error.value = e instanceof Error ? e.message : String(e)
       if (mine === latest) loading.value = false

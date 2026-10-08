@@ -566,6 +566,9 @@ export default {
     subtitle: 'Last {period} · click a campaign for its keyword board, ad groups and ads',
     loading: 'Loading campaigns…',
     card: {
+      simulated: 'Simulated',
+      simulatedHelp: 'Created by the demo simulation. It does not exist in Google Ads.',
+      noData: 'No data yet.',
       clicks: '{n} clicks',
       keywords: '1 keyword | {n} keywords',
       noKeywords: "No keywords: this campaign type doesn't use them.",
@@ -576,6 +579,18 @@ export default {
       showAllKeywords: 'Show all {n} keywords',
       showFewer: 'Show fewer',
       open: 'Open campaign',
+    },
+    launches: {
+      title: 'Launches',
+      hint: 'Every attempt to create a campaign, including checks that created nothing. Simulated for now: nothing here was sent to Google Ads.',
+      show: 'Show the log',
+      hide: 'Hide the log',
+      empty: 'Nothing has been launched yet.',
+      simulated: 'Simulated',
+      validateOnly: 'check only',
+      suggestion: 'Suggestion #{id}',
+      objects: '{n} objects',
+      status: { validated: 'Checked', created: 'Created', failed: 'Failed' },
     },
   },
   campaignDetail: {

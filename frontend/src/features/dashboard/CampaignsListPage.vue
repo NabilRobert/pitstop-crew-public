@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import CampaignCard from './CampaignCard.vue'
 import ProposalsSection from '../keyword-optimizer/ProposalsSection.vue'
 import LaunchHost from '../keyword-optimizer/LaunchHost.vue'
+import LaunchesLog from '../keyword-optimizer/LaunchesLog.vue'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 import { isDemo } from '../../shared/composables/auth'
 import PeriodSelector from './PeriodSelector.vue'
@@ -20,6 +21,13 @@ const periodSubtitleKey = computed(
 
 const { loading, error, campaigns, campaignRows, rollups, keywordInfoAvailable, suggestions, reload } = useCampaignsList(days)
 const idByName = computed(() => new Map(campaigns.value.map((c) => [c.name, c.id])))
+const simulatedByName = computed(() => new Map(campaigns.value.map((c) => [c.name, c.simulated === true])))
+// The log re-reads after something is created.
+const logKey = ref(0)
+async function afterLaunch() {
+  await reload()
+  logKey.value++
+}
 
 // --- campaign proposals (contract 3.3): the lanes and their detail panel live in ProposalsSection ---
 const canEdit = computed(() => !isDemo.value)
@@ -82,10 +90,12 @@ watch(loading, (isLoading) => {
         :campaign-id="idByName.get(row.campaign) ?? null"
         :rollup="rollups.get(idByName.get(row.campaign) ?? -1) ?? null"
         :keyword-info-available="keywordInfoAvailable"
+        :simulated="simulatedByName.get(row.campaign) ?? false"
       />
     </div>
+      <LaunchesLog :key="logKey" />
     </template>
 
-    <LaunchHost :suggestions="suggestions" :can-edit="canEdit" @done="reload" />
+    <LaunchHost :suggestions="suggestions" :can-edit="canEdit" @done="afterLaunch" />
   </main>
 </template>

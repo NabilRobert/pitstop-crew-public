@@ -265,6 +265,7 @@ export function useCampaignDetail(campaignId: Ref<string | number>, days: Ref<nu
   const loading = ref(true)
   const error = ref<string | null>(null)
   const campaignName = ref('')
+  const campaignSimulated = ref(false)
   const adGroupRows = ref<AdGroupRow[]>([])
   const keywordRows = ref<KeywordRow[]>([])
   const searchTermRows = ref<SearchTermRow[]>([])
@@ -306,6 +307,7 @@ export function useCampaignDetail(campaignId: Ref<string | number>, days: Ref<nu
       ])
       if (mine !== latestLoad) return
       campaignName.value = campaigns.find((c) => c.id === id)?.name ?? ''
+      campaignSimulated.value = campaigns.find((c) => c.id === id)?.simulated === true
       const own = perf.filter((r) => r.campaign === campaignName.value)
       totals.value = own.reduce(
         (acc, r) => ({ impressions: acc.impressions + r.impressions, clicks: acc.clicks + r.clicks, cost_micros: acc.cost_micros + r.cost_micros, conversions: acc.conversions + r.conversions }),
@@ -357,6 +359,7 @@ export function useCampaignDetail(campaignId: Ref<string | number>, days: Ref<nu
     loading,
     error,
     campaignName,
+    campaignSimulated,
     adGroupRows,
     keywordRows,
     searchTermRows,
