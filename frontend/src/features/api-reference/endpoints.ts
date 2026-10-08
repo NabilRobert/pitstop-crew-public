@@ -23,7 +23,7 @@ export const SECTIONS: ApiSection[] = [
 ]
 
 export const CAMPAIGNS_ENDPOINTS: EndpointDef[] = [
-  { method: 'GET', path: '/campaigns', desc: 'List all campaigns.' },
+  { method: 'GET', path: '/campaigns', desc: 'List all campaigns. Each has simulated: true when it was created by a simulated launch (it has no performance rows and does not exist in Google Ads).' },
   { method: 'GET', path: '/performance?days=30', desc: 'Time-series performance for the trailing N days.' },
   { method: 'GET', path: '/segments/performance?days=30', desc: 'Performance broken down by audience segment.' },
 ]
@@ -77,7 +77,7 @@ export const KEYWORD_OPTIMIZER_ENDPOINTS: EndpointDef[] = [
   {
     method: 'PATCH',
     path: '/keyword-suggestions/:id',
-    desc: '{status: "applied"|"dismissed"|"open"}. Owner only (the demo account gets 403). Allowed: open→applied, open→dismissed, and undoing either back to open. Any other move, or touching a superseded row, is 409. Applied/dismissed is the owner\'s own bookkeeping — nothing is sent to Google Ads.',
+    desc: '{status: "open"|"planned"|"applied"|"dismissed"}. Owner only (the demo account gets 403). planned is valid only for new_campaign and new_ad suggestions. Any move that is not allowed, or touching a superseded row, is 409. Applied/dismissed is the owner\'s own bookkeeping — nothing is sent to Google Ads.',
   },
   {
     method: 'GET',
@@ -93,6 +93,16 @@ export const KEYWORD_OPTIMIZER_ENDPOINTS: EndpointDef[] = [
     method: 'GET',
     path: '/keywords/summary?days=30&adGroupId=',
     desc: 'Window aggregates that cannot be derived from the per-day keyword rows: intent mix, how much spend could be classified, waste exposure, conversions by conversion action, and stock.',
+  },
+  {
+    method: 'POST',
+    path: '/launches',
+    desc: 'Owner only (the demo account gets 403, and the attempt is recorded). {suggestion_id, confirm_name, validate_only}: launches a planned new_campaign (with its planned ads) or a planned new_ad on an existing ad group. confirm_name must be exactly the campaign or ad group name. Checks run in a fixed order (kill switch ads_write_enabled, status, name, then the plan against the current settings). Everything is written paused, in one transaction, into this app\'s own tables as a SIMULATED launch. Nothing is sent to Google Ads. Every call, refusals and failures included, writes an audit row.',
+  },
+  {
+    method: 'GET',
+    path: '/launches?limit=20',
+    desc: 'The audit log of launch attempts, newest first: who, when, mode, status (validated, created or failed), the objects created and the messages from the checks.',
   },
   {
     method: 'POST',

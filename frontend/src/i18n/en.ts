@@ -1090,6 +1090,8 @@ export default {
       item1: "Each card shows what to do, the numbers it is based on, how confident it is, and whether it is backed by this account's data or only by general rules (marked unverified). Negatives that would also block a converting search say so before you apply them.",
       item2: "The suggestions are tied to the cars currently in stock, so a keyword for a model you have none of is called out, and new keyword ideas come from what is actually listed. The inventory panel at the bottom shows stock, how long cars have been listed, and margin.",
       item3: "Negative keywords can be downloaded or copied as a list to paste into Google Ads Editor. The page works for the read-only demo account too, but only the owner can mark suggestions applied or dismissed or start a run.",
+      item4: "The optimizer also proposes whole new campaigns and ads, built from the cars in stock and the keywords that have already proven themselves. Plan one to keep it, then press Review and create. For now creating is a simulation: it writes paused rows into this app only, tagged SIMULATED, and nothing reaches Google Ads.",
+      item5: "The page and the Campaigns page update by themselves when a run finishes, and clicking a keyword on a campaign card opens the same side panel the board uses, with a link to that campaign.",
     },
     health: {
       title: 'System Health',
@@ -1150,7 +1152,9 @@ export default {
       item3: "A suggestion is checked against its own side effects: a proposed negative is tested against the search terms that actually converted, and any it would also block are shown on the card before anyone applies it.",
       item4: "Inventory is part of the decision, but it is not trusted blindly. Suggestions are tied to the stock actually listed, including a call-out for advertising a model with no cars, and the inventory comes from a separate read-only connection whose address lives only on the server. If that source is down the page says so and carries on without the stock-based suggestions.",
       item5: "Search-term text is attacker-controlled input. It is rendered as plain text, kept out of any instructions to the model, and neutralized in the negatives export so a term starting with = or + cannot become a spreadsheet formula.",
-      notProven: "What is not proven yet: the deterministic parts are exercised against the generated demo data, which has planted problems with known answers, but the model step has not yet been run end-to-end on a real account. The intent label on each search term is an estimate, and the demo data is synthetic.",
+      notProven: "What is not proven yet: the deterministic parts are exercised against the generated demo data, which has planted problems with known answers, but the model step has not yet been run end-to-end on a real account. The intent label on each search term is an estimate, and the demo data is synthetic. The launch is a simulation: the real Google Ads write path is not built, so nothing the app does changes an account.",
+      item6: "A launch is guarded like a real write even though it is a simulation. The campaign is created paused, in one transaction, only after the owner types its exact name; a kill switch (off by default) refuses everything; every attempt, including refusals and failures, goes into an audit log; and a launch the demo account tries is refused and recorded.",
+      item7: "Ad copy follows the same split as everything else: code builds it from templates and checks it (length limits, only claims the owner has allowed, only numbers that are in the stock facts), and the model may only polish wording. The checks are repeated against the current settings at launch, so a claim switched off after an ad was proposed fails then.",
     },
     observability: {
       title: 'Seeing what the AI actually did',

@@ -134,6 +134,8 @@ const { t } = useI18n()
           <li>{{ t('howItWorks.keywordOptimizer.item1') }}</li>
           <li>{{ t('howItWorks.keywordOptimizer.item2') }}</li>
           <li>{{ t('howItWorks.keywordOptimizer.item3') }}</li>
+          <li>{{ t('howItWorks.keywordOptimizer.item4') }}</li>
+          <li>{{ t('howItWorks.keywordOptimizer.item5') }}</li>
         </ul>
       </section>
 

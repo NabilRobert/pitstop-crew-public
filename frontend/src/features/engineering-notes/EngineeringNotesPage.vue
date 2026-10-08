@@ -55,6 +55,8 @@ const { t } = useI18n()
           <li>{{ t('engineeringNotes.keywordOptimizer.item3') }}</li>
           <li>{{ t('engineeringNotes.keywordOptimizer.item4') }}</li>
           <li>{{ t('engineeringNotes.keywordOptimizer.item5') }}</li>
+          <li>{{ t('engineeringNotes.keywordOptimizer.item6') }}</li>
+          <li>{{ t('engineeringNotes.keywordOptimizer.item7') }}</li>
         </ul>
         <p>{{ t('engineeringNotes.keywordOptimizer.notProven') }}</p>
       </section>
