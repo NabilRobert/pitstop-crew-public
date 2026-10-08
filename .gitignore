@@ -28,3 +28,6 @@ backend/backups/
 
 # OS
 .DS_Store
+
+# Backend files dropped here by hand for review (copied from the VPS, never committed from this folder)
+diff_files/
