@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Suggestion } from '../../shared/api/types'
 import { formatDate, formatMicrosAsIDR } from '../../shared/utils/format'
+import AdPreview from './AdPreview.vue'
 import CampaignProposal from './CampaignProposal.vue'
 import {
   suggestionTitle,
@@ -36,6 +37,11 @@ const where = computed(() =>
 const isOpen = computed(() => props.suggestion.status === 'open')
 const isPlanned = computed(() => props.suggestion.status === 'planned')
 const proposal = computed(() => (props.suggestion.payload.kind === 'new_campaign' ? props.suggestion.payload : null))
+const ad = computed(() => (props.suggestion.payload.kind === 'new_ad' ? props.suggestion.payload : null))
+// An ad that belongs to a proposed campaign is created together with it, so it never gets its own 'I created it'.
+const adWithCampaign = computed(() => ad.value?.target.kind === 'proposed_campaign')
+// 'planned' is a valid status for campaign proposals and for ads.
+const plannable = computed(() => !!proposal.value || !!ad.value)
 </script>
 
 <template>
@@ -77,6 +83,7 @@ const proposal = computed(() => (props.suggestion.payload.kind === 'new_campaign
     <p v-if="where" class="mt-1 font-mono text-[11px] text-ink-faint">{{ where }}</p>
 
     <CampaignProposal v-if="proposal" :suggestion="suggestion" :payload="proposal" />
+    <AdPreview v-if="ad" :payload="ad" />
 
     <!-- Payload-specific detail. Everything is rendered as text, never as HTML:
          search-term text is untrusted input. -->
@@ -153,7 +160,7 @@ const proposal = computed(() => (props.suggestion.payload.kind === 'new_campaign
     </div>
 
     <footer v-if="canEdit" class="mt-4 flex flex-wrap items-center gap-2">
-      <template v-if="proposal && isOpen">
+      <template v-if="plannable && isOpen">
         <button
           type="button"
           class="rounded-md bg-rosso px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco hover:bg-rosso-dark disabled:cursor-not-allowed disabled:opacity-50"
@@ -171,8 +178,10 @@ const proposal = computed(() => (props.suggestion.payload.kind === 'new_campaign
           {{ t('keywordOptimizer.card.dismiss') }}
         </button>
       </template>
-      <template v-else-if="proposal && isPlanned">
+      <template v-else-if="plannable && isPlanned">
+        <p v-if="adWithCampaign" class="w-full text-sm text-ink-soft">{{ t('keywordOptimizer.ad.createdWithCampaign') }}</p>
         <button
+          v-else
           type="button"
           class="rounded-md bg-rosso px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco hover:bg-rosso-dark disabled:cursor-not-allowed disabled:opacity-50"
           :disabled="busy"

@@ -122,7 +122,19 @@ export function buildNotes(
 /** Suggestions that belong to no single keyword (campaign ideas, campaign-wide negatives, brand-new keyword ideas).
  * Whole-campaign proposals are NOT here: they have their own, much more visible lane (see `proposalsByStatus`). */
 export function looseIdeas(suggestions: Suggestion[]): Suggestion[] {
-  return suggestions.filter((s) => s.keyword === null && s.status === 'open' && s.type !== 'new_campaign').sort(byRank)
+  return suggestions.filter((s) => s.keyword === null && s.status === 'open' && s.type !== 'new_campaign' && !isProposalAd(s)).sort(byRank)
+}
+
+/** An ad that is part of a proposed campaign (shown inside that campaign's poster, not as its own idea). */
+export function isProposalAd(s: Suggestion): boolean {
+  return s.type === 'new_ad' && s.payload.kind === 'new_ad' && s.payload.target.kind === 'proposed_campaign'
+}
+
+/** The ads that belong to one proposed campaign, in the order the server sent them. */
+export function adsOfProposal(suggestions: Suggestion[], campaignSuggestionId: number): Suggestion[] {
+  return suggestions.filter(
+    (s) => s.payload.kind === 'new_ad' && s.payload.target.kind === 'proposed_campaign' && s.payload.target.campaign_suggestion_id === campaignSuggestionId && s.status !== 'dismissed' && s.status !== 'superseded'
+  )
 }
 
 /** New-campaign proposals in one status ('open' = proposed by the AI and waiting, 'planned' = approved). */
@@ -175,7 +187,7 @@ export function visibleNotes(notes: BoardNote[], filter: BoardFilter, limit = BO
 
 export const STOP_TYPES: SuggestionType[] = ['negative_keyword', 'pause_keyword', 'change_match_type']
 export const GROW_TYPES: SuggestionType[] = ['promote_search_term', 'raise_bid_candidate', 'spin_out_campaign']
-export const NEW_TYPES: SuggestionType[] = ['new_keyword', 'new_campaign']
+export const NEW_TYPES: SuggestionType[] = ['new_keyword', 'new_campaign', 'new_ad']
 
 export interface Headline {
   total: number

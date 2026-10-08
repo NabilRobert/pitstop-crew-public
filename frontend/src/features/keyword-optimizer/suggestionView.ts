@@ -2,7 +2,7 @@
 // Everything shown as a number is read from the structured `evidence` /
 // `payload` / `inventory` fields, never parsed out of the LLM's `explanation`.
 
-import type { Suggestion, SuggestionType } from '../../shared/api/types'
+import type { NewAdPayload, Suggestion, SuggestionType } from '../../shared/api/types'
 import { formatMicrosAsIDR, formatNumber, formatPercent } from '../../shared/utils/format'
 
 type Translate = (key: string, params?: Record<string, unknown>) => string
@@ -17,7 +17,16 @@ export const SUGGESTION_TYPES: SuggestionType[] = [
   'spin_out_campaign',
   'raise_bid_candidate',
   'new_campaign',
+  'new_ad',
 ]
+
+/** What an ad is about, for titles: "Toyota Fortuner" (the model its facts describe), else the ad group. */
+export function adSubject(p: NewAdPayload): string {
+  const { make, model } = p.facts
+  if (make && model) return `${make} ${model}`
+  if (model) return model
+  return p.target.kind === 'proposed_campaign' ? p.target.ad_group_name : '—'
+}
 
 /** One-line headline for a suggestion, built from its structured payload. */
 export function suggestionTitle(s: Suggestion, t: Translate): string {
@@ -48,6 +57,8 @@ export function suggestionTitle(s: Suggestion, t: Translate): string {
       return t('keywordOptimizer.title.raise_bid_candidate', { keyword: s.keyword?.text ?? '—' })
     case 'new_campaign':
       return t('keywordOptimizer.title.new_campaign', { name: p.name })
+    case 'new_ad':
+      return t('keywordOptimizer.title.new_ad', { what: adSubject(p) })
   }
 }
 
@@ -134,5 +145,7 @@ export function tapeText(s: Suggestion, t: Translate): string {
       return t('keywordOptimizer.board.tape.raise_bid_candidate')
     case 'new_campaign':
       return t('keywordOptimizer.board.tape.new_campaign', { name: p.name })
+    case 'new_ad':
+      return t('keywordOptimizer.board.tape.new_ad', { what: adSubject(p) })
   }
 }

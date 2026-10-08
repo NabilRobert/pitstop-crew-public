@@ -6,6 +6,8 @@
 export interface Campaign {
   id: number
   name: string
+  /** Contract 3.6: true for a campaign created by a SIMULATED launch. Optional until the backend ships 3.6. */
+  simulated?: boolean
 }
 
 export interface PerformanceRow {
@@ -311,6 +313,19 @@ export interface Settings {
   // Contract 3.4: whole-rupiah strings bounding a proposed campaign's daily budget; optional until the backend sends them.
   campaign_daily_budget_floor_idr?: string
   campaign_daily_budget_ceiling_idr?: string
+  // Contract 3.6: dealer profile, what ads may claim, and the creation kill switch. Optional until the backend ships 3.6.
+  dealer_name?: string
+  dealer_city?: string
+  dealer_area?: string
+  dealer_whatsapp?: string
+  dealer_landing_url?: string
+  ads_claim_installments?: string
+  ads_claim_trade_in?: string
+  ads_claim_test_drive?: string
+  ads_claim_inspection?: string
+  ads_inspection_wording?: string
+  ads_write_enabled?: string
+  ads_write_mode?: string
 }
 
 export interface TriggerRunResponse {
@@ -446,6 +461,7 @@ export type SuggestionType =
   | 'new_keyword'
   | 'raise_bid_candidate'
   | 'new_campaign' // contract 3.3: a whole new campaign proposal (see NewCampaignPayload)
+  | 'new_ad' // contract 3.6: an ad suggestion (see NewAdPayload)
 /** 'planned' (3.3): a new_campaign proposal the owner approved but that is not in Google Ads yet. */
 export type SuggestionStatus = 'open' | 'planned' | 'applied' | 'dismissed' | 'superseded'
 /** 'prior' = not yet backed by this account's data; shown as "unverified". */
@@ -488,6 +504,56 @@ export interface NewCampaignPayload {
   overlaps: { campaign_id: number; name: string; shared_keywords: number }[]
 }
 
+/** Contract 3.6. Computed in code; the UI shows them, never the model's opinion. */
+export interface AdCheckFlags {
+  /** 3-15 headlines of at most 30 characters, 2-4 descriptions of at most 90, paths of at most 15. */
+  limits_ok: boolean
+  /** Every number in the copy comes from `facts`. */
+  numbers_from_facts: boolean
+  /** No claim the dealer profile does not allow. */
+  claims_allowed: boolean
+}
+
+export type AdClaim = 'installments' | 'trade_in' | 'test_drive' | 'inspection'
+
+export interface NewAdPayload {
+  kind: 'new_ad'
+  target:
+    | { kind: 'existing_ad_group'; ad_group_id: number }
+    | { kind: 'proposed_campaign'; campaign_suggestion_id: number; ad_group_name: string }
+  /** Why this ad: for a proposed campaign / replaces a poor-or-average ad / winners' wording is in no headline. */
+  basis: 'new_campaign' | 'weak_ad' | 'uncovered_winner'
+  headlines: { text: string }[]
+  descriptions: { text: string }[]
+  path1: string | null
+  path2: string | null
+  /** null until the dealer profile has a landing page (the demo has none). */
+  final_url: string | null
+  /** Everything the copy is allowed to say. */
+  facts: {
+    make: string | null
+    model: string | null
+    units: number
+    year_from: number | null
+    year_to: number | null
+    price_from_idr: number | null
+    price_to_idr: number | null
+    mileage_from_km: number | null
+    dealer: string
+    city: string | null
+    area: string | null
+    whatsapp: string | null
+    claims_used: AdClaim[]
+    snapshot_on: string
+  }
+  /** Proven winners that shaped the wording. */
+  winner_keywords: { keyword_id: number | null; text: string }[]
+  replaces_ad: { id: number; label: string; ad_strength: AdStrength | null } | null
+  checks: AdCheckFlags
+  /** true = the model reworded the template copy and it passed validation; false = plain template copy. */
+  polished: boolean
+}
+
 export type SuggestionPayload =
   | {
       kind: 'negative_keyword'
@@ -512,6 +578,7 @@ export type SuggestionPayload =
     }
   | { kind: 'raise_bid_candidate'; current_bid_micros: number | null; rank_lost_share: number }
   | NewCampaignPayload
+  | NewAdPayload
 
 export interface SuggestionEvidence {
   window_start: string
@@ -634,4 +701,36 @@ export interface KeywordSummaryResponse {
 
 export interface TriggerKeywordOptimizerResponse {
   run_id: number
+}
+
+// ---- Contract 3.6: simulated launches ---------------------------------------------------------------
+export interface LaunchObject {
+  kind: 'budget' | 'campaign' | 'ad_group' | 'ad' | 'keyword' | 'negative'
+  name: string
+  detail: string | null
+}
+
+export interface Launch {
+  /** null for a validate-only call (nothing stored); GET /launches items carry the audit row's own id. */
+  id: number | null
+  created_at: string
+  /** 'simulated' only, for now. */
+  mode: 'simulated'
+  status: 'validated' | 'created' | 'failed'
+  suggestion_id: number
+  /** null for validate-only. */
+  campaign: { id: number; name: string } | null
+  objects: LaunchObject[]
+  messages: string[]
+}
+
+export interface LaunchListItem extends Launch {
+  validate_only: boolean
+}
+
+export interface LaunchRequest {
+  suggestion_id: number
+  validate_only: boolean
+  /** Must equal the campaign name (new_campaign) or the ad group name (new_ad) exactly. */
+  confirm_name: string
 }

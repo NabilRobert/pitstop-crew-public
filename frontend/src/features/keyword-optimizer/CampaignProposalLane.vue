@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import type { NewCampaignPayload, Suggestion } from '../../shared/api/types'
 import { formatMicrosAsIDR } from '../../shared/utils/format'
+import { adsOfProposal } from './boardModel'
 
 // One lane of whole-campaign proposals (contract 3.3). 'proposed' = the AI suggested it and it is waiting
 // for a decision; 'planned' = the owner approved it, but it is NOT in Google Ads yet. Cards are deliberately
@@ -10,6 +11,8 @@ import { formatMicrosAsIDR } from '../../shared/utils/format'
 const props = defineProps<{
   mode: 'proposed' | 'planned'
   items: Suggestion[]
+  /** Every suggestion loaded, to find each proposal's ads. */
+  all?: Suggestion[]
   canEdit: boolean
   busyIds: Set<number>
 }>()
@@ -20,6 +23,17 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const payloadOf = (s: Suggestion) => s.payload as NewCampaignPayload
+const adsOf = (s: Suggestion) => adsOfProposal(props.all ?? [], s.id)
+/** Plain strings for one ad, so the template never has to narrow the payload union. */
+function adInfo(a: Suggestion): { group: string; headline: string; description: string } {
+  const p = a.payload
+  if (p.kind !== 'new_ad') return { group: '', headline: '', description: '' }
+  return {
+    group: p.target.kind === 'proposed_campaign' ? p.target.ad_group_name : '',
+    headline: p.headlines.slice(0, 3).map((h) => h.text).join(' | '),
+    description: p.descriptions[0]?.text ?? '',
+  }
+}
 const keywordCount = (p: NewCampaignPayload) => p.ad_groups.reduce((n, g) => n + g.keywords.length, 0)
 </script>
 
@@ -62,6 +76,16 @@ const keywordCount = (p: NewCampaignPayload) => p.ad_groups.reduce((n, g) => n +
                 <span class="proposal__match">{{ t(`keywordOptimizer.match.${k.match_type}`) }}</span>
               </li>
             </ul>
+          </div>
+        </details>
+
+        <!-- The ads written for it, one per ad group: the first headline and description of each. -->
+        <details v-if="adsOf(s).length" class="proposal__details">
+          <summary>{{ t('keywordOptimizer.lanes.showAds', { n: adsOf(s).length }) }}</summary>
+          <div v-for="a in adsOf(s)" :key="a.id" class="proposal__group">
+            <div class="proposal__group-name">{{ adInfo(a).group }}</div>
+            <div>{{ adInfo(a).headline }}</div>
+            <div class="proposal__match" style="text-transform: none; opacity: 1;">{{ adInfo(a).description }}</div>
           </div>
         </details>
 

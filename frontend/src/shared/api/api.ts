@@ -38,6 +38,9 @@ import type {
   InventorySummary,
   KeywordSummaryResponse,
   TriggerKeywordOptimizerResponse,
+  Launch,
+  LaunchListItem,
+  LaunchRequest,
 } from './types'
 import type { Locale } from '../../i18n/index.js'
 
@@ -209,6 +212,8 @@ export const api = {
   keywordSummary: (days = 30, adGroupId?: number) =>
     request<KeywordSummaryResponse>(`/keywords/summary${queryString({ days, adGroupId })}`),
   inventorySummary: () => request<InventorySummary>('/inventory/summary'),
+  createLaunch: (body: LaunchRequest) => request<Launch>('/launches', { method: 'POST', body: JSON.stringify(body) }),
+  launches: (limit = 20) => request<LaunchListItem[]>(`/launches${queryString({ limit })}`),
   triggerKeywordOptimizer: () =>
     request<TriggerKeywordOptimizerResponse>('/keyword-optimizer/run', { method: 'POST' }),
 }
