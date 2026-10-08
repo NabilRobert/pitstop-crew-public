@@ -115,14 +115,14 @@ function onDrop(e: DragEvent, bin: 'applied' | 'dismissed') {
 .tray { background: #ffffff; color: #000; border: 1.5px solid #000; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
 .tray__title { margin: 0; font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #000; }
 .tray__hint { margin: 0; font-size: 0.78rem; }
-.idea { text-align: left; padding: 6px 8px; font-size: 0.85rem; line-height: 1.3; color: #000; background: #fff1a8; border: 1px dashed #000; cursor: pointer; }
+.idea { text-align: left; padding: 6px 8px; font-size: 0.85rem; line-height: 1.3; color: #000; background: var(--kv-poster); border: 1px dashed #000; cursor: pointer; }
 .idea[draggable='true'] { cursor: grab; }
 .idea__type { display: block; font-family: var(--font-mono); font-size: 9px; font-weight: 700; text-transform: uppercase; }
 .idea__unverified { display: block; font-family: var(--font-mono); font-size: 9px; font-weight: 700; text-transform: uppercase; }
 .bins { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; }
 .bin { flex: 1 1 140px; min-height: 84px; padding: 8px 10px; color: #000; border: 2px dashed #000; transition: transform 100ms ease-out; }
-.bin--done { background: #00bcf0; }
-.bin--no { background: #f4c2c2; }
+.bin--done { background: var(--kv-good); }
+.bin--no { background: var(--kv-warn); }
 .bin--over { transform: scale(1.04); border-style: solid; }
 .bin__title { font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .bin__count { margin-left: 4px; padding: 0 5px; background: #000; color: #fff; }

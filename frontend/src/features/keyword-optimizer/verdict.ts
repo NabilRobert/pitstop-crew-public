@@ -1,8 +1,8 @@
 // Look of each keyword verdict on the cork board. Notes are physical objects, so
-// these paper and sticker colors are fixed brand-palette hex, NOT theme tokens:
-// a note has to read the same on Ferrari's dark ground, Blueprint's light one and
-// Atom-Eve's pink. Ink is always black on paper. Color is never the only cue:
-// every sticker also prints its label.
+// they keep black ink on paper in every theme, but the paper and sticker colours come
+// from the active theme's board palette (--kv-* in style.css): racing flags on Ferrari,
+// blues and greys on Blueprint, the pop-art set on Atom-Eve. Color is never the only
+// cue: every sticker also prints its label.
 
 import type { KeywordVerdict } from '../../shared/api/types'
 
@@ -13,10 +13,10 @@ export interface VerdictStyle {
 }
 
 export const VERDICT_STYLE: Record<KeywordVerdict, VerdictStyle> = {
-  winner: { paper: '#d6f4fd', sticker: '#00bcf0', stickerInk: '#000000' },
-  wasting: { paper: '#ffd5e4', sticker: '#ff6aa0', stickerInk: '#000000' },
-  no_stock: { paper: '#f4c2c2', sticker: '#000000', stickerInk: '#ffffff' },
-  testing: { paper: '#fff1a8', sticker: '#ffe556', stickerInk: '#000000' },
+  winner: { paper: 'var(--kv-winner-paper)', sticker: 'var(--kv-winner-sticker)', stickerInk: 'var(--kv-winner-ink)' },
+  wasting: { paper: 'var(--kv-wasting-paper)', sticker: 'var(--kv-wasting-sticker)', stickerInk: 'var(--kv-wasting-ink)' },
+  no_stock: { paper: 'var(--kv-nostock-paper)', sticker: 'var(--kv-nostock-sticker)', stickerInk: 'var(--kv-nostock-ink)' },
+  testing: { paper: 'var(--kv-testing-paper)', sticker: 'var(--kv-testing-sticker)', stickerInk: 'var(--kv-testing-ink)' },
   needs_data: { paper: '#ffffff', sticker: '#ffffff', stickerInk: '#000000' },
   steady: { paper: '#ffffff', sticker: '#ffffff', stickerInk: '#000000' },
 }

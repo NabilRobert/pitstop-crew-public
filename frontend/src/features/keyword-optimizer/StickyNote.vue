@@ -167,7 +167,7 @@ function dragStart(e: DragEvent, s: Suggestion) {
   text-align: left;
   font-size: 0.92em;
   line-height: 1.25;
-  background: #ffe556;
+  background: var(--kv-tape);
   color: #000;
   border: 1px dashed #000;
   cursor: pointer;

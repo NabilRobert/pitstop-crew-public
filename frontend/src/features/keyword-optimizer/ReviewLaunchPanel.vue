@@ -167,8 +167,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 .panel__title { margin: 0; font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; }
 .panel__close { padding: 6px 12px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-ink); background: var(--color-surface); border: 1.5px solid var(--color-border-strong); cursor: pointer; }
 .banner { margin: 0 0 10px; padding: 8px 10px; font-size: 0.9rem; border: 1.5px solid #000; color: #000; }
-.banner--sim { background: #ffe556; font-weight: 700; }
-.banner--off { background: #f4c2c2; }
+.banner--sim { background: var(--kv-tape); font-weight: 700; }
+.banner--off { background: var(--kv-warn); }
 .sub { margin: 14px 0 4px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-faint); }
 .objects { margin: 0; padding: 0; list-style: none; max-height: 18rem; overflow-y: auto; border: 1.5px solid var(--color-border); background: var(--color-surface); }
 .objects li { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 5px 10px; border-bottom: 1px solid var(--color-border); font-size: 0.88rem; }

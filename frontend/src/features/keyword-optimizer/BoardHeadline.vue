@@ -52,14 +52,14 @@ const parts = computed(() => {
 
 <style scoped>
 .headline { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
-.headline__sentence { flex: 2 1 280px; background: #ffe556; color: #000; border: 1.5px solid #000; padding: 12px 14px; }
+.headline__sentence { flex: 2 1 280px; background: var(--kv-headline); color: #000; border: 1.5px solid #000; padding: 12px 14px; }
 .headline__title { margin: 0; font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; line-height: 1.15; color: #000; }
 .headline__detail { margin: 4px 0 0; font-size: 1rem; }
 .headline__safe { margin: 6px 0 0; font-size: 0.82rem; }
 .headline__numbers { flex: 3 1 360px; display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
 .stat { flex: 1 1 130px; padding: 10px 12px; color: #000; border: 1.5px solid #000; }
-.stat--pink { background: #f4c2c2; }
-.stat--cyan { background: #00bcf0; }
+.stat--pink { background: var(--kv-warn); }
+.stat--cyan { background: var(--kv-good); }
 .stat--white { background: #ffffff; }
 .stat dt { font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .stat dd { margin: 0; }

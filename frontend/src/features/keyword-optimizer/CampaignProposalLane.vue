@@ -117,7 +117,7 @@ const keywordCount = (p: NewCampaignPayload) => p.ad_groups.reduce((n, g) => n +
 <style scoped>
 /* Fixed paper and ink, like the notes on the board: a proposal must read the same in every theme. */
 .proposal { position: relative; padding: 28px 16px 14px; color: #000; border: 2px solid #000; }
-.proposal--proposed { background: #fff1a8; }
+.proposal--proposed { background: var(--kv-poster); }
 .proposal--planned { background: #ffffff; border-style: dashed; }
 .proposal__stamp {
   position: absolute; top: -2px; left: -2px; padding: 2px 8px; background: #000; color: #fff;

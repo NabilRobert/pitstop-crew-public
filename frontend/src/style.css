@@ -191,6 +191,44 @@ body {
   background-attachment: fixed;
 }
 
+/* Board colours (keyword optimizer): each theme paints its notes, stickers, tapes and posters from its own palette.
+   Ferrari uses the racing flags (green / red / yellow), Blueprint its blues and greys, Atom-Eve the pop-art set.
+   Ink on every paper stays black; only a sticker on a dark fill prints white. Every sticker also prints its label, so
+   colour is never the only cue. Contrast of each sticker ink on its fill is at least 4.5:1. */
+:root {
+  --kv-winner-paper: #d3ecdc;  --kv-winner-sticker: #039b4e;  --kv-winner-ink: #000000;
+  --kv-wasting-paper: #f6d2d2; --kv-wasting-sticker: #e42528; --kv-wasting-ink: #ffffff;
+  --kv-nostock-paper: #d9d4d4; --kv-nostock-sticker: #000000; --kv-nostock-ink: #ffffff;
+  --kv-testing-paper: #fbf6b0; --kv-testing-sticker: #f8e823; --kv-testing-ink: #000000;
+  --kv-tape: #f8e823;
+  --kv-poster: #fbf6b0;
+  --kv-headline: #f8e823;
+  --kv-good: #039b4e;
+  --kv-warn: #f6d2d2;
+}
+:root[data-theme='blueprint'] {
+  --kv-winner-paper: #d6ecf8;  --kv-winner-sticker: #0090d1;  --kv-winner-ink: #000000;
+  --kv-wasting-paper: #f6d9d9; --kv-wasting-sticker: #c81e21; --kv-wasting-ink: #ffffff;
+  --kv-nostock-paper: #dcdde0; --kv-nostock-sticker: #000000; --kv-nostock-ink: #ffffff;
+  --kv-testing-paper: #ececef; --kv-testing-sticker: #b7bbc1; --kv-testing-ink: #000000;
+  --kv-tape: #cfe6f3;
+  --kv-poster: #e6f2f9;
+  --kv-headline: #0090d1;
+  --kv-good: #0090d1;
+  --kv-warn: #f6d9d9;
+}
+:root[data-theme='atom-eve'] {
+  --kv-winner-paper: #d6f4fd;  --kv-winner-sticker: #00bcf0;  --kv-winner-ink: #000000;
+  --kv-wasting-paper: #ffd5e4; --kv-wasting-sticker: #ff6aa0; --kv-wasting-ink: #000000;
+  --kv-nostock-paper: #f4c2c2; --kv-nostock-sticker: #000000; --kv-nostock-ink: #ffffff;
+  --kv-testing-paper: #fff1a8; --kv-testing-sticker: #ffe556; --kv-testing-ink: #000000;
+  --kv-tape: #ffe556;
+  --kv-poster: #fff1a8;
+  --kv-headline: #ffe556;
+  --kv-good: #00bcf0;
+  --kv-warn: #f4c2c2;
+}
+
 /* The keyword optimizer's cork board: one tan in every theme, because a board is a physical
    object. The dots are decorative only. */
 .cork-board {
