@@ -1,8 +1,8 @@
-// Contract 3.6 step b — new_ad suggestions from the engine
+// Contract 3.6 — new_ad suggestions from the engine
 // (docs/overhaul-v3-backend.md section 11.9), on small hand-built accounts
 // so each test pins one rule: each basis and its decoy, winners in a
-// proposal's keywords, the per-run cap, dedupe by ad_target, supersede on
-// changed facts, and campaign_suggestion_id filled in the same run.
+// proposal's keywords, the per-run cap, dedupe by target, supersede on
+// changed facts, and target.campaign_suggestion_id filled in the same run.
 
 import { describe, it, expect } from 'vitest'
 import { runEngine, evidenceWindow, type Candidate, type EngineAd, type EngineInput, type EngineKeyword, type SuggestionHistory, type WindowStats } from './engine.js'
@@ -116,26 +116,40 @@ describe('weak_ad', () => {
   it('replaces an ad with poor strength in an ad group that names a make with stock', () => {
     const [c, ...rest] = newAds(account({ ads: [ad(1, 20, { adStrength: 'poor' }), ad(2, 20)] }))
     expect(rest).toHaveLength(0)
-    expect(payload(c)).toMatchObject({ basis: 'weak_ad', replaces_ad_id: 1, ad_group_name: 'Model — Toyota', campaign_name: 'Search — Model', campaign_suggestion_id: null })
+    expect(payload(c)).toMatchObject({
+      basis: 'weak_ad',
+      target: { kind: 'existing_ad_group', ad_group_id: 20 },
+      replaces_ad: { id: 1, label: 'Ad 1', ad_strength: 'poor' },
+      final_url: null, // no dealer_landing_url
+      polished: false,
+      checks: { limits_ok: true, numbers_from_facts: true, claims_allowed: true },
+    })
     expect(payload(c).facts).toMatchObject({ make: 'Toyota', model: null, units: 3 })
-    expect(payload(c).final_url_source).toBe('ad_group')
-    expect(c.evidence.rules).toEqual(['ad.weak_ad.poor_strength'])
+    expect(c.evidence).toMatchObject({ rules: ['ad.weak_ad.poor_strength'], ad_target: 'ad_group:20|toyota|', ad_group_name: 'Model — Toyota', campaign_name: 'Search — Model' })
     expect(c).toMatchObject({ basis: 'evidence', confidence: 'medium', adGroupId: 20, campaignId: 2 })
   })
 
-  it('replaces an ad whose CTR is at most 0.8× the best other ad, both with 1,000+ impressions', () => {
-    const weak = ad(1, 20, { stats: stats(40, 1, 1_600_000_000, 2000) }) // 2%
-    const strong = ad(2, 20, { stats: stats(100, 3, 1_600_000_000, 2000) }) // 5%
-    const [c] = newAds(account({ ads: [weak, strong] }))
-    expect(payload(c)).toMatchObject({ basis: 'weak_ad', replaces_ad_id: 1 })
-    expect(c.evidence).toMatchObject({ rules: ['ad.weak_ad.low_ctr'], ctr: 0.02, best_other_ctr: 0.05 })
-
-    const thin = ad(1, 20, { stats: stats(40, 1, 1_600_000_000, 999) })
-    expect(newAds(account({ ads: [thin, strong] }))).toHaveLength(0)
+  it('replaces an average ad too, poor first; a good or excellent one never', () => {
+    const [c] = newAds(account({ ads: [ad(1, 20, { adStrength: 'average' }), ad(2, 20)] }))
+    expect(payload(c).replaces_ad).toEqual({ id: 1, label: 'Ad 1', ad_strength: 'average' })
+    expect(c.evidence.rules).toEqual(['ad.weak_ad.average_strength'])
+    const [p] = newAds(account({ ads: [ad(1, 20, { adStrength: 'average' }), ad(2, 20, { adStrength: 'poor' })] }))
+    expect(payload(p).replaces_ad?.id).toBe(2)
+    expect(newAds(account({ ads: [ad(1, 20, { adStrength: 'good' }), ad(2, 20, { adStrength: 'excellent' }), ad(3, 20, { adStrength: null })] }))).toHaveLength(0)
   })
 
-  it('leaves an ad group that names no make with stock alone', () => {
-    expect(newAds(account({ ads: [ad(1, 10, { adStrength: 'poor' })] }))).toHaveLength(0) // "Used Cars"
+  it('takes the subject from a winner keyword when the ad group name names no vehicle; leaves a group with neither alone', () => {
+    expect(newAds(account({ ads: [ad(1, 10, { adStrength: 'poor' })] }))).toHaveLength(0) // "Used Cars", no winner
+    const genericWinner = keyword(201, '"jazz bekas"', stats(400, 40, 800_000_000), 10)
+    const [c] = newAds(account({ ads: [ad(1, 10, { adStrength: 'poor' })] }, [genericWinner]))
+    expect(payload(c)).toMatchObject({ basis: 'weak_ad', target: { kind: 'existing_ad_group', ad_group_id: 10 } })
+    expect(payload(c).facts).toMatchObject({ make: 'Honda', model: 'Jazz', units: 2 })
+  })
+
+  it('proposes no ad for a model with no stock', () => {
+    const noToyota = [...cars(2, 'Honda', 'Jazz')]
+    const input = account({ ads: [ad(1, 20, { adStrength: 'poor' })], inventory: { source: 'demo', snapshotOn: AS_OF, vehicles: noToyota, events: [], error: null } })
+    expect(newAds(input)).toHaveLength(0)
   })
 })
 
@@ -143,10 +157,11 @@ describe('uncovered_winner', () => {
   it('proposes an ad naming the model when its winner keyword lands on ads that do not', () => {
     const [c, ...rest] = newAds(account({ ads: [ad(1, 20)] }, [innovaWinner]))
     expect(rest).toHaveLength(0)
-    expect(payload(c)).toMatchObject({ basis: 'uncovered_winner', ad_target: 'ad_group:20|toyota|innova', replaces_ad_id: null })
+    expect(payload(c)).toMatchObject({ basis: 'uncovered_winner', target: { kind: 'existing_ad_group', ad_group_id: 20 }, replaces_ad: null })
+    expect(c.evidence.ad_target).toBe('ad_group:20|toyota|innova')
     expect(payload(c).facts).toMatchObject({ make: 'Toyota', model: 'Innova', units: 3 })
-    expect(payload(c).winner_keywords).toEqual([{ text: 'innova bekas', source: 'keyword', keyword_id: 200, search_term_id: null }])
-    expect(payload(c).headlines[0]).toBe('Toyota Innova Bekas')
+    expect(payload(c).winner_keywords).toEqual([{ keyword_id: 200, text: 'innova bekas' }])
+    expect(payload(c).headlines[0]).toEqual({ text: 'Toyota Innova Bekas' })
     expect(c.evidence).toMatchObject({ rules: ['ad.uncovered_winner'], winner_count: 1, winner_conversions: 40 })
   })
 
@@ -167,8 +182,8 @@ describe('the per-run cap', () => {
     const poor = (id: number, group: number, impressions: number) => ad(id, group, { adStrength: 'poor', stats: stats(10, 0, 1_600_000_000, impressions) })
     const input = account({ ads: [poor(1, 20, 400), poor(2, 21, 300), poor(3, 22, 200), poor(4, 23, 100)] })
     const r = runEngine(input)
-    expect(r.candidates.filter((c) => c.type === 'new_ad').map((c) => payload(c).replaces_ad_id)).toEqual([1, 2, 3])
-    expect(r.capped.filter((c) => c.type === 'new_ad').map((c) => payload(c).replaces_ad_id)).toEqual([4])
+    expect(r.candidates.filter((c) => c.type === 'new_ad').map((c) => payload(c).replaces_ad?.id)).toEqual([1, 2, 3])
+    expect(r.capped.filter((c) => c.type === 'new_ad').map((c) => payload(c).replaces_ad?.id)).toEqual([4])
     expect(r.skipped.filter((s) => s.type === 'new_ad').map((s) => s.reason)).toEqual(['cap'])
   })
 })
@@ -184,7 +199,7 @@ describe('dedupe by ad_target, and supersede on changed facts', () => {
   })
 
   it('a planned ad for the target blocks a new one, whatever its facts', () => {
-    expect(payload(newAds(weakInput([]))[0]).ad_target).toBe(target)
+    expect(newAds(weakInput([]))[0].evidence.ad_target).toBe(target)
     expect(newAds(weakInput([at('planned', 100)]))).toHaveLength(0)
   })
 
@@ -230,15 +245,15 @@ describe('new_campaign ads and winners in a proposal', () => {
     const [a, ...rest] = proposalAds(r.candidates)
     expect(rest).toHaveLength(0)
     const name = (p.payload as NewCampaignPayload).name
-    expect(payload(a)).toMatchObject({ basis: 'new_campaign', campaign_name: name, ad_group_name: 'Toyota Rush', ad_target: `proposal:${p.fingerprint}|Toyota Rush`, campaign_suggestion_id: null })
-    expect(a.evidence.campaign_fingerprint).toBe(p.fingerprint)
+    expect(payload(a)).toMatchObject({ basis: 'new_campaign', target: { kind: 'proposed_campaign', campaign_suggestion_id: 0, ad_group_name: 'Toyota Rush' }, replaces_ad: null })
+    expect(a.evidence).toMatchObject({ campaign_fingerprint: p.fingerprint, campaign_name: name, ad_target: `proposal:${p.fingerprint}|Toyota Rush` })
     expect(a).toMatchObject({ basis: 'prior', confidence: 'low' })
   })
 
   it("uses the stored proposal's id when the proposal is already open, and proposes none for a dismissed one", () => {
     const [p] = runEngine(input()).candidates.filter((c) => c.type === 'new_campaign')
     const open = proposalAds(newAds(input({ history: [{ id: 67, fingerprint: p.fingerprint, status: 'open', statusChangedOn: null }] })))
-    expect(payload(open[0]).campaign_suggestion_id).toBe(67)
+    expect(payload(open[0]).target).toEqual({ kind: 'proposed_campaign', campaign_suggestion_id: 67, ad_group_name: 'Toyota Rush' })
     expect(proposalAds(newAds(input({ history: [{ id: 67, fingerprint: p.fingerprint, status: 'dismissed', statusChangedOn: AS_OF }] })))).toHaveLength(0)
   })
 
@@ -259,8 +274,8 @@ describe('new_campaign ads and winners in a proposal', () => {
     const stored = await persistSuggestions(client as never, 1, r)
     const proposalId = 500 + inserted.findIndex((x) => x.type === 'new_campaign')
     const adRow = inserted.find((x) => x.type === 'new_ad' && x.payload.basis === 'new_campaign')!
-    expect(adRow.payload.campaign_suggestion_id).toBe(proposalId)
-    expect(stored.newAds.filter((a) => a.payload.basis === 'new_campaign').map((a) => a.payload.campaign_suggestion_id)).toEqual([proposalId])
+    expect(adRow.payload.target).toEqual({ kind: 'proposed_campaign', campaign_suggestion_id: proposalId, ad_group_name: 'Toyota Rush' })
+    expect(stored.newAds.filter((a) => a.payload.basis === 'new_campaign').map((a) => a.payload.target)).toEqual([adRow.payload.target])
   })
 })
 

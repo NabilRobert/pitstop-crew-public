@@ -4,8 +4,8 @@
 
 import { describe, it, expect } from 'vitest'
 import { buildPolishInput, renderPolish, validatePolish, type PolishAd } from './adPolish.js'
-import { checkAd, passes, templateCopy } from './adCopy.js'
-import { buildFacts, type AdSettings } from './ads.js'
+import { checkAd, templateCopy, toTexts } from './adCopy.js'
+import { buildFacts, copyContext, type AdSettings } from './ads.js'
 import type { NewAdPayload } from './types.js'
 import type { Vehicle } from './inventory/types.js'
 import { polishStep } from '../pipeline/keywordOptimizer.js'
@@ -34,28 +34,25 @@ const car = (id: number, priceIdr: number, year: number): Vehicle => ({
   soldOn: null,
 })
 
+const CTX = copyContext(SETTINGS)
+
 function adRow(id: number): PolishAd {
   const facts = buildFacts([car(1, 279_000_000, 2022), car(2, 300_000_000, 2023)], 'Toyota', 'Innova', SETTINGS, '2026-10-06')!
-  const t = templateCopy(facts, ['innova reborn bekas'])
+  const t = templateCopy(facts, CTX, ['innova reborn bekas'])
   const payload: NewAdPayload = {
     kind: 'new_ad',
+    target: { kind: 'existing_ad_group', ad_group_id: id },
     basis: 'uncovered_winner',
-    ad_target: `ad_group:${id}|toyota|innova`,
-    campaign_suggestion_id: null,
-    campaign_name: 'Search — Model + Suburb',
-    ad_group_name: 'Model — Toyota',
-    replaces_ad_id: null,
-    final_url: 'https://dealer.example.com/toyota',
-    final_url_source: 'ad_group',
+    headlines: toTexts(t.headlines),
+    descriptions: toTexts(t.descriptions),
     path1: t.path1,
     path2: t.path2,
-    headlines: t.headlines,
-    descriptions: t.descriptions,
-    copy_source: 'template',
-    template: { headlines: t.headlines, descriptions: t.descriptions },
+    final_url: null,
     facts,
-    winner_keywords: [{ text: 'innova reborn bekas', source: 'keyword', keyword_id: 5, search_term_id: null }],
-    checks: checkAd(t, facts),
+    winner_keywords: [{ keyword_id: 5, text: 'innova reborn bekas' }],
+    replaces_ad: null,
+    checks: checkAd(t, facts, CTX).flags,
+    polished: false,
   }
   return { id, payload }
 }
@@ -66,12 +63,13 @@ const GOOD = {
 }
 
 describe('buildPolishInput', () => {
-  it('sends the facts without vehicle ids or snapshot date, the allowed claims and the template', () => {
-    const sent = JSON.parse(buildPolishInput([adRow(11)])).ads[0]
+  it('sends the facts, the allowed claims and the exact inspection wording, the winners and the template', () => {
+    const input = JSON.parse(buildPolishInput([adRow(11)], CTX))
+    expect(input.inspection_wording).toBe('Unit sudah melalui pemeriksaan')
+    const sent = input.ads[0]
     expect(sent.candidate_id).toBe(11)
-    expect(sent.facts).not.toHaveProperty('vehicle_ids')
-    expect(sent.facts).not.toHaveProperty('snapshot_on')
-    expect(sent.facts.price_min_idr).toBe(279_000_000)
+    expect(sent.target).toEqual({ ad_group_id: 11 })
+    expect(sent.facts.price_from_idr).toBe(279_000_000)
     expect(sent.allowed_claims.join()).toContain('kredit')
     expect(sent.allowed_claims.join()).not.toContain('tukar tambah') // switched off
     expect(sent.template.headlines[0]).toBe('Toyota Innova Bekas')
@@ -82,16 +80,16 @@ describe('buildPolishInput', () => {
 describe('validatePolish', () => {
   const ads = [adRow(11), adRow(12)]
 
-  it('accepts a returned ad that passes all three checks', () => {
-    const v = validatePolish({ ads: [{ candidate_id: 11, ...GOOD }] }, ads)
+  it('accepts a returned ad that passes every check', () => {
+    const v = validatePolish({ ads: [{ candidate_id: 11, ...GOOD }] }, ads, CTX)
     expect(v.accepted.map((a) => a.id)).toEqual([11])
-    expect(passes(v.accepted[0].checks)).toBe(true)
+    expect(v.accepted[0].checks).toEqual({ limits_ok: true, numbers_from_facts: true, claims_allowed: true })
     expect(v.rejected).toEqual([])
     expect(v.missing).toEqual([12])
   })
 
   it('rejects an id it was not sent, and one returned twice', () => {
-    const v = validatePolish({ ads: [{ candidate_id: 99, ...GOOD }, { candidate_id: 11, ...GOOD }, { candidate_id: 11, ...GOOD }] }, ads)
+    const v = validatePolish({ ads: [{ candidate_id: 99, ...GOOD }, { candidate_id: 11, ...GOOD }, { candidate_id: 11, ...GOOD }] }, ads, CTX)
     expect(v.accepted.map((a) => a.id)).toEqual([11])
     expect(v.rejected.map((r) => [r.candidateId, r.reason])).toEqual([
       [99, 'not an ad that was sent'],
@@ -99,7 +97,7 @@ describe('validatePolish', () => {
     ])
   })
 
-  it('keeps the template for copy that fails a check: a number not in the facts, a switched-off claim, a superlative, "!"', () => {
+  it('falls back to the whole template for copy that fails any check: a number not in the facts, a claim not allowed, a superlative, "!", too few lines', () => {
     const bad = [
       { headlines: [...GOOD.headlines, 'Mulai Rp 250 Juta'], descriptions: GOOD.descriptions },
       { headlines: [...GOOD.headlines, 'Bisa Tukar Tambah'], descriptions: GOOD.descriptions },
@@ -108,27 +106,27 @@ describe('validatePolish', () => {
       { headlines: GOOD.headlines.slice(0, 2), descriptions: GOOD.descriptions },
     ]
     for (const b of bad) {
-      const v = validatePolish({ ads: [{ candidate_id: 11, ...b }] }, ads)
+      const v = validatePolish({ ads: [{ candidate_id: 11, ...b }] }, ads, CTX)
       expect(v.accepted).toEqual([])
       expect(v.rejected[0].candidateId).toBe(11)
     }
   })
 
   it('rejects a reply without an ads list, and an ad without text lists', () => {
-    expect(validatePolish({ ranking: [] }, ads).rejected[0].reason).toContain('"ads"')
-    expect(validatePolish({ ads: [{ candidate_id: 11, headlines: 'x', descriptions: [] }] }, ads).rejected[0].reason).toContain('lists of text')
+    expect(validatePolish({ ranking: [] }, ads, CTX).rejected[0].reason).toContain('"ads"')
+    expect(validatePolish({ ads: [{ candidate_id: 11, headlines: 'x', descriptions: [] }] }, ads, CTX).rejected[0].reason).toContain('lists of text')
   })
 })
 
 describe('renderPolish', () => {
   it('shows the polish where it was kept and the template, with the reason, elsewhere', () => {
     const ads = [adRow(11), adRow(12)]
-    const v = validatePolish({ ads: [{ candidate_id: 11, ...GOOD }, { candidate_id: 12, headlines: ['A', 'B', 'C'], descriptions: ['Terbaik di kota.', 'x'] }] }, ads)
+    const v = validatePolish({ ads: [{ candidate_id: 11, ...GOOD }, { candidate_id: 12, headlines: ['A', 'B', 'C'], descriptions: ['Terbaik di kota.', 'x'] }] }, ads, CTX)
     const text = renderPolish(v, ads)
-    expect(text).toContain('Ad #11: Search — Model + Suburb › Model — Toyota (uncovered_winner), polished by Kai')
+    expect(text).toContain('Ad #11: ad group #11 (uncovered_winner), polished by Kai')
     expect(text).toContain('Innova Reborn Bekas | Mulai Rp 279 Juta')
     expect(text).toMatch(/Ad #12: .*template kept \(.*superlative/)
-    expect(text).toContain(`Headlines: ${ads[1].payload.template.headlines.join(' | ')}`)
+    expect(text).toContain(`Headlines: ${ads[1].payload.headlines.map((h) => h.text).join(' | ')}`)
   })
 })
 
@@ -145,7 +143,7 @@ function fakeCritic(status: 'approved' | 'flagged') {
 }
 
 describe('polishStep', () => {
-  const ctx = { language: 'en', reportDate: '2026-10-06', pipelineRunId: 1 }
+  const ctx = { language: 'en', reportDate: '2026-10-06', pipelineRunId: 1, copy: CTX }
   const ads = [adRow(11), adRow(12)]
   const reply = async () => ({
     ads: [
@@ -169,7 +167,7 @@ describe('polishStep', () => {
     expect(r.updates.map((u) => u.id)).toEqual([11])
     expect(r.updates[0].headlines).toEqual(GOOD.headlines)
     expect(r.validation.rejected.map((x) => x.candidateId)).toEqual([12, 40])
-    expect(critic.seen.args?.supportingData).toBe(buildPolishInput(ads)) // Ciri grades against what Kai was given
+    expect(critic.seen.args?.supportingData).toBe(buildPolishInput(ads, CTX)) // Ciri grades against what Kai was given
   })
 
   it('stores nothing from a flagged draft', async () => {

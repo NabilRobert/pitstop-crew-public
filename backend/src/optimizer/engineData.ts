@@ -149,7 +149,7 @@ export function adSettingsFrom(settings: Record<string, string>): AdSettings {
   const blankToNull = (v: string | undefined) => (v === undefined || v.trim() === '' ? null : v.trim())
   return {
     dealerName: settings.dealer_name.trim(),
-    dealerCity: settings.dealer_city.trim(),
+    dealerCity: blankToNull(settings.dealer_city),
     dealerArea: blankToNull(settings.dealer_area),
     dealerWhatsapp: blankToNull(settings.dealer_whatsapp),
     landingUrl: blankToNull(settings.dealer_landing_url),
@@ -159,7 +159,7 @@ export function adSettingsFrom(settings: Record<string, string>): AdSettings {
       test_drive: settings.ads_claim_test_drive === 'true',
       inspection: settings.ads_claim_inspection === 'true',
     },
-    inspectionWording: settings.ads_inspection_wording.trim(),
+    inspectionWording: blankToNull(settings.ads_inspection_wording),
   }
 }
 

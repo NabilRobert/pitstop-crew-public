@@ -224,10 +224,11 @@ describe('detectChanges', () => {
     expect(detectChanges({ ...same, recomputed: [] })).toEqual({ changed: false, reasons: [] })
   })
 
-  it("ignores a new_ad's polished copy, but not a change to its template or facts (3.6)", () => {
-    const template = { headlines: ['Toyota Innova Bekas', 'Mulai Rp 279 Juta', '2 Unit Tersedia'], descriptions: ['a.', 'b.'] }
-    const ad = { kind: 'new_ad', ...template, copy_source: 'template', template, facts: { units: 2 }, checks: { limits: { ok: true, problems: [] } } }
-    const polished = { ...ad, headlines: ['Toyota Innova Bekas', 'Innova Siap Pakai', '2 Unit Tersedia'], copy_source: 'model', checks: { style: { ok: true, problems: [] } } }
+  it("ignores a new_ad's polished copy, but not a change to its facts (3.6)", () => {
+    const template = [{ text: 'Toyota Innova Bekas' }, { text: 'Mulai Rp 279 Juta' }, { text: 'Tersedia 2 Unit' }]
+    const flags = { limits_ok: true, numbers_from_facts: true, claims_allowed: true }
+    const ad = { kind: 'new_ad', target: { kind: 'existing_ad_group', ad_group_id: 20 }, headlines: template, descriptions: [{ text: 'a.' }, { text: 'b.' }], polished: false, facts: { units: 2 }, checks: flags }
+    const polished = { ...ad, headlines: [{ text: 'Toyota Innova Bekas' }, { text: 'Innova Siap Pakai' }, { text: 'Tersedia 2 Unit' }], polished: true }
     const adCandidate = { ...candidate, type: 'new_ad' as const, payload: ad as unknown as Candidate['payload'] }
     const adSame = { ...same, storedOpen: [{ ...stored, payload: polished }], recomputed: [adCandidate] }
     expect(detectChanges(adSame)).toEqual({ changed: false, reasons: [] })

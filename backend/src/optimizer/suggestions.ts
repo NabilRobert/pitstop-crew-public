@@ -30,7 +30,7 @@ export async function loadSuggestionHistory(): Promise<SuggestionHistory[]> {
     `SELECT DISTINCT ON (fingerprint) id, fingerprint, status,
             to_char((status_changed_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS status_changed_on,
             CASE WHEN suggestion_type = 'new_campaign' THEN payload->>'name' END AS campaign_name,
-            CASE WHEN suggestion_type = 'new_ad' THEN payload->>'ad_target' END AS ad_target
+            CASE WHEN suggestion_type = 'new_ad' THEN evidence->>'ad_target' END AS ad_target
      FROM keyword_suggestions
      ORDER BY fingerprint, created_at DESC, id DESC`
   )
@@ -95,12 +95,18 @@ export async function persistSuggestions(
   // proposal's new id (the engine couldn't know it).
   const insertedIds = new Map<string, number>()
   const newAds: { id: number; payload: NewAdPayload }[] = []
+  let inserted = 0
   for (const c of plan.insert) {
-    const payload =
-      c.payload.kind === 'new_ad' && c.payload.campaign_suggestion_id === null && typeof c.evidence.campaign_fingerprint === 'string'
-        ? { ...c.payload, campaign_suggestion_id: insertedIds.get(c.evidence.campaign_fingerprint) ?? null }
-        : c.payload
-    const inserted = await client.query<{ id: number }>(
+    let payload = c.payload
+    if (payload.kind === 'new_ad' && payload.target.kind === 'proposed_campaign' && payload.target.campaign_suggestion_id === 0) {
+      const id = typeof c.evidence.campaign_fingerprint === 'string' ? insertedIds.get(c.evidence.campaign_fingerprint) : undefined
+      // Unreachable: the engine proposes ads only for proposals that are
+      // stored, or stored this run (before their ads). Never store an ad
+      // pointing at no proposal.
+      if (id === undefined) continue
+      payload = { ...payload, target: { ...payload.target, campaign_suggestion_id: id } }
+    }
+    const row = await client.query<{ id: number }>(
       `INSERT INTO keyword_suggestions
          (pipeline_run_id, suggestion_type, campaign_id, ad_group_id, keyword_id, search_term_id,
           payload, evidence, basis, confidence, expected_impact, inventory_snapshot_on, fingerprint)
@@ -122,10 +128,11 @@ export async function persistSuggestions(
         c.fingerprint,
       ]
     )
-    insertedIds.set(c.fingerprint, inserted.rows[0].id)
-    if (payload.kind === 'new_ad') newAds.push({ id: inserted.rows[0].id, payload })
+    insertedIds.set(c.fingerprint, row.rows[0].id)
+    inserted += 1
+    if (payload.kind === 'new_ad') newAds.push({ id: row.rows[0].id, payload })
   }
-  return { inserted: plan.insert.length, superseded: plan.supersedeIds.length, newAds }
+  return { inserted, superseded: plan.supersedeIds.length, newAds }
 }
 
 // --- 3.3: planned campaign proposals that became real campaigns --------------

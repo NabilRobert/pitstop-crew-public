@@ -111,13 +111,13 @@ function conversionActionMix(k: KeywordProfile): Record<string, number> {
 
 const V2_KEYWORDS: KeywordProfile[] = [
   // Brand — Dealer Name (automated bidding: no bid)
-  kw('kw_brand_name_exact', 'brand_dealer_name', '[dealer name]', 'exact', 0.5, 8, [1.3, 1.3, 0.8], null),
-  kw('kw_brand_name_phrase', 'brand_dealer_name', '"dealer name used cars"', 'phrase', 0.3, 8, [1.1, 1.1, 0.9], null),
-  kw('kw_brand_name_broad', 'brand_dealer_name', 'dealer name', 'broad', 0.2, 7, [0.8, 0.7, 1.1], null),
+  kw('kw_brand_name_exact', 'brand_dealer_name', '[pitstop used cars]', 'exact', 0.5, 8, [1.3, 1.3, 0.8], null),
+  kw('kw_brand_name_phrase', 'brand_dealer_name', '"pitstop used cars"', 'phrase', 0.3, 8, [1.1, 1.1, 0.9], null),
+  kw('kw_brand_name_broad', 'brand_dealer_name', 'pitstop car dealer', 'broad', 0.2, 7, [0.8, 0.7, 1.1], null),
   // Brand — Location Variants
-  kw('kw_brand_loc_exact', 'brand_location', '[dealer name jakarta]', 'exact', 0.45, 8, [1.25, 1.2, 0.85], null),
-  kw('kw_brand_loc_phrase', 'brand_location', '"dealer name near me"', 'phrase', 0.35, 7, [1.0, 1.0, 1.0], null),
-  kw('kw_brand_loc_broad', 'brand_location', 'dealer name location', 'broad', 0.2, 7, [0.8, 0.75, 1.1], null),
+  kw('kw_brand_loc_exact', 'brand_location', '[pitstop used cars serpong]', 'exact', 0.45, 8, [1.25, 1.2, 0.85], null),
+  kw('kw_brand_loc_phrase', 'brand_location', '"pitstop used cars near me"', 'phrase', 0.35, 7, [1.0, 1.0, 1.0], null),
+  kw('kw_brand_loc_broad', 'brand_location', 'pitstop used cars gading serpong', 'broad', 0.2, 7, [0.8, 0.75, 1.1], null),
   // Used Cars Generic
   kw('kw_generic_cars_broad', 'generic_used_cars', 'used cars for sale', 'broad', 0.7, 6, [0.8, 0.6, 1.1], null),
   kw('kw_generic_cars_phrase', 'generic_used_cars', '"used cars jakarta"', 'phrase', 0.35, 7, [1.0, 1.0, 1.0], null),
@@ -147,11 +147,11 @@ const V2_KEYWORDS: KeywordProfile[] = [
 ]
 
 const V3_KEYWORDS: KeywordProfile[] = [
-  // Brand — Indonesian-language and suburb variants
-  kw('kw_brand_name_id_phrase', 'brand_dealer_name', '"dealer name mobil bekas"', 'phrase', 0.25, 8, [1.1, 1.15, 0.9], null),
-  kw('kw_brand_name_showroom', 'brand_dealer_name', 'dealer name showroom', 'broad', 0.15, 7, [0.9, 0.9, 1.0], null),
-  kw('kw_brand_loc_bekasi', 'brand_location', '[dealer name bekasi]', 'exact', 0.2, 8, [1.2, 1.2, 0.85], null),
-  kw('kw_brand_loc_tangerang', 'brand_location', '"dealer name tangerang"', 'phrase', 0.15, 7, [1.0, 1.05, 0.95], null),
+  // Brand — Indonesian-language and suburb variants (Tangerang, Serpong, BSD)
+  kw('kw_brand_name_id_phrase', 'brand_dealer_name', '"pitstop mobil bekas"', 'phrase', 0.25, 8, [1.1, 1.15, 0.9], null),
+  kw('kw_brand_name_showroom', 'brand_dealer_name', 'pitstop showroom', 'broad', 0.15, 7, [0.9, 0.9, 1.0], null),
+  kw('kw_brand_loc_bekasi', 'brand_location', '[pitstop used cars bsd]', 'exact', 0.2, 8, [1.2, 1.2, 0.85], null),
+  kw('kw_brand_loc_tangerang', 'brand_location', '"pitstop mobil bekas tangerang"', 'phrase', 0.15, 7, [1.0, 1.05, 0.95], null),
 
   // Used Cars Generic — the head terms. "mobil bekas" (broad) is the
   // account's biggest junk magnet: most of the planted waste matches it.
@@ -284,18 +284,18 @@ const broader = (key: string, keywordKey: string, text: string, intent: Intent =
   st(key, keywordKey, text, intent, 0.4, [1, 1], 1, 'broader')
 
 const V2_SEARCH_TERMS: TermSpec[] = [
-  close('st_brand_name_exact_close', 'kw_brand_name_exact', 'dealer name reviews', 'researcher'),
-  broader('st_brand_name_exact_broad', 'kw_brand_name_exact', 'car dealer jakarta'),
-  close('st_brand_name_phrase_close', 'kw_brand_name_phrase', 'dealer name used car lot'),
-  broader('st_brand_name_phrase_broad', 'kw_brand_name_phrase', 'used car dealership jakarta'),
-  close('st_brand_name_broad_close', 'kw_brand_name_broad', 'dealer name cars'),
+  close('st_brand_name_exact_close', 'kw_brand_name_exact', 'pitstop used cars reviews', 'researcher'),
+  broader('st_brand_name_exact_broad', 'kw_brand_name_exact', 'car dealer tangerang'),
+  close('st_brand_name_phrase_close', 'kw_brand_name_phrase', 'pitstop used car lot'),
+  broader('st_brand_name_phrase_broad', 'kw_brand_name_phrase', 'used car dealership tangerang'),
+  close('st_brand_name_broad_close', 'kw_brand_name_broad', 'pitstop car dealership'),
   broader('st_brand_name_broad_broad', 'kw_brand_name_broad', 'car dealership near me'),
-  close('st_brand_loc_exact_close', 'kw_brand_loc_exact', 'dealer name jakarta selatan'),
-  broader('st_brand_loc_exact_broad', 'kw_brand_loc_exact', 'car dealer jakarta selatan'),
-  close('st_brand_loc_phrase_close', 'kw_brand_loc_phrase', 'dealer name close by'),
+  close('st_brand_loc_exact_close', 'kw_brand_loc_exact', 'pitstop used car serpong'),
+  broader('st_brand_loc_exact_broad', 'kw_brand_loc_exact', 'car dealer serpong'),
+  close('st_brand_loc_phrase_close', 'kw_brand_loc_phrase', 'pitstop used cars close by'),
   broader('st_brand_loc_phrase_broad', 'kw_brand_loc_phrase', 'nearest used car dealer'),
-  close('st_brand_loc_broad_close', 'kw_brand_loc_broad', 'dealer name address'),
-  broader('st_brand_loc_broad_broad', 'kw_brand_loc_broad', 'car dealership location jakarta'),
+  close('st_brand_loc_broad_close', 'kw_brand_loc_broad', 'pitstop used cars gading serpong address'),
+  broader('st_brand_loc_broad_broad', 'kw_brand_loc_broad', 'car dealership location bsd'),
   close('st_generic_cars_broad_close', 'kw_generic_cars_broad', 'used cars for sale near me'),
   broader('st_generic_cars_broad_broad', 'kw_generic_cars_broad', 'buy used car indonesia'),
   close('st_generic_cars_phrase_close', 'kw_generic_cars_phrase', 'used cars jakarta selatan'),
@@ -413,6 +413,18 @@ const LONG_TAIL_SUFFIXES = [
   'murah', 'jakarta timur', 'bekasi', 'tangerang selatan', 'depok', 'bogor',
   'matic', 'manual', '2018', '2019', '2020', 'km rendah', 'tangan pertama', 'pajak panjang',
 ]
+// The dealer is in Gading Serpong, Tangerang: a brand search names its own
+// area. Same positions as above, so each term keeps its key and weights.
+const BRAND_LOCATIONS: Record<string, string> = {
+  jakarta: 'tangerang',
+  jabodetabek: 'serpong',
+  'jakarta timur': 'gading serpong',
+  bekasi: 'bsd',
+  depok: 'bsd serpong',
+  bogor: 'alam sutera',
+}
+const localSuffix = (adGroupKey: string, suffix: string) =>
+  adGroupKey.startsWith('brand_') ? (BRAND_LOCATIONS[suffix] ?? suffix) : suffix
 
 /** Generated terms: a close variant for every v3 keyword (the v2 ones
  * already have theirs), and a 3-term buyer-intent long tail for every
@@ -440,7 +452,7 @@ function generatedTerms(existing: TermSpec[]): TermSpec[] {
     const core = coreText(k.text)
     if (v3Keys.has(k.key)) {
       for (let i = 0; i < CLOSE_SUFFIXES.length; i++) {
-        const suffix = CLOSE_SUFFIXES[(hash(k.key) + i) % CLOSE_SUFFIXES.length]
+        const suffix = localSuffix(k.adGroupKey, CLOSE_SUFFIXES[(hash(k.key) + i) % CLOSE_SUFFIXES.length])
         const text = `${core} ${suffix}`
         if (core.includes(suffix) || !claim(k.key, text)) continue
         out.push(st(`st_${k.key}_close`, k.key, text, 'buyer', 0.6, [1, 1], 1, 'close_variant'))
@@ -450,7 +462,7 @@ function generatedTerms(existing: TermSpec[]): TermSpec[] {
     if (k.matchType === 'exact') continue
     let made = 0
     for (let i = 0; i < LONG_TAIL_SUFFIXES.length && made < 3; i++) {
-      const suffix = LONG_TAIL_SUFFIXES[(hash(k.key) + i * 5) % LONG_TAIL_SUFFIXES.length]
+      const suffix = localSuffix(k.adGroupKey, LONG_TAIL_SUFFIXES[(hash(k.key) + i * 5) % LONG_TAIL_SUFFIXES.length])
       const text = `${core} ${suffix}`
       if (core.includes(suffix) || !claim(k.key, text)) continue
       const tailKey = `st_${k.key}_tail_${made + 1}`

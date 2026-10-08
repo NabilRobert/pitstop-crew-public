@@ -3,7 +3,7 @@
 // No model calls.
 
 import { describe, it, expect } from 'vitest'
-import { buildKaiInput, findForeignNumbers, renderRanking, validateRanking, MAX_EXPLANATION_CHARS, type OpenSuggestion } from './ranking.js'
+import { buildKaiInput, findForeignNumbers, moneyProblems, renderRanking, validateRanking, MAX_EXPLANATION_CHARS, type OpenSuggestion } from './ranking.js'
 
 function suggestion(id: number, over: Partial<OpenSuggestion> = {}): OpenSuggestion {
   return {
@@ -88,6 +88,51 @@ describe('validateRanking', () => {
   })
 })
 
+// Suggestion #35 on 2026-10-08: Kai quoted micros as rupiah.
+describe('money in explanations', () => {
+  const c = suggestion(11, {
+    type: 'promote_search_term',
+    payload: { kind: 'promote_search_term', text: 'car dealer serpong', to_match_type: 'exact', ad_group_id: 2 },
+    evidence: { ...suggestion(11).evidence, cost_micros: 45_111_296_559, term_cpa_micros: 16_585_036_779, parent_cpa_micros: 16_960_507_100 } as OpenSuggestion['evidence'],
+  })
+  const stored35 =
+    "The Brand term 'car dealer jakarta selatan' had 32 clicks, 2.72 conversions and cost Rp 45,111,296,559, with term CPA 16,585,036,779 micros vs parent CPA 16,960,507,100 micros."
+
+  it('accepts the evidence’s rupiah figures as written or rounded', () => {
+    for (const text of ['cost Rp 45,111', 'cost Rp45.111', 'a CPA of Rp 16,585 vs Rp 16,961', 'about Rp 45 ribu', '16,585 rupiah', 'IDR 45,111']) {
+      expect(moneyProblems(text, c), text).toEqual([])
+    }
+  })
+
+  it('rejects "micros", a micros value written as rupiah, and a figure not in the evidence', () => {
+    expect(moneyProblems('term CPA 16,585,036,779 micros', c)).toEqual(['mentions micros'])
+    expect(moneyProblems('cost Rp 45,111,296,559', c)).toEqual(['"Rp 45,111,296,559" is not a rupiah figure in the evidence'])
+    expect(moneyProblems('saves Rp 50,000', c)).toEqual(['"Rp 50,000" is not a rupiah figure in the evidence'])
+    expect(moneyProblems('worth Rp 2 miliar', c)).toHaveLength(1)
+  })
+
+  it('allows a rupiah figure that is part of the candidate’s own name', () => {
+    const themed = suggestion(67, { campaignName: null, payload: { ...c.payload, text: 'Search — Used Cars Rp 150–250 Juta' } as OpenSuggestion['payload'] })
+    expect(moneyProblems("The campaign 'Search — Used Cars Rp 150–250 Juta' covers 7 units.", themed)).toEqual([])
+  })
+
+  it('a raw micros number is no longer an allowed figure', () => {
+    expect(findForeignNumbers('a CPA of 16,585,036,779', c)).toEqual(['16,585,036,779'])
+    expect(findForeignNumbers('a CPA of Rp 16,585', c)).toEqual([])
+  })
+
+  it('drops such an explanation for every type, and records why', () => {
+    const v = validateRanking({ ranking: [{ candidate_id: 11, rank: 1, explanation: stored35 }, { candidate_id: 12, rank: 2, explanation: 'Cost Rp 19,200 with 0 conversions.' }] }, [c, suggestion(12)])
+    expect(v.items).toEqual([
+      { candidateId: 11, rank: 1, explanation: null },
+      { candidateId: 12, rank: 2, explanation: 'Cost Rp 19,200 with 0 conversions.' },
+    ])
+    expect(v.badMoney).toEqual([
+      { candidateId: 11, problems: ['mentions micros', '"Rp 45,111,296,559" is not a rupiah figure in the evidence'] },
+    ])
+  })
+})
+
 describe('findForeignNumbers', () => {
   const c = suggestion(11)
 
@@ -128,7 +173,7 @@ describe('Kai input and the graded text', () => {
         campaigns: [{ name: 'Search — Used Cars Generic', clicks: 900, costMicros: 1_500_000_000_000, conversions: 70.456 }],
       })
     )
-    expect(input.account.campaigns[0]).toEqual({ name: 'Search — Used Cars Generic', clicks: 900, cost_micros: 1_500_000_000_000, conversions: 70.46 })
+    expect(input.account.campaigns[0]).toEqual({ name: 'Search — Used Cars Generic', clicks: 900, cost_idr: 1_500_000, conversions: 70.46 })
     expect(input.candidates.map((c: { candidate_id: number; needs_explanation: boolean }) => [c.candidate_id, c.needs_explanation])).toEqual([
       [11, true],
       [12, true],
@@ -136,6 +181,14 @@ describe('Kai input and the graded text', () => {
     ])
     expect(input.candidates[0]).toMatchObject({ keyword: 'mobil bekas (broad)', search_term: 'lowongan sales mobil bekas', payload: { text: 'lowongan sales mobil bekas' } })
     expect(input.candidates[0].payload.kind).toBeUndefined()
+  })
+
+  it('gives Kai money in whole rupiah, never micros', () => {
+    const json = buildKaiInput(candidates, { windowStart: '2026-07-06', windowEnd: '2026-10-03', inventory: { source: 'demo', snapshotOn: null }, campaigns: [] })
+    expect(json).not.toContain('micros')
+    const first = JSON.parse(json).candidates[0]
+    expect(first.evidence).toMatchObject({ cost_idr: 19_200, conversions_value_idr: 0, clicks: 12, ad_group_conversion_rate: 0.0787 })
+    expect(first.expected_impact).toEqual({ wasted_spend_idr_per_week: 1_493 })
   })
 
   it('renders the ranking as readable text, marking unverified rows and earlier explanations', () => {

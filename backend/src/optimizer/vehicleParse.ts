@@ -104,6 +104,7 @@ export const GENERIC_WORDS = new Set([
   'for', 'sale', 'buy', 'cheap', 'suv', 'suvs', 'keluarga', 'seater', 'jakarta', 'bekasi', 'tangerang', 'depok',
   'bogor', 'selatan', 'timur', 'utara', 'barat', 'pusat', 'jabodetabek', 'indonesia', 'id', 'matic', 'manual',
   'diesel', 'bensin', 'km', 'rendah', 'tangan', 'pertama', 'pajak', 'panjang', 'hidup', 'baru', 'type', 'tipe', 'meriah',
+  'pitstop', 'gading', 'serpong', 'bsd', // the demo dealer's name and area (brand keywords)
 ])
 
 export interface Dictionary {

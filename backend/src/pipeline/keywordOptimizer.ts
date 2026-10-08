@@ -29,6 +29,9 @@ import { runEngine, type Candidate, type EngineInput } from '../optimizer/engine
 import { linkPlannedCampaigns, persistSuggestions } from '../optimizer/suggestions.js'
 import { buildKaiInput, renderRanking, validateRanking, type AccountSummary, type OpenSuggestion, type RankingValidation } from '../optimizer/ranking.js'
 import { buildPolishInput, renderPolish, validatePolish, type PolishAd, type PolishedAd, type PolishValidation } from '../optimizer/adPolish.js'
+import { toTexts, type CopyContext } from '../optimizer/adCopy.js'
+import { copyContext } from '../optimizer/ads.js'
+import { adSettingsFrom } from '../optimizer/engineData.js'
 import type { MatchType } from '../optimizer/types.js'
 
 // 'unchanged' (3.5): nothing changed since the last run, so the model step
@@ -74,11 +77,11 @@ export { canonicalJson } from '../optimizer/canonicalJson.js'
 import { canonicalJson } from '../optimizer/canonicalJson.js'
 
 /** What the change check compares in a payload. 3.6: an ad's copy, its
- * source and its checks can be replaced by Kai's polish, so only the rest
- * (the template and the facts included) counts. */
+ * `polished` flag and its checks can be replaced by Kai's polish, so only the
+ * rest (the facts, the target and the winners) counts. */
 export function comparablePayload(payload: unknown): unknown {
   if (!payload || typeof payload !== 'object' || (payload as { kind?: unknown }).kind !== 'new_ad') return payload
-  const { headlines: _h, descriptions: _d, copy_source: _s, checks: _c, ...rest } = payload as Record<string, unknown>
+  const { headlines: _h, descriptions: _d, polished: _p, checks: _c, ...rest } = payload as Record<string, unknown>
   return rest
 }
 
@@ -237,13 +240,13 @@ export async function kaiStep(
       const v = validateRanking(await deps.rank(input, revision), open)
       const text = renderRanking(v.items, open)
       byContent.set(text, v)
-      const problems = v.rejected.length + v.foreignNumbers.length + v.unranked.length
+      const problems = v.rejected.length + v.foreignNumbers.length + v.badMoney.length + v.unranked.length
       await event('decision', 'Validate Kai output', {
         status: problems > 0 ? 'error' : 'ok',
         summary:
           `${v.items.length} ranked, ${v.items.filter((i) => i.explanation !== null).length} explained` +
-          (problems > 0 ? ` — ${v.rejected.length} rejected, ${v.unranked.length} left out, ${v.foreignNumbers.length} with a number not in their evidence` : ''),
-        meta: { rejected: v.rejected, unranked: v.unranked, foreign_numbers: v.foreignNumbers },
+          (problems > 0 ? ` — ${v.rejected.length} rejected, ${v.unranked.length} left out, ${v.foreignNumbers.length} with a number not in their evidence, ${v.badMoney.length} dropped for money not in rupiah` : ''),
+        meta: { rejected: v.rejected, unranked: v.unranked, foreign_numbers: v.foreignNumbers, bad_money: v.badMoney },
       })
       return text
     },
@@ -305,16 +308,16 @@ export interface PolishStepResult {
  * for good: later runs never polish a row again. No ads, no call (null). */
 export async function polishStep(
   ads: readonly PolishAd[],
-  ctx: { language: string; reportDate: string; pipelineRunId: number },
+  ctx: { language: string; reportDate: string; pipelineRunId: number; copy: CopyContext },
   deps: PolishStepDeps
 ): Promise<PolishStepResult | null> {
   if (ads.length === 0) return null
-  const input = buildPolishInput(ads)
+  const input = buildPolishInput(ads, ctx.copy)
   const byContent = new Map<string, PolishValidation>()
   const outputId = await deps.runWithCritic({
     agentType: 'keyword_optimizer',
     generate: async (revision) => {
-      const v = validatePolish(await deps.polish(input, revision), ads)
+      const v = validatePolish(await deps.polish(input, revision), ads, ctx.copy)
       const text = renderPolish(v, ads)
       byContent.set(text, v)
       const kept = v.rejected.length + v.missing.length
@@ -340,14 +343,14 @@ export async function polishStep(
   return { outputId, approved, validation, updates: approved ? validation.accepted : [] }
 }
 
-/** Stores approved polish: the copy, its checks and copy_source 'model'.
- * The template, facts and the rest of the payload stay. */
+/** Stores approved polish: the copy, its checks and polished: true.
+ * The facts and the rest of the payload stay. */
 export async function applyPolish(client: PoolClient, updates: readonly PolishedAd[]): Promise<void> {
   for (const u of updates) {
     await client.query(
       `UPDATE keyword_suggestions SET payload = payload || $2::jsonb
        WHERE id = $1 AND status = 'open' AND suggestion_type = 'new_ad'`,
-      [u.id, JSON.stringify({ headlines: u.headlines, descriptions: u.descriptions, copy_source: 'model', checks: u.checks })]
+      [u.id, JSON.stringify({ headlines: toTexts(u.headlines), descriptions: toTexts(u.descriptions), polished: true, checks: u.checks })]
     )
   }
 }
@@ -427,7 +430,8 @@ export async function runKeywordOptimizer(opts: KeywordOptimizerOptions = {}): P
         emitEvent('Keyword optimizer: no changes since the last run — Kai and Ciri skipped', 'info', runId)
         return { ...base, kai: 'unchanged' as const, adPolish: 'none' as const }
       }
-      const { report_language: language } = await getSettings()
+      const settings = await getSettings()
+      const language = settings.report_language
 
       // 3.6: only the ads this run inserted (the 11.8 skip rule applied to
       // ads). A failure keeps the templates and doesn't stop the ranking.
@@ -435,7 +439,8 @@ export async function runKeywordOptimizer(opts: KeywordOptimizerOptions = {}): P
       if (newAds.length > 0) {
         try {
           emitEvent(`Kai: polishing the copy of ${newAds.length} new ad(s)…`, 'info', runId)
-          const p = await polishStep(newAds, { language, reportDate: input.asOf, pipelineRunId: handle.runId }, {
+          const copy = copyContext(adSettingsFrom(settings))
+          const p = await polishStep(newAds, { language, reportDate: input.asOf, pipelineRunId: handle.runId, copy }, {
             polish: (text, revision) => kai.polishAds(text, revision, opts.client),
             runWithCritic,
             getOutput,

@@ -87,7 +87,7 @@ export interface SuggestionHistory {
   status: SuggestionStatus
   statusChangedOn: string | null // 'YYYY-MM-DD'
   campaignName?: string | null // new_campaign: the proposed name (3.3), kept unique
-  adTarget?: string | null // new_ad: payload.ad_target (3.6), for dedupe across changed facts
+  adTarget?: string | null // new_ad: evidence.ad_target (3.6), for dedupe across changed facts
 }
 
 /** 3.6 — an enabled ad in an enabled ad group, with its window totals. */
@@ -793,7 +793,7 @@ export function runEngine(input: EngineInput): EngineResult {
     // 3.6: an ad's target, whatever its facts: a planned ad blocks a new
     // one; an applied or dismissed one does for the cooldown.
     if (c.payload.kind === 'new_ad') {
-      const target = c.payload.ad_target
+      const target = c.evidence.ad_target
       const same = input.history.filter((x) => x.adTarget === target && x.fingerprint !== c.fingerprint)
       const block = same.find((x) => x.status === 'planned') ?? same.find((x) => (x.status === 'applied' || x.status === 'dismissed') && inCooldown(x))
       if (block) {
@@ -832,7 +832,7 @@ export function runEngine(input: EngineInput): EngineResult {
   }
 
   // --- new_ad (3.6, ads.ts) ----------------------------------------------------
-  const ads = proposeAds(input, t, winners, proposals)
+  const ads = proposeAds(input, winners, proposals)
   for (const f of ads.failedChecks) skipped.push({ fingerprint: f.fingerprint, type: 'new_ad', reason: 'checks', detail: f.problems.join('; ') })
   for (const c of ads.candidates) guard(c)
 

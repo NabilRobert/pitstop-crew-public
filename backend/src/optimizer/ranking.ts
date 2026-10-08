@@ -29,9 +29,25 @@ export interface AccountSummary {
   campaigns: { name: string; clicks: number; costMicros: number; conversions: number }[]
 }
 
+// Money reaches Kai in whole rupiah, never micros: a field ending in _micros
+// (or with _micros_ inside, like wasted_spend_micros_per_week) becomes the
+// same name with _idr, its value divided by 1,000,000 and rounded.
+const MICROS_KEY = /_micros(?=_|$)/
+
+/** A copy of a value with every micros field turned into whole rupiah. */
+export function inRupiah(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(inRupiah)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value).map(([k, v]) =>
+      MICROS_KEY.test(k) ? [k.replace(MICROS_KEY, '_idr'), typeof v === 'number' ? Math.round(v / 1e6) : v] : [k, inRupiah(v)]
+    )
+  )
+}
+
 /** The JSON Kai receives (and Ciri grades her against). Snake case, the
- * contract's own field names. Only rows without an explanation get a new
- * one; the rest are ranked alongside them. */
+ * contract's own field names, money in whole rupiah (inRupiah). Only rows
+ * without an explanation get a new one; the rest are ranked alongside them. */
 export function buildKaiInput(open: readonly OpenSuggestion[], summary: AccountSummary): string {
   return JSON.stringify({
     account: {
@@ -41,17 +57,14 @@ export function buildKaiInput(open: readonly OpenSuggestion[], summary: AccountS
       campaigns: summary.campaigns.map((c) => ({
         name: c.name,
         clicks: c.clicks,
-        cost_micros: c.costMicros,
+        cost_idr: Math.round(c.costMicros / 1e6),
         conversions: Math.round(c.conversions * 100) / 100,
       })),
     },
     candidates: open.map((o) => {
       const { kind: _kind, ...payload } = o.payload as unknown as Record<string, unknown>
-      // 3.6: an ad's template and checks only repeat its copy; not sent.
-      if (o.type === 'new_ad') {
-        delete payload.template
-        delete payload.checks
-      }
+      // 3.6: an ad's checks are all true once stored; not sent.
+      if (o.type === 'new_ad') delete payload.checks
       return {
         candidate_id: o.id,
         type: o.type,
@@ -62,9 +75,9 @@ export function buildKaiInput(open: readonly OpenSuggestion[], summary: AccountS
         ad_group: o.adGroupName,
         keyword: o.keyword ? `${o.keyword.text} (${o.keyword.matchType})` : null,
         search_term: o.searchTerm,
-        payload,
-        evidence: o.evidence,
-        expected_impact: o.expectedImpact,
+        payload: inRupiah(payload),
+        evidence: inRupiah(o.evidence),
+        expected_impact: inRupiah(o.expectedImpact),
       }
     }),
   })
@@ -83,6 +96,9 @@ export interface RankingValidation {
   // STARTING DEFAULT: flagged in the trace, not dropped — except for the
   // types in STRICT_NUMBER_TYPES, whose explanation is dropped (`dropped`).
   foreignNumbers: { candidateId: number; numbers: string[]; dropped: boolean }[]
+  // Explanations that say "micros" or quote a rupiah figure that isn't one
+  // of the candidate's own: always dropped, whatever the type.
+  badMoney: { candidateId: number; problems: string[] }[]
   unranked: number[] // candidate ids Kai left out (their rank stays null)
 }
 
@@ -123,34 +139,48 @@ export function validateRanking(raw: unknown, candidates: readonly OpenSuggestio
 
   kept.sort((a, b) => a.rank - b.rank || a.order - b.order)
   const foreignNumbers: RankingValidation['foreignNumbers'] = []
+  const badMoney: RankingValidation['badMoney'] = []
   const items = kept.map((k, i) => {
     let explanation = k.explanation
     if (explanation !== null) {
       const c = byId.get(k.id)!
+      const money = moneyProblems(explanation, c)
+      if (money.length > 0) badMoney.push({ candidateId: k.id, problems: money })
       const numbers = findForeignNumbers(explanation, c)
       if (numbers.length > 0) {
         const dropped = STRICT_NUMBER_TYPES.has(c.type)
         foreignNumbers.push({ candidateId: k.id, numbers, dropped })
         if (dropped) explanation = null
       }
+      if (money.length > 0) explanation = null
     }
     return { candidateId: k.id, rank: i + 1, explanation }
   })
   const rankedIds = new Set(items.map((i) => i.candidateId))
-  return { items, rejected, foreignNumbers, unranked: candidates.filter((c) => !rankedIds.has(c.id)).map((c) => c.id) }
+  return { items, rejected, foreignNumbers, badMoney, unranked: candidates.filter((c) => !rankedIds.has(c.id)).map((c) => c.id) }
 }
 
 // --- the number check ---------------------------------------------------
 
-const NUMBER_TOKEN = /\d+(?:[.,]\d+)*(?:\s*(?:juta|jt|ribu|rb|k|million|thousand)\b)?/gi
+const NUMBER = String.raw`\d+(?:[.,]\d+)*(?:\s*(?:miliar|milyar|billion|juta|jt|ribu|rb|k|million|thousand)\b)?`
+const NUMBER_TOKEN = new RegExp(NUMBER, 'gi')
+// A rupiah figure: "Rp 45,111", "Rp45.111", "IDR 2.3 juta", "45,111 rupiah".
+const RUPIAH = new RegExp(String.raw`\b(?:rp|idr)\.?\s*(${NUMBER})|(${NUMBER})\s*rupiah\b`, 'gi')
+const MICROS_WORD = /\bmicros?\b/i
 
 /** The numeric readings of one token: English (1,234.5) and Indonesian
- * (1.234,5) separators, with a "juta"/"ribu"/"k" multiplier applied. */
+ * (1.234,5) separators, with a "miliar"/"juta"/"ribu"/"k" multiplier applied. */
 function readings(token: string): number[] {
   const m = token.match(/^([\d.,]+)\s*([a-z]*)$/i)
   if (!m) return []
   const unit = m[2].toLowerCase()
-  const mult = ['juta', 'jt', 'million'].includes(unit) ? 1e6 : ['ribu', 'rb', 'k', 'thousand'].includes(unit) ? 1e3 : 1
+  const mult = ['miliar', 'milyar', 'billion'].includes(unit)
+    ? 1e9
+    : ['juta', 'jt', 'million'].includes(unit)
+      ? 1e6
+      : ['ribu', 'rb', 'k', 'thousand'].includes(unit)
+        ? 1e3
+        : 1
   const en = Number(m[1].replace(/,/g, ''))
   const id = Number(m[1].replace(/\./g, '').replace(',', '.'))
   return [en, id].filter(Number.isFinite).map((n) => n * mult)
@@ -166,19 +196,50 @@ function collectNumbers(value: unknown, out: number[]): void {
   else if (value && typeof value === 'object') for (const v of Object.values(value)) collectNumbers(v, out)
 }
 
-/** Every number a candidate's explanation may quote: its evidence, payload,
- * expected impact and target texts, plus the readings a person would use —
- * micros as rupiah, a 0-1 share as a percent. */
+/** Every number a candidate's explanation may quote: what Kai was shown of
+ * its evidence, payload and expected impact (money in rupiah, never micros)
+ * and its target texts, plus a 0-1 share as a percent. */
 export function allowedNumbers(c: OpenSuggestion): number[] {
   const raw: number[] = []
-  collectNumbers([c.evidence, c.payload, c.expectedImpact, c.keyword?.text, c.searchTerm, c.campaignName, c.adGroupName], raw)
+  collectNumbers([inRupiah([c.evidence, c.payload, c.expectedImpact]), c.keyword?.text, c.searchTerm, c.campaignName, c.adGroupName], raw)
   const out = new Set<number>()
   for (const n of raw) {
     out.add(n)
-    out.add(n / 1e6)
     if (Math.abs(n) <= 1) out.add(n * 100)
   }
   return [...out]
+}
+
+/** The candidate's money, in rupiah: every _idr field of what Kai was shown,
+ * and any rupiah figure inside its own texts (a theme such as "Used Cars
+ * Rp 150–250 Juta"). */
+export function rupiahFigures(c: OpenSuggestion): number[] {
+  const out: number[] = []
+  const walk = (v: unknown) => {
+    if (typeof v === 'string') for (const m of v.matchAll(RUPIAH)) out.push(...readings((m[1] ?? m[2]).trim()))
+    else if (Array.isArray(v)) v.forEach(walk)
+    else if (v && typeof v === 'object')
+      for (const [k, x] of Object.entries(v)) {
+        if (/_idr(?=_|$)/.test(k) && typeof x === 'number' && Number.isFinite(x)) out.push(x)
+        else walk(x)
+      }
+  }
+  walk([inRupiah([c.evidence, c.payload, c.expectedImpact]), c.keyword?.text, c.searchTerm, c.campaignName, c.adGroupName])
+  return out
+}
+
+/** Like the ad copy's number check (adCopy.ts), for money: an explanation may
+ * not mention micros, and every rupiah figure it quotes must be one of the
+ * candidate's own, as written or rounded ("Rp 45 ribu" for Rp 45,111). */
+export function moneyProblems(explanation: string, c: OpenSuggestion): string[] {
+  const out: string[] = []
+  if (MICROS_WORD.test(explanation)) out.push('mentions micros')
+  const allowed = rupiahFigures(c)
+  for (const m of explanation.matchAll(RUPIAH)) {
+    const token = (m[1] ?? m[2]).trim()
+    if (!readings(token).some((x) => allowed.some((a) => close(x, a)))) out.push(`"${m[0].trim()}" is not a rupiah figure in the evidence`)
+  }
+  return out
 }
 
 const close = (x: number, a: number) => Math.abs(x - a) <= Math.max(0.51, 0.02 * Math.abs(a))
@@ -217,8 +278,10 @@ function target(c: OpenSuggestion): string {
       return `raise bid on ${c.keyword?.text}`
     case 'new_campaign':
       return `new campaign "${p.name}" (${p.basis.replace(/_/g, ' ')}, ${p.ad_groups.length} ad group${p.ad_groups.length === 1 ? '' : 's'}, ${p.stock.units} units)`
-    case 'new_ad':
-      return `new ad for "${p.ad_group_name}" in "${p.campaign_name}" (${p.basis.replace(/_/g, ' ')}, ${p.facts.units} units)`
+    case 'new_ad': {
+      const where = p.target.kind === 'proposed_campaign' ? `"${p.target.ad_group_name}" in proposal #${p.target.campaign_suggestion_id}` : `"${c.adGroupName}" in "${c.campaignName}"`
+      return `new ad for ${where} (${p.basis.replace(/_/g, ' ')}, ${p.facts.units} units)`
+    }
   }
 }
 

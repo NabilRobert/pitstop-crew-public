@@ -48,16 +48,17 @@ async function main() {
   for (const c of examples) {
     const p = ad(c)
     console.log('\n' + '='.repeat(78))
-    console.log(`${p.basis} — ${p.campaign_name} › ${p.ad_group_name}${p.replaces_ad_id ? ` (replaces ad #${p.replaces_ad_id})` : ''}`)
-    console.log(`target ${p.ad_target}; fingerprint ${c.fingerprint}; basis ${c.basis}, confidence ${c.confidence}`)
-    console.log(`final_url ${p.final_url} (${p.final_url_source}); path /${p.path1}/${p.path2}`)
+    const where = p.target.kind === 'proposed_campaign' ? `${String(c.evidence.campaign_name)} › ${p.target.ad_group_name}` : `${String(c.evidence.campaign_name)} › ${String(c.evidence.ad_group_name)}`
+    console.log(`${p.basis} — ${where}${p.replaces_ad ? ` (replaces ad #${p.replaces_ad.id} "${p.replaces_ad.label}", ${p.replaces_ad.ad_strength})` : ''}`)
+    console.log(`target ${JSON.stringify(p.target)}; fingerprint ${c.fingerprint}; basis ${c.basis}, confidence ${c.confidence}`)
+    console.log(`final_url ${p.final_url}; path /${p.path1}/${p.path2}; polished ${p.polished}`)
     console.log('facts:', JSON.stringify(p.facts, null, 2))
     console.log('winner keywords:', JSON.stringify(p.winner_keywords))
     console.log('evidence:', JSON.stringify(c.evidence))
     console.log('headlines:')
-    for (const h of p.headlines) console.log(`  ${String(h.length).padStart(2)}  ${h}`)
+    for (const { text } of p.headlines) console.log(`  ${String(text.length).padStart(2)}  ${text}`)
     console.log('descriptions:')
-    for (const d of p.descriptions) console.log(`  ${String(d.length).padStart(2)}  ${d}`)
+    for (const { text } of p.descriptions) console.log(`  ${String(text.length).padStart(2)}  ${text}`)
     console.log('checks:', JSON.stringify(p.checks))
   }
   process.exit(0)

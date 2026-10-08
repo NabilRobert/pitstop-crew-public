@@ -36,8 +36,6 @@ export const ENGINE_DEFAULTS = {
   campaignMaxAdGroups: 4,
   // Contract 3.6 — ad suggestions (ads.ts, section 11.9).
   adCap: 3, // new weak_ad + uncovered_winner ads per run (proposal ads aren't capped)
-  weakAdMinImpressions: 1000, // both ads need this many in the window for the CTR rule
-  weakAdCtrRatio: 0.8, // CTR ≤ this × the best other enabled ad in the ad group
   adPromotedDays: 30, // an applied promote_search_term counts as a winner this long
 }
 

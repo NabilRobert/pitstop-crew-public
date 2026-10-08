@@ -75,52 +75,59 @@ export interface NewCampaignPayload {
   overlaps: { campaign_id: number; name: string; shared_keywords: number }[]
 }
 
-/** Contract 3.6 — one check over an ad's copy (src/optimizer/adCopy.ts). */
-export interface AdCheck {
-  ok: boolean
-  problems: string[]
+/** Contract 3.6 — a claim the dealer profile can allow (settings
+ * ads_claim_*). */
+export type AdClaim = 'installments' | 'trade_in' | 'test_drive' | 'inspection'
+export const AD_CLAIMS: readonly AdClaim[] = ['installments', 'trade_in', 'test_drive', 'inspection']
+
+/** Contract 3.6 — computed in code (src/optimizer/adCopy.ts), shown by the
+ * UI; never the model's opinion. A stored ad has all three true. */
+export interface AdCheckFlags {
+  limits_ok: boolean // counts, lengths and format: 3-15 headlines of at most 30, 2-4 descriptions of at most 90, paths of at most 15
+  numbers_from_facts: boolean // every number in the copy comes from `facts`
+  claims_allowed: boolean // no claim the dealer profile does not allow
 }
 
-/** Contract 3.6 — the only source of any number or claim in an ad's copy,
- * computed from one inventory snapshot and the dealer settings. */
+/** Contract 3.6 — everything an ad's copy is allowed to say, from the
+ * available units of the target make/model and the dealer profile. */
 export interface AdFacts {
-  make: string
-  model: string | null // null = a make-level ad group (several models)
-  models: string[]
+  make: string | null
+  model: string | null
   units: number
-  year_min: number
-  year_max: number
-  price_min_idr: number
-  price_max_idr: number
-  vehicle_ids: number[]
-  dealer: { name: string; city: string; area: string | null; whatsapp: string | null }
-  claims: { installments: boolean; trade_in: boolean; test_drive: boolean; inspection: boolean }
-  inspection_wording: string | null // set when claims.inspection
+  year_from: number | null
+  year_to: number | null
+  price_from_idr: number | null
+  price_to_idr: number | null
+  mileage_from_km: number | null
+  dealer: string
+  city: string | null
+  area: string | null
+  whatsapp: string | null
+  claims_used: AdClaim[] // only claims whose setting is 'true'
   snapshot_on: string
 }
+
+export type AdTarget =
+  | { kind: 'existing_ad_group'; ad_group_id: number }
+  | { kind: 'proposed_campaign'; campaign_suggestion_id: number; ad_group_name: string }
 
 /** Contract 3.6 — a new responsive search ad, computed in code
  * (src/optimizer/ads.ts); only headlines/descriptions may come from the
  * model's polish, and only when they pass every check. */
 export interface NewAdPayload {
   kind: 'new_ad'
+  target: AdTarget
   basis: AdBasis
-  ad_target: string // where the ad goes, stable across runs
-  campaign_suggestion_id: number | null // basis new_campaign: the proposal it belongs to
-  campaign_name: string
-  ad_group_name: string
-  replaces_ad_id: number | null // weak_ad
-  final_url: string | null
-  final_url_source: 'setting' | 'ad_group' | 'account' | null
+  headlines: { text: string }[]
+  descriptions: { text: string }[]
   path1: string | null
   path2: string | null
-  headlines: string[]
-  descriptions: string[]
-  copy_source: 'template' | 'model'
-  template: { headlines: string[]; descriptions: string[] }
+  final_url: string | null // null until the dealer profile has a landing page
   facts: AdFacts
-  winner_keywords: { text: string; source: 'keyword' | 'search_term'; keyword_id: number | null; search_term_id: number | null }[]
-  checks: { limits: AdCheck; facts: AdCheck; style: AdCheck }
+  winner_keywords: { keyword_id: number | null; text: string }[]
+  replaces_ad: { id: number; label: string; ad_strength: 'poor' | 'average' | 'good' | 'excellent' | null } | null
+  checks: AdCheckFlags
+  polished: boolean // true when the model reworded the template copy and it passed validation
 }
 
 export interface SuggestionEvidence {
