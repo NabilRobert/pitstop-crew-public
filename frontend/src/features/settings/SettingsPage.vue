@@ -16,6 +16,19 @@ const {
   monthlyCostCapUsd,
   problemKey,
   keywordSettingsSupported,
+  adsSupported,
+  dealerName,
+  dealerCity,
+  dealerArea,
+  dealerWhatsapp,
+  dealerLandingUrl,
+  claimInstallments,
+  claimTradeIn,
+  claimTestDrive,
+  claimInspection,
+  inspectionWording,
+  adsWriteEnabled,
+  adsWriteMode,
   campaignBudgetSupported,
   campaignBudgetFloor,
   campaignBudgetCeiling,
@@ -118,6 +131,59 @@ const {
           <p class="mt-1 text-xs text-ink-faint">
             {{ t('settings.monthlyCostCapHelp') }}
           </p>
+        </div>
+
+        <div v-if="adsSupported" class="mt-5 border-t border-border pt-5">
+          <h2 class="mb-1 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{{ t('settings.ads.title') }}</h2>
+          <p class="mb-3 text-xs text-ink-faint">{{ t('settings.ads.intro') }}</p>
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-name">{{ t('settings.ads.dealerName') }}</label>
+              <input id="ads-name" v-model="dealerName" type="text" maxlength="40" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
+            </div>
+            <div>
+              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-wa">{{ t('settings.ads.whatsapp') }}</label>
+              <input id="ads-wa" v-model="dealerWhatsapp" type="text" inputmode="tel" maxlength="20" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
+              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.ads.whatsappHelp') }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-city">{{ t('settings.ads.city') }}</label>
+              <input id="ads-city" v-model="dealerCity" type="text" maxlength="40" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
+            </div>
+            <div>
+              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-area">{{ t('settings.ads.area') }}</label>
+              <input id="ads-area" v-model="dealerArea" type="text" maxlength="40" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
+            </div>
+          </div>
+          <div class="mt-5">
+            <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-url">{{ t('settings.ads.landingUrl') }}</label>
+            <input id="ads-url" v-model="dealerLandingUrl" type="url" placeholder="https://" class="w-full max-w-md rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
+            <p class="mt-1 text-xs text-ink-faint">{{ t('settings.ads.landingUrlHelp') }}</p>
+          </div>
+
+          <fieldset class="mt-5">
+            <legend class="mb-1 font-mono text-[10px] uppercase tracking-wide text-ink-faint">{{ t('settings.ads.claimsTitle') }}</legend>
+            <p class="mb-2 text-xs text-ink-faint">{{ t('settings.ads.claimsHelp') }}</p>
+            <label class="mb-1 flex items-center gap-2 text-sm text-ink-soft"><input v-model="claimInstallments" type="checkbox" class="h-4 w-4 accent-rosso" /> {{ t('settings.ads.claims.installments') }}</label>
+            <label class="mb-1 flex items-center gap-2 text-sm text-ink-soft"><input v-model="claimTradeIn" type="checkbox" class="h-4 w-4 accent-rosso" /> {{ t('settings.ads.claims.tradeIn') }}</label>
+            <label class="mb-1 flex items-center gap-2 text-sm text-ink-soft"><input v-model="claimTestDrive" type="checkbox" class="h-4 w-4 accent-rosso" /> {{ t('settings.ads.claims.testDrive') }}</label>
+            <label class="mb-1 flex items-center gap-2 text-sm text-ink-soft"><input v-model="claimInspection" type="checkbox" class="h-4 w-4 accent-rosso" /> {{ t('settings.ads.claims.inspection') }}</label>
+            <div v-if="claimInspection" class="mt-2 max-w-md">
+              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-wording">{{ t('settings.ads.inspectionWording') }}</label>
+              <input id="ads-wording" v-model="inspectionWording" type="text" maxlength="60" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
+            </div>
+          </fieldset>
+
+          <div class="mt-5 border-t border-border pt-4">
+            <label class="flex items-start gap-3">
+              <input v-model="adsWriteEnabled" type="checkbox" class="mt-0.5 h-4 w-4 accent-rosso" />
+              <span class="text-sm text-ink-soft">
+                <span class="font-medium text-ink">{{ t('settings.ads.writeTitle') }}</span><br />
+                {{ t('settings.ads.writeDesc') }}
+              </span>
+            </label>
+            <p class="mt-1 text-xs text-ink-faint">{{ t('settings.ads.mode', { mode: adsWriteMode === 'simulated' ? t('settings.ads.modeSimulated') : adsWriteMode }) }}</p>
+          </div>
         </div>
 
         <div v-if="campaignBudgetSupported" class="mt-5 border-t border-border pt-5">

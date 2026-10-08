@@ -3,6 +3,23 @@ import { api } from '../../shared/api/api'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 import type { InventorySummary, Settings } from '../../shared/api/types'
 
+/** Dealer profile checks, matching the backend's (contract 3.6). */
+export const isDealerName = (v: string) => v.trim().length > 0 && v.trim().length <= 40
+export const isShortText = (v: string, max = 40) => v.trim().length <= max
+/** Digits, spaces, '-' and '+', at most 20 characters; may be empty (a placeholder number in the demo). */
+export const isPhone = (v: string) => /^[0-9 +\-]{0,20}$/.test(v)
+/** Empty (no landing page yet), or an http(s) URL. */
+export function isLandingUrl(v: string): boolean {
+  const t = v.trim()
+  if (t === '') return true
+  try {
+    const u = new URL(t)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 /** HH:MM, 24-hour, like the backend's isValidTime. */
 export function isValidRunTime(value: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value)
@@ -51,6 +68,20 @@ export function useSettings() {
   const keywordMinConfidenceP = ref('')
   const inventoryAllowedSpendShare = ref('')
   const inventoryLeadToSaleRate = ref('')
+  // Contract 3.6: dealer profile, what ads may claim, and the creation switch. Hidden until the server sends them.
+  const adsSupported = ref(false)
+  const dealerName = ref('')
+  const dealerCity = ref('')
+  const dealerArea = ref('')
+  const dealerWhatsapp = ref('')
+  const dealerLandingUrl = ref('')
+  const claimInstallments = ref(true)
+  const claimTradeIn = ref(true)
+  const claimTestDrive = ref(true)
+  const claimInspection = ref(true)
+  const inspectionWording = ref('')
+  const adsWriteEnabled = ref(false)
+  const adsWriteMode = ref('simulated')
   // Contract 3.4: the daily budget bounds for proposed campaigns, in whole rupiah. Hidden until the backend sends them.
   const campaignBudgetSupported = ref(false)
   const campaignBudgetFloor = ref('')
@@ -58,7 +89,25 @@ export function useSettings() {
   // Read-only status; the inventory connection string is never shown, edited or fetched here.
   const inventory = ref<InventorySummary | null>(null)
 
+  function applyAdsSettings(settings: Settings) {
+    adsSupported.value = settings.dealer_name !== undefined
+    if (!adsSupported.value) return
+    dealerName.value = settings.dealer_name ?? ''
+    dealerCity.value = settings.dealer_city ?? ''
+    dealerArea.value = settings.dealer_area ?? ''
+    dealerWhatsapp.value = settings.dealer_whatsapp ?? ''
+    dealerLandingUrl.value = settings.dealer_landing_url ?? ''
+    claimInstallments.value = settings.ads_claim_installments === 'true'
+    claimTradeIn.value = settings.ads_claim_trade_in === 'true'
+    claimTestDrive.value = settings.ads_claim_test_drive === 'true'
+    claimInspection.value = settings.ads_claim_inspection === 'true'
+    inspectionWording.value = settings.ads_inspection_wording ?? ''
+    adsWriteEnabled.value = settings.ads_write_enabled === 'true'
+    adsWriteMode.value = settings.ads_write_mode ?? 'simulated'
+  }
+
   function applyKeywordSettings(settings: Settings) {
+    applyAdsSettings(settings)
     campaignBudgetSupported.value = settings.campaign_daily_budget_floor_idr !== undefined
     if (campaignBudgetSupported.value) {
       campaignBudgetFloor.value = settings.campaign_daily_budget_floor_idr ?? ''
@@ -77,6 +126,13 @@ export function useSettings() {
 
   /** Returns an i18n key for the first invalid keyword setting, or null. */
   function keywordSettingsProblem(): string | null {
+    if (adsSupported.value) {
+      if (!isDealerName(dealerName.value)) return 'settings.ads.invalid.dealerName'
+      if (!isShortText(dealerCity.value) || !isShortText(dealerArea.value)) return 'settings.ads.invalid.place'
+      if (!isPhone(dealerWhatsapp.value)) return 'settings.ads.invalid.whatsapp'
+      if (!isLandingUrl(dealerLandingUrl.value)) return 'settings.ads.invalid.landingUrl'
+      if (!isShortText(inspectionWording.value, 60)) return 'settings.ads.invalid.wording'
+    }
     if (campaignBudgetSupported.value) {
       if (!isWholeRupiah(campaignBudgetFloor.value)) return 'settings.keywordOptimizer.invalid.budgetFloor'
       if (!isWholeRupiah(campaignBudgetCeiling.value)) return 'settings.keywordOptimizer.invalid.budgetCeiling'
@@ -132,6 +188,22 @@ export function useSettings() {
         report_language: reportLanguage.value,
         auto_reports_enabled: String(autoReportsEnabled.value),
         monthly_cost_cap_usd: monthlyCostCapUsd.value.trim(),
+        ...(adsSupported.value
+          ? {
+              dealer_name: dealerName.value.trim(),
+              dealer_city: dealerCity.value.trim(),
+              dealer_area: dealerArea.value.trim(),
+              dealer_whatsapp: dealerWhatsapp.value.trim(),
+              dealer_landing_url: dealerLandingUrl.value.trim(),
+              ads_claim_installments: String(claimInstallments.value),
+              ads_claim_trade_in: String(claimTradeIn.value),
+              ads_claim_test_drive: String(claimTestDrive.value),
+              ads_claim_inspection: String(claimInspection.value),
+              ads_inspection_wording: inspectionWording.value.trim(),
+              ads_write_enabled: String(adsWriteEnabled.value),
+              // ads_write_mode is not sent: only 'simulated' exists and the server rejects anything else.
+            }
+          : {}),
         ...(campaignBudgetSupported.value
           ? {
               campaign_daily_budget_floor_idr: campaignBudgetFloor.value.trim(),
@@ -177,6 +249,19 @@ export function useSettings() {
     monthlyCostCapUsd,
     problemKey,
     keywordSettingsSupported,
+    adsSupported,
+    dealerName,
+    dealerCity,
+    dealerArea,
+    dealerWhatsapp,
+    dealerLandingUrl,
+    claimInstallments,
+    claimTradeIn,
+    claimTestDrive,
+    claimInspection,
+    inspectionWording,
+    adsWriteEnabled,
+    adsWriteMode,
     campaignBudgetSupported,
     campaignBudgetFloor,
     campaignBudgetCeiling,
