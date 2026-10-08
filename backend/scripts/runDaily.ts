@@ -1,12 +1,17 @@
 // Cron entrypoint: `*/15 * * * * node dist/scripts/runDaily.js` (see
-// backend/deploy/crontab.txt). Runs every 15 minutes but only actually
+// deploy/crontab.txt). Runs every 15 minutes but only actually
 // fires the pipeline once it's past the configured run time (see
-// backend/src/platform/settings.ts) AND it hasn't already succeeded today — so the
+// src/platform/settings.ts) AND it hasn't already succeeded today — so the
 // crontab line itself no longer encodes the run time, the Settings page
 // does. On Mondays, also runs the weekly rollup + weekly feedback job
 // once past the weekly run time. Emails the report on success, or a
-// failure alert on any exception — per PROJECT.md, failures are
+// failure alert on any exception — per docs/PROJECT.md, failures are
 // surfaced, never silently skipped.
+//
+// Contract 3.5: Kai, the keyword optimizer, runs every day at its own time
+// (keyword_optimizer_run_time) behind its own switch
+// (keyword_optimizer_enabled), independent of auto_reports_enabled in both
+// directions. Its rules are in src/pipeline/keywordSchedule.ts.
 //
 // Everything here is evaluated in WIB (see ../src/platform/timezone.ts), not
 // the VPS's own OS timezone — the Settings page's run-time fields, "today"'s
@@ -14,78 +19,29 @@
 // the server actually lives.
 
 import { runDaily, runWeekly, type RunResult } from '../src/pipeline/orchestrator.js'
-import {
-  formatReportEmail,
-  formatFailureAlert,
-  formatWeeklyFeedbackEmail,
-  formatDeadMansSwitchAlert,
-  formatSpendCeilingAlert,
-} from '../src/reporting/reports.js'
+import { formatReportEmail, formatFailureAlert, formatWeeklyFeedbackEmail } from '../src/reporting/reports.js'
 import { runWeeklyFeedback } from '../src/pipeline/weeklyFeedback.js'
+import { runKeywordOptimizer } from '../src/pipeline/keywordOptimizer.js'
+import { runBothBlocks, runKeywordBlock } from '../src/pipeline/keywordSchedule.js'
+import { alertSpendCeilingOnce, checkDeadMansSwitch } from '../src/pipeline/cronAlerts.js'
 import { deliverReport as deliver } from '../src/platform/emailDelivery.js'
 import { pruneTracePayloads } from '../src/platform/trace.js'
 import { getSettings } from '../src/platform/settings.js'
 import {
   getLastSuccessfulRun,
+  getLastCompletedRun,
   reconcileOrphanedRuns,
   PipelineRunInProgressError,
   SpendCeilingExceededError,
   type RunType,
 } from '../src/pipeline/pipelineRuns.js'
-import { getAlertState, setAlertState } from '../src/platform/alertState.js'
 import { wibDate, wibTime, isWibMonday } from '../src/platform/timezone.js'
 import { DATA_SOURCE } from '../src/platform/config.js'
 import { ensureFutureOverrides } from '../src/data/demo/timeMachine.js'
 
-// Matches the frontend's STALE_HOURS exactly (useSystemHealth.ts) so the
-// email alert and the visible System Health "stale" status trip at the
-// same point. Reused for the backup dead-man's-switch too — backups run
-// once daily, so the same ~30h buffer comfortably covers one missed day
-// without being so tight it false-positives on ordinary timing jitter.
-const STALE_HOURS = 30
-
-/** Fires exactly one email per outage: trips once when a pipeline goes
- * stale, stays silent on every subsequent tick while still stale (so a
- * 15-minute cron doesn't spam), and re-arms once a successful run lands.
- * See platform/alertState.ts for the dedupe flag this reads/writes. */
-async function checkDeadMansSwitch(runType: RunType, alertKey: string): Promise<void> {
-  const last = await getLastSuccessfulRun(runType)
-  const hoursSince = last?.finished_at ? (Date.now() - new Date(last.finished_at).getTime()) / 3_600_000 : Infinity
-
-  if (hoursSince > STALE_HOURS) {
-    const alreadyAlerted = await getAlertState(alertKey)
-    if (alreadyAlerted !== 'true') {
-      const { subject, body } = formatDeadMansSwitchAlert(runType, STALE_HOURS, last?.finished_at ?? null)
-      await deliver(runType, subject, body)
-      await setAlertState(alertKey, 'true')
-    }
-    // still stale, already alerted this outage — stay silent, don't spam
-  } else {
-    await setAlertState(alertKey, 'false') // re-arm for the next outage
-  }
-}
-
 /** trackRun tags the errors it re-throws with the run they belong to. */
 function failedRunId(err: unknown): number | undefined {
   return err && typeof err === 'object' && 'pipelineRunId' in err ? (err as { pipelineRunId: number }).pipelineRunId : undefined
-}
-
-/** Sends the spend-cap-skipped email at most once per calendar month per
- * runType — without this, every 15-minute tick after daily_run_time hits
- * the same cap again (a cap hit never counts as "already ran today", so
- * alreadyRanToday() stays false and the cron keeps retrying), which would
- * be 70-90 emails a day until the cap is raised or the month rolls over.
- * Unlike checkDeadMansSwitch's true/false dedupe flag, this stores the
- * month itself (todayWib.slice(0, 7), e.g. "2026-09") — re-arming for next
- * month happens for free, since next month's string just won't match. */
-async function alertSpendCeilingOnce(runType: 'daily' | 'weekly', err: SpendCeilingExceededError, todayWib: string): Promise<void> {
-  const alertKey = `spend_cap_alert_sent_${runType}`
-  const thisMonth = todayWib.slice(0, 7)
-  console.log(`${runType[0].toUpperCase()}${runType.slice(1)} run skipped — ${err.message}`)
-  if ((await getAlertState(alertKey)) === thisMonth) return // already emailed this month
-  const { subject, body } = formatSpendCeilingAlert(runType, err.capUsd, err.monthToDateUsd)
-  await deliver(runType, subject, body)
-  await setAlertState(alertKey, thisMonth)
 }
 
 async function alreadyRanToday(runType: RunType, todayWib: string): Promise<boolean> {
@@ -121,6 +77,16 @@ async function main() {
 
   const settings = await getSettings()
 
+  // The two blocks are independent: a report failure must not stop Kai's
+  // run, and Kai's must not stop the reports. The reports go first, so a
+  // daily report that succeeds this tick is already fresh data for Kai.
+  await runBothBlocks(
+    () => reportsBlock(settings),
+    () => keywordBlock(settings)
+  )
+}
+
+async function reportsBlock(settings: Awaited<ReturnType<typeof getSettings>>): Promise<void> {
   if (settings.auto_reports_enabled === 'false') {
     console.log('Automatic reports are disabled — skipping')
     return
@@ -129,8 +95,8 @@ async function main() {
   // Deliberately after the auto_reports_enabled early-return above — a
   // deliberately-paused pipeline is expected staleness, not an outage to
   // alert on.
-  await checkDeadMansSwitch('daily', 'dead_man_switch_alert_sent')
-  await checkDeadMansSwitch('backup', 'backup_stale_alert_sent')
+  await checkDeadMansSwitch('daily', 'dead_man_switch_alert_sent', () => getLastSuccessfulRun('daily'))
+  await checkDeadMansSwitch('backup', 'backup_stale_alert_sent', () => getLastSuccessfulRun('backup'))
 
   const now = wibTime()
   const today = wibDate()
@@ -221,6 +187,34 @@ async function main() {
   } else {
     console.log('No recurring critic patterns this week — nothing to suggest.')
   }
+}
+
+/** Contract 3.5 — Kai's automatic daily run (src/pipeline/keywordSchedule.ts
+ * has the rules). A completed run counts as done for the day: 'success', or
+ * 'partial' (suggestions stored, Kai unreachable), or an unreachable model
+ * would be retried on every 15-minute tick. */
+async function keywordBlock(settings: Awaited<ReturnType<typeof getSettings>>): Promise<void> {
+  const today = wibDate()
+  await runKeywordBlock({
+    now: wibTime(),
+    today,
+    settings,
+    ranToday: async () => {
+      const last = await getLastCompletedRun('keyword_optimizer')
+      return Boolean(last?.finished_at) && wibDate(new Date(last!.finished_at)) === today
+    },
+    dailySucceededToday: () => alreadyRanToday('daily', today),
+    checkDeadMansSwitch: () =>
+      checkDeadMansSwitch('keyword_optimizer', 'keyword_optimizer_stale_alert_sent', () => getLastCompletedRun('keyword_optimizer')),
+    run: (opts) => runKeywordOptimizer(opts),
+    alertSpendCeilingOnce: (err, day) => alertSpendCeilingOnce('keyword_optimizer', err, day),
+    alertFailure: async (err) => {
+      const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
+      const { subject, body } = formatFailureAlert('keyword_optimizer', message)
+      await deliver('keyword_optimizer', subject, body, failedRunId(err))
+    },
+    log: (line) => console.log(line),
+  })
 }
 
 main()

@@ -1,12 +1,12 @@
-# Deploying the backend (VPS)
+# Deploying the API (VPS)
 
-Written ahead of actually provisioning the VPS — see PROJECT.md → Deployment.
-Run through this once the Sumopod VPS exists.
+The Sumopod VPS is provisioned and live at `gads.my.id` — see docs/PROJECT.md → Deployment.
+Steps below still apply for the initial setup and for redeploys.
 
 ## 1. Get the code on the box
 ```bash
-git clone <repo-url> google-ads
-cd google-ads/backend-ts
+git clone https://github.com/NabilRobert/pitcrew-ai-backend.git
+cd pitcrew-ai-backend
 ```
 
 ## 2. Node environment
@@ -16,11 +16,10 @@ npm run build   # compiles src/ + scripts/ to dist/ — the deploy scripts run t
 ```
 
 ## 3. Environment variables
-Copy `.env.example` (repo root) to `.env` (repo root, one level up from
-`backend-ts/`) and fill in every value — same credentials already in use
-locally (Sumopod DB connection string, Sumopod AI key, Google Ads
-credentials, email provider). `.env` is gitignored; it has to be created
-fresh on the VPS, not committed.
+Copy `.env.example` to `.env` (both at repo root) and fill in every value
+— same credentials already in use locally (Sumopod DB connection string,
+Sumopod AI key, Google Ads credentials, email provider). `.env` is
+gitignored; it has to be created fresh on the VPS, not committed.
 
 ## 4. Verify before scheduling anything
 ```bash
@@ -71,8 +70,25 @@ A manual run exercises the exact same script cron will call — if it
 works here, it'll work at 6am.
 
 ## 9. CORS
-Once the frontend is deployed to Vercel, set `FRONTEND_ORIGIN` in `.env`
-to the real Vercel URL (currently defaults to `http://localhost:5173`).
+The frontend is a separate repo/deployment (Vercel). Set `FRONTEND_ORIGIN`
+in `.env` to its real URL (currently defaults to `http://localhost:5173`)
+so the API's CORS check accepts requests from it.
+
+## 10. Domain
+Production base URL is **`https://gads.my.id`**, live. The API itself just
+listens on `:8000` (`PORT` env var) — a reverse proxy (nginx/Caddy) with TLS
+termination sits in front, forwarding `gads.my.id` to `localhost:8000`.
+
+## 11. Run the API server
+The scheduled scripts (`run_daily.sh`) are cron-driven, but the REST API
+(`src/api/main.ts`) is a long-running process — keep it up with a process
+manager so it survives reboots and crashes:
+```bash
+npm install -g pm2
+pm2 start dist/src/api/main.js --name pitcrew-api
+pm2 save
+pm2 startup   # follow the printed instructions to survive reboots
+```
 
 ## Redeploying after code changes
 ```bash
@@ -85,6 +101,6 @@ process); only matters if a long-running process (e.g. the API server)
 is also kept up via something like pm2/systemd.
 
 ## Logs
-`backend-ts/logs/run_daily.log` — append-only, not rotated yet. Worth
-adding `logrotate` once this has been running a while and the file's
-grown large; not needed on day one.
+`logs/run_daily.log` — append-only, not rotated yet. Worth adding
+`logrotate` once this has been running a while and the file's grown
+large; not needed on day one.

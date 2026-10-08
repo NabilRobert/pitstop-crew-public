@@ -1,4 +1,4 @@
-// Daily DB backup — see PROJECT.md → Automation ("Database backup").
+// Daily DB backup — see docs/PROJECT.md → Automation ("Database backup").
 // Sumopod/Sumobase's own backup policy for the hosted Postgres instance
 // isn't documented anywhere findable, so this doesn't rely on it.
 //
@@ -20,12 +20,7 @@ import { deliverReport } from '../src/platform/emailDelivery.js'
 
 const execFileAsync = promisify(execFile)
 
-// backend/backups/ — matches .gitignore's "backend/backups/" entry and
-// where this has actually been writing on the VPS. (REPO_ROOT resolves to
-// the monorepo root via schema.sql, not backend/ itself — this used to
-// read 'backend-ts' here, a stale segment from before that folder was
-// renamed to 'backend', which never matched anything real.)
-const BACKUP_DIR = join(REPO_ROOT, 'backend', 'backups')
+const BACKUP_DIR = join(REPO_ROOT, 'backups')
 const RETENTION_DAYS = 14
 
 async function main() {

@@ -1,4 +1,4 @@
-// One-time script — see PROJECT.md → Auth / API Setup Progress, step 4.
+// One-time script — see docs/PROJECT.md → Auth / API Setup Progress, step 4.
 //
 // Run this, complete the browser OAuth consent with the Google account
 // that has access to the Ads MCC, then paste the printed refresh token

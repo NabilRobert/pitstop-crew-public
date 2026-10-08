@@ -105,10 +105,7 @@ CREATE TABLE IF NOT EXISTS weekly_feedback_suggestions (
 
 -- On-demand Q&A against Anna, Rico, or Sammy, tied to the report being asked
 -- about. Backs the Ask feature (agents/analysis.md, agents/recommendation.md,
--- agents/summary.md) and the Time Machine + Ask Standout Feature. Organized
--- into conversation threads (ask_conversations, below) rather than one flat
--- list per output — a thread's prior Q&A gets folded back into the prompt
--- so a follow-up actually has an antecedent.
+-- agents/summary.md) and the Time Machine + Ask Standout Feature.
 CREATE TABLE IF NOT EXISTS ask_log (
     id          SERIAL PRIMARY KEY,
     output_id   INTEGER NOT NULL REFERENCES ai_outputs(id),
@@ -220,28 +217,19 @@ CREATE TABLE IF NOT EXISTS demo_state_overrides (
 -- checks (MAX(finished_at) WHERE status='success'), and cost guardrails.
 CREATE TABLE IF NOT EXISTS pipeline_runs (
     id             SERIAL PRIMARY KEY,
-    run_type       TEXT NOT NULL CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback', 'backup')),
+    run_type       TEXT NOT NULL CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback')),
     started_at     TIMESTAMPTZ NOT NULL,
     finished_at    TIMESTAMPTZ,
-    status         TEXT NOT NULL DEFAULT 'success' CHECK (status IN ('running', 'success', 'failure', 'partial')),
+    status         TEXT NOT NULL DEFAULT 'success' CHECK (status IN ('success', 'failure', 'partial')),
     cost_usd_micros BIGINT,               -- estimated OpenAI cost this run, USD in micros
     error_message  TEXT,                  -- NULL unless status != 'success'
     created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Enforces at most one in-flight run at a time across BOTH processes that
--- can start one (the API server and the cron script, scripts/runDaily.ts)
--- — startRun() relies on this unique_violation (23505) to throw
--- PipelineRunInProgressError instead of racing two runs. See
--- pipelineRuns.ts's reconcileOrphanedRuns() for what clears a row stuck
--- here by a crash.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_runs_one_running ON pipeline_runs (status) WHERE (status = 'running');
-
--- Widen status to include 'running' — startRun() now inserts that as the
--- real in-flight state (see idx_pipeline_runs_one_running above), not
--- 'success' as a placeholder like before. No-op against a fresh DB (the
--- CREATE TABLE above already includes it); matters only for an existing DB
--- whose constraint predates this change.
+-- Widen status to include the in-flight state — closes the pre-existing bug
+-- where a fresh run was inserted as status='success' before any work
+-- happened. Constraint name matches Postgres's own default name for the
+-- original unnamed inline CHECK, so DROP/ADD is safe to re-run.
 ALTER TABLE pipeline_runs DROP CONSTRAINT IF EXISTS pipeline_runs_status_check;
 ALTER TABLE pipeline_runs ADD CONSTRAINT pipeline_runs_status_check
     CHECK (status IN ('running', 'success', 'failure', 'partial'));
@@ -249,12 +237,18 @@ ALTER TABLE pipeline_runs ADD CONSTRAINT pipeline_runs_status_check
 -- Widen run_type to include 'backup' — scripts/backupDb.ts is now tracked
 -- in this table too (trackRun('backup', ...)), not just daily/weekly/
 -- weekly_feedback, so a silent backup failure isn't invisible the way it
--- was before. A no-op against a fresh DB (the CREATE TABLE above already
--- includes 'backup'); this only matters for an existing DB whose
--- constraint predates this change.
+-- was before. Same DROP/ADD-is-safe-to-re-run pattern as
+-- pipeline_runs_status_check above.
 ALTER TABLE pipeline_runs DROP CONSTRAINT IF EXISTS pipeline_runs_run_type_check;
 ALTER TABLE pipeline_runs ADD CONSTRAINT pipeline_runs_run_type_check
     CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback', 'backup'));
+
+-- At most one row can be 'running' at a time, enforced by Postgres itself so
+-- it holds across processes — closes the race between a manual
+-- POST /pipeline/run and the cron script (scripts/runDaily.ts), both of
+-- which hit this same DB.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_runs_one_running
+    ON pipeline_runs (status) WHERE status = 'running';
 
 -- Which pipeline_runs row produced a given ai_outputs row — lets a report
 -- be looked up by the exact generation it came from instead of just
@@ -285,6 +279,7 @@ INSERT INTO app_settings (key, value) VALUES ('weekly_run_time', '06:00') ON CON
 INSERT INTO app_settings (key, value) VALUES ('grade_forces_revision', 'false') ON CONFLICT (key) DO NOTHING;
 INSERT INTO app_settings (key, value) VALUES ('report_language', 'en') ON CONFLICT (key) DO NOTHING;
 INSERT INTO app_settings (key, value) VALUES ('auto_reports_enabled', 'true') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('monthly_cost_cap_usd', '20') ON CONFLICT (key) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_campaign_performance_date ON campaign_performance(date);
 CREATE INDEX IF NOT EXISTS idx_segment_performance_date ON segment_performance(date);
@@ -561,7 +556,7 @@ CREATE INDEX IF NOT EXISTS idx_change_events_changed_at ON change_events(changed
 -- partial total. See src/platform/llmUsage.ts.
 ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS llm_usage JSONB;
 
--- Run Inspector (backend/src/platform/trace.ts). One row per step of a pipeline run:
+-- Run Inspector (src/platform/trace.ts). One row per step of a pipeline run:
 -- the run itself, data-context builds, agents, LLM calls, critic reviews,
 -- approval decisions, revisions, the email send, and errors — nested via
 -- parent_id (NULL = the run's root event) and ordered by seq (assigned in start
@@ -601,9 +596,230 @@ CREATE TABLE IF NOT EXISTS trace_payloads (
 );
 CREATE INDEX IF NOT EXISTS idx_trace_payloads_event ON trace_payloads(event_id);
 
--- Monthly spend ceiling (backend/src/pipeline/pipelineRuns.ts's startRun,
--- Settings page). Empty value = disabled. Default is a generous margin
--- (see backend/src/platform/settings.ts), not a tight limit — protects
--- against a scheduling bug or a stuck loop triggering runs back-to-back,
--- which nothing else in code prevents (only the per-run max-2-revisions cap).
-INSERT INTO app_settings (key, value) VALUES ('monthly_cost_cap_usd', '20') ON CONFLICT (key) DO NOTHING;
+-- v3 Stage 1 — keyword optimizer. See docs/overhaul-v3*.md (section 6).
+-- Additive only: new nullable/defaulted columns on existing tables, new
+-- tables for negatives, per-keyword conversions by action, the intent and
+-- vehicle-parse caches, the demo inventory, and the engine's suggestions.
+-- Every API-mirroring table keeps a nullable google_*_id; money stays in
+-- micros except the inventory's *_idr columns (whole rupiah, as the
+-- dealer's own system stores them).
+
+-- NULL = automated bidding / unknown, never 0.
+ALTER TABLE keywords ADD COLUMN IF NOT EXISTS cpc_bid_micros BIGINT;
+-- Keyword-level impression share is NULL (not 0) until a keyword has served,
+-- so the UI can say "no data yet". search_budget_lost_impression_share is
+-- deliberately absent: Google documents it as campaign-level only.
+ALTER TABLE keyword_performance ADD COLUMN IF NOT EXISTS search_impression_share REAL;
+ALTER TABLE keyword_performance ADD COLUMN IF NOT EXISTS search_rank_lost_impression_share REAL;
+ALTER TABLE keyword_performance ADD COLUMN IF NOT EXISTS conversions_value_micros BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE search_term_performance ADD COLUMN IF NOT EXISTS conversions_value_micros BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE conversion_actions ADD COLUMN IF NOT EXISTS default_value_micros BIGINT;
+ALTER TABLE conversion_actions ADD COLUMN IF NOT EXISTS always_use_default_value BOOLEAN;
+-- Our own label, not a Google field.
+ALTER TABLE conversion_actions ADD COLUMN IF NOT EXISTS value_tier TEXT
+    CHECK (value_tier IN ('micro', 'lead', 'visit', 'sale'));
+
+-- Mirrors campaign_criterion / ad_group_criterion / shared_criterion with
+-- negative = TRUE.
+CREATE TABLE IF NOT EXISTS negative_keywords (
+    id                   SERIAL PRIMARY KEY,
+    scope                TEXT NOT NULL CHECK (scope IN ('campaign', 'ad_group', 'shared_set')),
+    campaign_id          INTEGER REFERENCES campaigns(id),
+    ad_group_id          INTEGER REFERENCES ad_groups(id),
+    text                 TEXT NOT NULL,
+    match_type           TEXT NOT NULL CHECK (match_type IN ('exact', 'phrase', 'broad')),
+    source               TEXT NOT NULL CHECK (source IN ('existing', 'applied_suggestion')),
+    google_criterion_id  TEXT,
+    data_source          TEXT NOT NULL CHECK (data_source IN ('live', 'demo')),
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Per-keyword, per-day, per-conversion-action. Non-zero rows only. The real
+-- API returns only conversion metrics when segmented by conversion_action,
+-- which is why this is its own table rather than columns on
+-- keyword_performance.
+CREATE TABLE IF NOT EXISTS keyword_conversion_action_performance (
+    id                        SERIAL PRIMARY KEY,
+    keyword_id                INTEGER NOT NULL REFERENCES keywords(id),
+    conversion_action_id      INTEGER NOT NULL REFERENCES conversion_actions(id),
+    date                      DATE NOT NULL,
+    conversions               REAL NOT NULL DEFAULT 0,
+    conversions_value_micros  BIGINT NOT NULL DEFAULT 0,
+    UNIQUE (keyword_id, conversion_action_id, date)
+);
+
+-- One row per unique normalized search-term text, shared across ad groups.
+-- classifier_version is bumped to force reclassification.
+CREATE TABLE IF NOT EXISTS search_term_intents (
+    normalized_text     TEXT PRIMARY KEY,
+    intent              TEXT NOT NULL CHECK (intent IN (
+                            'buyer', 'researcher', 'job_seeker', 'student', 'competitor', 'consumer', 'unknown'
+                        )),
+    confidence          REAL NOT NULL CHECK (confidence BETWEEN 0 AND 1),
+    method              TEXT NOT NULL CHECK (method IN ('rule', 'llm')),
+    rule_id             TEXT,                -- which rule fired, for auditing
+    classifier_version  INTEGER NOT NULL,
+    classified_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Keyword text parsed once into make / model / year (cache).
+CREATE TABLE IF NOT EXISTS keyword_vehicle_parse (
+    keyword_id      INTEGER PRIMARY KEY REFERENCES keywords(id),
+    make            TEXT,
+    model           TEXT,
+    year_from       INTEGER,
+    year_to         INTEGER,
+    method          TEXT NOT NULL CHECK (method IN ('rule', 'llm')),
+    parser_version  INTEGER NOT NULL,
+    parsed_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Demo inventory only. A real source (INVENTORY_DB_STRING) is read through
+-- the inventory adapter instead and never copied into these tables.
+CREATE TABLE IF NOT EXISTS vehicles (
+    id                    SERIAL PRIMARY KEY,
+    external_id           TEXT,
+    make                  TEXT NOT NULL,
+    model                 TEXT NOT NULL,
+    year                  INTEGER NOT NULL,
+    mileage_km            INTEGER,
+    price_idr             BIGINT NOT NULL,
+    acquisition_cost_idr  BIGINT,
+    status                TEXT NOT NULL CHECK (status IN ('available', 'reserved', 'sold')),
+    listed_on             DATE NOT NULL,
+    sold_on               DATE
+);
+
+CREATE TABLE IF NOT EXISTS vehicle_events (
+    id             SERIAL PRIMARY KEY,
+    vehicle_id     INTEGER NOT NULL REFERENCES vehicles(id),
+    event_type     TEXT NOT NULL CHECK (event_type IN ('listed', 'price_change', 'reserved', 'sold')),
+    event_date     DATE NOT NULL,
+    old_price_idr  BIGINT,
+    new_price_idr  BIGINT
+);
+
+-- The deterministic engine's output. payload/evidence are computed in code;
+-- rank/explanation are the only fields the LLM step sets. fingerprint is a
+-- hash of (type + target), used to dedupe across weekly runs and to keep a
+-- dismissed idea from coming back every week.
+CREATE TABLE IF NOT EXISTS keyword_suggestions (
+    id                     SERIAL PRIMARY KEY,
+    pipeline_run_id        INTEGER NOT NULL REFERENCES pipeline_runs(id),
+    suggestion_type        TEXT NOT NULL CHECK (suggestion_type IN (
+                               'negative_keyword', 'promote_search_term', 'change_match_type', 'pause_keyword',
+                               'spin_out_campaign', 'new_keyword', 'raise_bid_candidate'
+                           )),
+    campaign_id            INTEGER REFERENCES campaigns(id),
+    ad_group_id            INTEGER REFERENCES ad_groups(id),
+    keyword_id             INTEGER REFERENCES keywords(id),
+    search_term_id         INTEGER REFERENCES search_terms(id),
+    payload                JSONB NOT NULL,
+    evidence               JSONB NOT NULL,
+    basis                  TEXT NOT NULL CHECK (basis IN ('evidence', 'prior')),
+    confidence             TEXT NOT NULL CHECK (confidence IN ('high', 'medium', 'low')),
+    expected_impact        JSONB,
+    rank                   INTEGER,
+    explanation            TEXT,
+    inventory_snapshot_on  DATE,
+    fingerprint            TEXT NOT NULL,
+    status                 TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'applied', 'dismissed', 'superseded')),
+    status_changed_at      TIMESTAMPTZ,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_keyword_suggestions_status ON keyword_suggestions(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_keyword_suggestions_fingerprint ON keyword_suggestions(fingerprint);
+
+-- Keyword optimizer settings — see src/platform/settings.ts for validators.
+INSERT INTO app_settings (key, value) VALUES ('keyword_optimizer_enabled', 'true') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('keyword_test_budget_share', '0.2') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('keyword_min_confidence_p', '0.05') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('inventory_allowed_spend_share', '0.2') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('inventory_lead_to_sale_rate', '0.02') ON CONFLICT (key) DO NOTHING;
+
+-- v3 step 7 — the keyword optimizer's weekly run and Kai's ranked,
+-- explained output (graded by Ciri through runWithCritic). Same
+-- DROP/ADD-is-safe-to-re-run pattern as the constraints above;
+-- ai_outputs_agent_type_check is Postgres's default name for the original
+-- inline CHECK.
+ALTER TABLE pipeline_runs DROP CONSTRAINT IF EXISTS pipeline_runs_run_type_check;
+ALTER TABLE pipeline_runs ADD CONSTRAINT pipeline_runs_run_type_check
+    CHECK (run_type IN ('daily', 'weekly', 'weekly_feedback', 'backup', 'keyword_optimizer'));
+ALTER TABLE ai_outputs DROP CONSTRAINT IF EXISTS ai_outputs_agent_type_check;
+ALTER TABLE ai_outputs ADD CONSTRAINT ai_outputs_agent_type_check
+    CHECK (agent_type IN ('analysis', 'recommendation', 'summary', 'critic', 'keyword_optimizer'));
+
+-- v3 contract 3.3 — campaign proposals: the new_campaign suggestion type,
+-- the 'planned' status (new_campaign only, enforced in the API), and the
+-- real campaign a planned proposal turned into once it shows up in the
+-- synced data (same name). Postgres's default names for the inline CHECKs.
+ALTER TABLE keyword_suggestions DROP CONSTRAINT IF EXISTS keyword_suggestions_suggestion_type_check;
+ALTER TABLE keyword_suggestions ADD CONSTRAINT keyword_suggestions_suggestion_type_check
+    CHECK (suggestion_type IN (
+        'negative_keyword', 'promote_search_term', 'change_match_type', 'pause_keyword',
+        'spin_out_campaign', 'new_keyword', 'raise_bid_candidate', 'new_campaign'
+    ));
+ALTER TABLE keyword_suggestions DROP CONSTRAINT IF EXISTS keyword_suggestions_status_check;
+ALTER TABLE keyword_suggestions ADD CONSTRAINT keyword_suggestions_status_check
+    CHECK (status IN ('open', 'planned', 'applied', 'dismissed', 'superseded'));
+ALTER TABLE keyword_suggestions ADD COLUMN IF NOT EXISTS linked_campaign_id INTEGER REFERENCES campaigns(id);
+
+-- Contract 3.3 — bounds on a proposed campaign's daily budget (whole rupiah).
+INSERT INTO app_settings (key, value) VALUES ('campaign_daily_budget_floor_idr', '20000') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('campaign_daily_budget_ceiling_idr', '100000') ON CONFLICT (key) DO NOTHING;
+
+-- Contract 3.5 — Kai's automatic daily run: its time (HH:MM, WIB), next to
+-- the existing keyword_optimizer_enabled switch, which now turns that run
+-- on and off independently of auto_reports_enabled.
+INSERT INTO app_settings (key, value) VALUES ('keyword_optimizer_run_time', '06:00') ON CONFLICT (key) DO NOTHING;
+
+-- Contract 3.6 — the dealer facts ad copy may use, the claims it may make,
+-- and the launch kill switch (OFF by default) and writer mode ('simulated'
+-- is the only writer). Validators in src/platform/settings.ts.
+INSERT INTO app_settings (key, value) VALUES ('dealer_name', 'Pitstop Used Cars') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('dealer_city', 'Tangerang') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('dealer_area', 'Gading Serpong') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('dealer_whatsapp', '0812-5550-0123') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('dealer_landing_url', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('ads_claim_installments', 'true') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('ads_claim_trade_in', 'true') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('ads_claim_test_drive', 'true') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('ads_claim_inspection', 'true') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('ads_inspection_wording', 'Unit sudah melalui pemeriksaan') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('ads_write_enabled', 'false') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('ads_write_mode', 'simulated') ON CONFLICT (key) DO NOTHING;
+
+-- Contract 3.6 — the new_ad suggestion type ('planned' is valid for it, as
+-- for new_campaign; enforced in the API). Same DROP/ADD as 3.3.
+ALTER TABLE keyword_suggestions DROP CONSTRAINT IF EXISTS keyword_suggestions_suggestion_type_check;
+ALTER TABLE keyword_suggestions ADD CONSTRAINT keyword_suggestions_suggestion_type_check
+    CHECK (suggestion_type IN (
+        'negative_keyword', 'promote_search_term', 'change_match_type', 'pause_keyword',
+        'spin_out_campaign', 'new_keyword', 'raise_bid_candidate', 'new_campaign', 'new_ad'
+    ));
+
+-- Contract 3.6 — the simulated launch (docs/overhaul-v3-backend.md 11.9).
+-- A campaign a simulated launch created: in this app's tables only, never
+-- sent to Google Ads, no performance rows.
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS simulated BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- One row per POST /launches call, refusals and failures included (the
+-- audit log). suggestion_id has no foreign key on purpose: a call naming an
+-- unknown suggestion (404) is audited with the id it asked for.
+CREATE TABLE IF NOT EXISTS launches (
+    id             SERIAL PRIMARY KEY,
+    suggestion_id  INTEGER,
+    campaign_name  TEXT,
+    mode           TEXT NOT NULL,
+    validate_only  BOOLEAN NOT NULL,
+    status         TEXT NOT NULL CHECK (status IN ('validated', 'created', 'rejected', 'failed')),
+    http_status    INTEGER NOT NULL,
+    problems       JSONB NOT NULL DEFAULT '[]',
+    plan           JSONB,
+    created        JSONB,
+    requested_by   TEXT NOT NULL CHECK (requested_by IN ('owner', 'demo')),
+    requested_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_launches_suggestion ON launches(suggestion_id);
+-- A proposal is launched at most once, even under concurrent calls.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_launches_one_created ON launches(suggestion_id) WHERE status = 'created';
