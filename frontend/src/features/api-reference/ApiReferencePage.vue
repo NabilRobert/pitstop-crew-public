@@ -3,11 +3,13 @@ import { useI18n } from 'vue-i18n'
 import { BASE_URL } from '../../shared/api/api'
 import {
   SECTIONS,
+  AUTH_ENDPOINTS,
   CAMPAIGNS_ENDPOINTS,
   REPORTS_ENDPOINTS,
   OUTPUTS_ENDPOINTS,
   PIPELINE_ENDPOINTS,
   KEYWORD_OPTIMIZER_ENDPOINTS,
+  ASSISTANT_ENDPOINTS,
   SETTINGS_ENDPOINTS,
   LEARNING_ENDPOINTS,
   TIME_MACHINE_ENDPOINTS,
@@ -63,6 +65,26 @@ const { t } = useI18n()
 
 curl {{ BASE_URL }}/config
 # {"data_source":"demo"|"live"} — drives the "Demo Mode" badge</code></pre>
+      </section>
+
+      <section id="auth">
+        <h2>Auth &amp; status</h2>
+        <table class="w-full min-w-max border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="py-2 pr-3 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Method &amp; path</th>
+              <th class="py-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="e in AUTH_ENDPOINTS" :key="e.method + e.path" class="border-b border-border/60 last:border-0">
+              <td class="py-2 pr-3 align-top font-mono text-xs">
+                <span :class="METHOD_COLOR[e.method]" class="font-bold">{{ e.method }}</span> {{ e.path }}
+              </td>
+              <td class="py-2 align-top text-ink-soft">{{ e.desc }}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
       <section id="campaigns">
@@ -215,6 +237,26 @@ const poll = setInterval(async () => {
           <code>intent</code> is <code>null</code> for a term that has not been classified. In every response,
           <code>null</code> means "no data", never zero.
         </p>
+      </section>
+
+      <section id="assistant">
+        <h2>Aska &amp; voice</h2>
+        <table class="w-full min-w-max border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="py-2 pr-3 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Method &amp; path</th>
+              <th class="py-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="e in ASSISTANT_ENDPOINTS" :key="e.method + e.path" class="border-b border-border/60 last:border-0">
+              <td class="py-2 pr-3 align-top font-mono text-xs">
+                <span :class="METHOD_COLOR[e.method]" class="font-bold">{{ e.method }}</span> {{ e.path }}
+              </td>
+              <td class="py-2 align-top text-ink-soft">{{ e.desc }}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
       <section id="settings">
