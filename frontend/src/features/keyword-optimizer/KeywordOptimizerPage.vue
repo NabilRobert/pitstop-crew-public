@@ -8,6 +8,7 @@ import NegativesExportPanel from './NegativesExportPanel.vue'
 import InventoryPanel from './InventoryPanel.vue'
 import KeywordBoardPanel from './KeywordBoardPanel.vue'
 import ProposalsSection from './ProposalsSection.vue'
+import LaunchHost from './LaunchHost.vue'
 import { SUGGESTION_TYPES } from './suggestionView'
 import { USE_FIXTURES } from './keywordOptimizerApi'
 import { useKeywordOptimizer, type StatusFilter } from './useKeywordOptimizer'
@@ -17,7 +18,7 @@ import { useKeywordSchedule } from './useKeywordSchedule'
 const { t } = useI18n()
 const {
   data, loading, error, backendMissing, items, openCount, appliedCount, dismissedCount, statusFilter, typeFilter,
-  typeCounts, visibleItems, truncated, busyIds, actionError, runMessage, runStarting, setStatus, runNow,
+  typeCounts, visibleItems, truncated, busyIds, actionError, runMessage, runStarting, setStatus, runNow, reload,
 } = useKeywordOptimizer()
 const board = useBoardData()
 const schedule = useKeywordSchedule()
@@ -246,5 +247,6 @@ function runStatusClass(status: string): string {
       <InventoryPanel collapse-key="pitstop-inventory-optimizer" link />
     </template>
 
+    <LaunchHost :suggestions="items" :can-edit="canEdit" @done="reload" />
   </main>
 </template>

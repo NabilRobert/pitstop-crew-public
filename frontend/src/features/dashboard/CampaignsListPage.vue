@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CampaignCard from './CampaignCard.vue'
 import ProposalsSection from '../keyword-optimizer/ProposalsSection.vue'
+import LaunchHost from '../keyword-optimizer/LaunchHost.vue'
 import { keywordOptimizerApi } from '../keyword-optimizer/keywordOptimizerApi'
 import { isDemo } from '../../shared/composables/auth'
 import PeriodSelector from './PeriodSelector.vue'
@@ -85,5 +86,6 @@ watch(loading, (isLoading) => {
     </div>
     </template>
 
+    <LaunchHost :suggestions="suggestions" :can-edit="canEdit" @done="reload" />
   </main>
 </template>

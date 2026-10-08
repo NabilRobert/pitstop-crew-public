@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import type { NewCampaignPayload, Suggestion } from '../../shared/api/types'
 import { formatMicrosAsIDR } from '../../shared/utils/format'
 import { adsOfProposal } from './boardModel'
+import { openLaunch } from './useLaunchPanel'
 
 // One lane of whole-campaign proposals (contract 3.3). 'proposed' = the AI suggested it and it is waiting
 // for a decision; 'planned' = the owner approved it, but it is NOT in Google Ads yet. Cards are deliberately
@@ -99,8 +100,11 @@ const keywordCount = (p: NewCampaignPayload) => p.ad_groups.reduce((n, g) => n +
               {{ t('keywordOptimizer.card.dismiss') }}
             </button>
           </template>
-          <template v-else-if="canEdit && mode === 'planned'">
-            <button type="button" class="btn btn--solid" :disabled="busyIds.has(s.id)" @click="emit('status', s.id, 'applied')">
+          <button v-if="mode === 'planned'" type="button" class="btn btn--solid" @click="openLaunch(s.id)">
+            {{ t('keywordOptimizer.launch.reviewCreate') }}
+          </button>
+          <template v-if="canEdit && mode === 'planned'">
+            <button type="button" class="btn btn--ghost" :disabled="busyIds.has(s.id)" @click="emit('status', s.id, 'applied')">
               {{ t('keywordOptimizer.proposal.iCreatedIt') }}
             </button>
           </template>

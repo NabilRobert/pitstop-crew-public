@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import type { Suggestion } from '../../shared/api/types'
 import { formatDate, formatMicrosAsIDR } from '../../shared/utils/format'
 import AdPreview from './AdPreview.vue'
+import { openLaunch } from './useLaunchPanel'
 import CampaignProposal from './CampaignProposal.vue'
 import {
   suggestionTitle,
@@ -181,9 +182,17 @@ const plannable = computed(() => !!proposal.value || !!ad.value)
       <template v-else-if="plannable && isPlanned">
         <p v-if="adWithCampaign" class="w-full text-sm text-ink-soft">{{ t('keywordOptimizer.ad.createdWithCampaign') }}</p>
         <button
-          v-else
+          v-if="!adWithCampaign"
           type="button"
-          class="rounded-md bg-rosso px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco hover:bg-rosso-dark disabled:cursor-not-allowed disabled:opacity-50"
+          class="rounded-md bg-rosso px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco hover:bg-rosso-dark"
+          @click="openLaunch(suggestion.id)"
+        >
+          {{ t('keywordOptimizer.launch.reviewCreate') }}
+        </button>
+        <button
+          v-if="!adWithCampaign"
+          type="button"
+          class="rounded-md border border-border-strong px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
           :disabled="busy"
           @click="emit('status', 'applied')"
         >

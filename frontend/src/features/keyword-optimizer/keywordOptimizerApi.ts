@@ -6,6 +6,9 @@
 
 import { api } from '../../shared/api/api'
 import type {
+  Launch,
+  LaunchListItem,
+  LaunchRequest,
   KeywordPerformanceRow,
   InventorySummary,
   KeywordSummaryResponse,
@@ -20,6 +23,7 @@ import {
   FIXTURE_KEYWORD_SUMMARY,
   FIXTURE_SUGGESTIONS,
 } from './fixtures'
+import { adsToLaunchWith, confirmNameOf, launchKind, plannedObjects } from './launchModel'
 
 export const USE_FIXTURES = import.meta.env.VITE_KEYWORD_OPTIMIZER_FIXTURES === 'true'
 
@@ -48,6 +52,12 @@ function filterFixtures(query: SuggestionsQuery): SuggestionsResponse {
     inventory: { source: 'demo', snapshot_on: FIXTURE_INVENTORY.snapshot_on },
   }
 }
+
+// Fixture mode launches (simulated, like the real thing for now): the same rules the backend enforces, in memory.
+const fixtureLaunches: LaunchListItem[] = []
+let nextLaunchId = 1
+/** In fixture mode creation is allowed, so the whole flow can be tried; the real switch is the `ads_write_enabled` setting. */
+export const FIXTURE_WRITE_ENABLED = true
 
 export const keywordOptimizerApi = {
   suggestions: (query: SuggestionsQuery = {}): Promise<SuggestionsResponse> =>
@@ -91,6 +101,40 @@ export const keywordOptimizerApi = {
     const lines = [p.name, ...p.ad_groups.flatMap((g) => [`  ${g.name}`, ...g.keywords.map((k) => `    ${k.text} (${k.match_type})`)])]
     return Promise.resolve(new Blob([lines.join('\n')], { type: 'text/plain' }))
   },
+
+  /** Contract 3.6: validate or create a SIMULATED launch. Fixture mode mirrors the server's rules and error cases. */
+  launch: async (req: LaunchRequest): Promise<Launch> => {
+    if (!USE_FIXTURES) return api.createLaunch(req)
+    const row = fixtureState.find((x) => x.id === req.suggestion_id)
+    if (!row) throw new Error(`No keyword suggestion with id ${req.suggestion_id}`)
+    if (!FIXTURE_WRITE_ENABLED) throw new Error('Creating campaigns is switched off in Settings')
+    if (launchKind(row) === null) throw new Error('Only a planned campaign, or a planned ad for an existing ad group, can be launched')
+    if (!(req.confirm_name === confirmNameOf(row))) throw new Error('The confirmation name does not match')
+    const objects = plannedObjects(row, row.payload.kind === 'new_campaign' ? adsToLaunchWith(fixtureState, row.id) : [])
+    const base = { created_at: new Date().toISOString(), mode: 'simulated' as const, suggestion_id: row.id, objects }
+    if (req.validate_only) {
+      const v: Launch = { ...base, id: null, status: 'validated', campaign: null, messages: ['Simulated check passed: every object is within Google limits and nothing is a duplicate.'] }
+      fixtureLaunches.unshift({ ...v, id: nextLaunchId++, validate_only: true })
+      return v
+    }
+    const campaign = row.payload.kind === 'new_campaign' ? { id: 900 + nextLaunchId, name: row.payload.name } : null
+    // creating moves the suggestion (and the ads that went with it) to applied
+    row.status = 'applied'
+    row.status_changed_at = new Date().toISOString()
+    if (campaign) {
+      row.linked_campaign = campaign
+      for (const a of adsToLaunchWith(fixtureState, row.id)) {
+        a.status = 'applied'
+        a.status_changed_at = row.status_changed_at
+      }
+    }
+    const created: Launch = { ...base, id: nextLaunchId, status: 'created', campaign, messages: ['Created in the demo data, paused. Nothing was sent to Google Ads.'] }
+    fixtureLaunches.unshift({ ...created, id: nextLaunchId++, validate_only: false })
+    return created
+  },
+
+  launches: (limit = 20): Promise<LaunchListItem[]> =>
+    USE_FIXTURES ? Promise.resolve(fixtureLaunches.slice(0, limit)) : api.launches(limit),
 
   exportNegatives: (format: 'csv' | 'txt', status: SuggestionStatus | 'all' = 'open'): Promise<Blob> => {
     if (!USE_FIXTURES) return api.exportKeywordSuggestions(format, status)
