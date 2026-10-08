@@ -201,6 +201,7 @@ function openIdea(s: Suggestion) {
       :suggestions="drawerSuggestions"
       :can-edit="canEdit"
       :busy-ids="busyIds"
+      :campaign-link="campaignId === null"
       @close="drawer = null"
       @status="(id, status) => emit('status', id, status)"
     />

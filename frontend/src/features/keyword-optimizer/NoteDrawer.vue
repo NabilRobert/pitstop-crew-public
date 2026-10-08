@@ -15,6 +15,8 @@ const props = defineProps<{
   suggestions: Suggestion[]
   canEdit: boolean
   busyIds: Set<number>
+  /** Show a link to the keyword's own campaign page (off where that page is already the one being viewed). */
+  campaignLink?: boolean
 }>()
 const emit = defineEmits<{
   (e: 'close'): void
@@ -58,6 +60,13 @@ onBeforeUnmount(() => {
           <p v-if="note" class="drawer__where">
             {{ t(`keywordOptimizer.match.${note.matchType}`) }} · {{ note.campaign.name }} › {{ note.adGroup }}
           </p>
+          <router-link
+            v-if="note && campaignLink"
+            :to="`/campaigns/${note.campaign.id}`"
+            class="mt-2 inline-block font-mono text-[11px] font-bold uppercase tracking-wide text-link underline"
+          >
+            {{ t('keywordOptimizer.board.drawer.openCampaign') }}
+          </router-link>
         </div>
         <button ref="closeButton" type="button" class="drawer__close" @click="emit('close')">
           {{ t('keywordOptimizer.board.drawer.close') }}

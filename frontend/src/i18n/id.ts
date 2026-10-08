@@ -142,6 +142,7 @@ export default {
       },
       drawer: {
         ideaTitle: 'Ide',
+        openCampaign: 'Buka kampanye ini',
         close: 'Tutup',
         advice: 'Saran ({n})',
         noAdvice: 'Tidak ada saran untuk kata kunci ini.',

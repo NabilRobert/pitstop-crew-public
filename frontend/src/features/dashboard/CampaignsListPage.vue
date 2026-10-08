@@ -112,6 +112,7 @@ watch(loading, (isLoading) => {
       :suggestions="drawerNote.all"
       :can-edit="canEdit"
       :busy-ids="busyIds"
+      campaign-link
       @close="openKeywordId = null"
       @status="(id, status) => setStatus(id, status)"
     />

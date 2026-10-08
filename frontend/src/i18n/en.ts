@@ -142,6 +142,7 @@ export default {
       },
       drawer: {
         ideaTitle: 'Idea',
+        openCampaign: 'Open this campaign',
         close: 'Close',
         advice: 'Advice ({n})',
         noAdvice: 'Nothing is suggested for this keyword.',
