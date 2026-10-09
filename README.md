@@ -52,6 +52,12 @@ Run the backend's test suite:
 npm run test:backend
 ```
 
+Run the frontend's checks (they render the real pages and composables against a mocked API, no browser or backend needed):
+```bash
+npm run test:frontend
+```
+To look at the UI without a backend, `npm run mock-api -w frontend` serves the test data on :8000; start the frontend with `VITE_API_URL=http://localhost:8000` and set a token in localStorage (`pitstop-auth-token`).
+
 ## Project structure
 
 ```
