@@ -754,6 +754,7 @@ export default {
     tabsView: 'Tabs',
   },
   settings: {
+    demoNote: 'You are looking at the read-only demo account: every setting is visible, none can be changed.',
     title: 'Settings',
     description:
       'Controls when the daily and weekly pipeline (Anna → Rico → Sammy) fires. Times are WIB (Indonesia Western Time, UTC+7) — not UTC, not your browser\'s timezone, and not whatever timezone the server itself happens to be set to.',

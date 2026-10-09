@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { isDemo } from '../../shared/composables/auth'
 import { useSettings } from './useSettings'
 import AdsSettingsSection from './AdsSettingsSection.vue'
 import BudgetSettingsSection from './BudgetSettingsSection.vue'
@@ -57,6 +58,11 @@ const {
     <div v-if="loading" class="py-12 text-center text-ink-faint">{{ t('common.loading') }}</div>
 
     <template v-else>
+      <p v-if="isDemo" class="mb-4 rounded-md border border-flag-caution/40 bg-flag-caution-soft px-3 py-2 text-sm text-ink" role="status">
+        {{ t('settings.demoNote') }}
+      </p>
+      <!-- A disabled fieldset turns every input inside it read-only for the demo account (the server refuses its writes anyway). -->
+      <fieldset :disabled="isDemo" class="m-0 min-w-0 border-0 p-0">
       <div class="rounded-lg border border-border bg-surface p-5">
         <label class="flex items-start gap-3">
           <input v-model="autoReportsEnabled" type="checkbox" class="mt-0.5 h-4 w-4 accent-rosso" />
@@ -167,6 +173,7 @@ const {
         />
 
         <button
+          v-if="!isDemo"
           type="button"
           class="mt-5 rounded-md bg-rosso px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wide text-bianco disabled:cursor-not-allowed disabled:opacity-50"
           :disabled="saving"
@@ -176,6 +183,7 @@ const {
         </button>
         <span v-if="saved" class="ml-3 text-sm text-flag-good">{{ t('settings.saved') }}</span>
       </div>
+      </fieldset>
 
       <div v-if="problemKey" class="mt-4 rounded-lg border border-flag-critical/40 bg-flag-critical-soft px-5 py-3 text-sm text-flag-critical" role="alert">
         {{ t(problemKey) }}

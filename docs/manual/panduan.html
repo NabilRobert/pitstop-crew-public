@@ -126,7 +126,7 @@
   <table>
     <tr><th>Akun</th><th>Bisa apa</th></tr>
     <tr><td class="k">Pemilik</td><td>Semuanya: menandai saran, merencanakan dan membuat kampanye (simulasi), menjalankan proses sekarang, mengubah Pengaturan, memakai Aska, melihat halaman dokumentasi teknis.</td></tr>
-    <tr><td class="k">Demo (hanya-baca)</td><td>Melihat semua halaman data, tetapi tidak bisa mengubah apa pun. Menu Pengaturan, Aska, Mesin Waktu, Cara Kerja, Catatan Teknis, dan Referensi API tidak ditampilkan. Larangan menulis dijaga di server, bukan hanya tombol yang disembunyikan.</td></tr>
+    <tr><td class="k">Demo (hanya-baca)</td><td>Melihat semua halaman data dan juga Pengaturan (hanya untuk dibaca: isiannya terkunci dan tombol Simpan tidak ada), tetapi tidak bisa mengubah apa pun. Menu Aska, Mesin Waktu, Cara Kerja, Catatan Teknis, dan Referensi API tidak ditampilkan. Larangan menulis dijaga di server, bukan hanya tombol yang disembunyikan.</td></tr>
   </table>
 
   <h3>Di bagian atas setiap halaman</h3>
@@ -150,7 +150,7 @@
     <tr><td class="k">Laporan</td><td>Laporan harian dan mingguan hasil kerja AI (analisis, rekomendasi, ringkasan) lengkap dengan nilai dari Ciri.</td><td>Semua</td></tr>
     <tr><td class="k">Kondisi Sistem</td><td>Apakah semuanya berjalan sendiri dengan benar: proses terakhir, penanda &ldquo;sistem diam&rdquo;, log setiap proses, dan biayanya.</td><td>Semua</td></tr>
     <tr><td class="k">Pembelajaran</td><td>Bagaimana nilai Ciri berubah dari minggu ke minggu dan riwayat usulan perbaikan prompt.</td><td>Semua</td></tr>
-    <tr><td class="k">Pengaturan</td><td>Jam proses otomatis, email laporan, profil dealer, klaim iklan, anggaran harian, dan sakelar pembuatan.</td><td>Pemilik</td></tr>
+    <tr><td class="k">Pengaturan</td><td>Jam proses otomatis, email laporan, profil dealer, klaim iklan, anggaran harian, dan sakelar pembuatan. Akun Demo bisa melihatnya, tetapi tidak bisa mengubahnya.</td><td>Semua (Pemilik bisa mengubah)</td></tr>
     <tr><td class="k">Tanya Aska</td><td>Asisten umum: tanya apa saja tentang akun, lewat ketikan atau suara.</td><td>Pemilik</td></tr>
     <tr><td class="k">Cara Kerja, Catatan Teknis, Referensi API</td><td>Penjelasan teknis: agen-agennya, keputusan rancangan, dan daftar endpoint.</td><td>Pemilik</td></tr>
   </table>
@@ -349,8 +349,8 @@
 
 <!-- 8 -->
 <section>
-  <h2>8. Pengaturan (akun Pemilik)</h2>
-  <p>Ubah isian lalu tekan <strong>Simpan</strong> di bagian bawah. Bila ada isian yang tidak valid, pesan merah muncul dan tidak ada yang tersimpan.</p>
+  <h2>8. Pengaturan</h2>
+  <p>Akun Pemilik mengubah isian lalu menekan <strong>Simpan</strong> di bagian bawah; akun Demo hanya bisa melihatnya (isian terkunci, tanpa tombol Simpan). Bila ada isian yang tidak valid, pesan merah muncul dan tidak ada yang tersimpan.</p>
   <figure class="small"><img src="img/pengaturan-iklan.jpg" alt="" /><figcaption>Bagian &ldquo;Iklan: profil dealer dan apa yang boleh dikatakan iklan&rdquo;.</figcaption></figure>
   <table>
     <tr><th style="width:44mm">Pengaturan</th><th>Fungsi</th></tr>

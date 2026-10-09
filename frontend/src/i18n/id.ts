@@ -754,6 +754,7 @@ export default {
     tabsView: 'Tab',
   },
   settings: {
+    demoNote: 'Anda melihat dengan akun demo (hanya-baca): semua pengaturan bisa dilihat, tidak ada yang bisa diubah.',
     title: 'Pengaturan',
     description:
       'Mengatur kapan pipeline harian dan mingguan (Anna → Rico → Sammy) berjalan. Waktu menggunakan WIB (UTC+7) — bukan UTC, bukan zona waktu browser Anda, dan bukan zona waktu server itu sendiri.',

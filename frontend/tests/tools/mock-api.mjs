@@ -30,7 +30,7 @@ http.createServer((rq, res) => {
   if (rq.method === 'OPTIONS') return send(res, 204, {})
   let buf = ''; rq.on('data', (c) => (buf += c)); rq.on('end', () => {
     const body = buf ? JSON.parse(buf) : {}
-    if (p === '/auth/verify') return send(res, 200, { ok: true, role: 'owner' })
+    if (p === '/auth/verify') return send(res, 200, { ok: true, role: process.env.MOCK_ROLE ?? 'owner' })
     if (p === '/config') return send(res, 200, { data_source: 'demo' })
     if (p === '/campaigns') return send(res, 200, campaigns)
     if (p === '/performance') return send(res, 200, perf)
