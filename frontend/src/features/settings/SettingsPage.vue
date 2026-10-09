@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useSettings } from './useSettings'
+import AdsSettingsSection from './AdsSettingsSection.vue'
+import BudgetSettingsSection from './BudgetSettingsSection.vue'
+import KeywordSettingsSection from './KeywordSettingsSection.vue'
 
 const { t } = useI18n()
 const {
@@ -133,187 +136,35 @@ const {
           </p>
         </div>
 
-        <div v-if="adsSupported" class="mt-5 border-t border-border pt-5">
-          <h2 class="mb-1 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{{ t('settings.ads.title') }}</h2>
-          <p class="mb-3 text-xs text-ink-faint">{{ t('settings.ads.intro') }}</p>
-          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-name">{{ t('settings.ads.dealerName') }}</label>
-              <input id="ads-name" v-model="dealerName" type="text" maxlength="40" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
-            </div>
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-wa">{{ t('settings.ads.whatsapp') }}</label>
-              <input id="ads-wa" v-model="dealerWhatsapp" type="text" inputmode="tel" maxlength="20" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
-              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.ads.whatsappHelp') }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-city">{{ t('settings.ads.city') }}</label>
-              <input id="ads-city" v-model="dealerCity" type="text" maxlength="40" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
-            </div>
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-area">{{ t('settings.ads.area') }}</label>
-              <input id="ads-area" v-model="dealerArea" type="text" maxlength="40" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
-            </div>
-          </div>
-          <div class="mt-5">
-            <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-url">{{ t('settings.ads.landingUrl') }}</label>
-            <input id="ads-url" v-model="dealerLandingUrl" type="url" placeholder="https://" class="w-full max-w-md rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
-            <p class="mt-1 text-xs text-ink-faint">{{ t('settings.ads.landingUrlHelp') }}</p>
-          </div>
+        <AdsSettingsSection
+          v-if="adsSupported"
+          v-model:dealerName="dealerName"
+          v-model:dealerWhatsapp="dealerWhatsapp"
+          v-model:dealerCity="dealerCity"
+          v-model:dealerArea="dealerArea"
+          v-model:dealerLandingUrl="dealerLandingUrl"
+          v-model:claimInstallments="claimInstallments"
+          v-model:claimTradeIn="claimTradeIn"
+          v-model:claimTestDrive="claimTestDrive"
+          v-model:claimInspection="claimInspection"
+          v-model:inspectionWording="inspectionWording"
+          v-model:adsWriteEnabled="adsWriteEnabled"
+          :ads-write-mode="adsWriteMode"
+        />
 
-          <fieldset class="mt-5">
-            <legend class="mb-1 font-mono text-[10px] uppercase tracking-wide text-ink-faint">{{ t('settings.ads.claimsTitle') }}</legend>
-            <p class="mb-2 text-xs text-ink-faint">{{ t('settings.ads.claimsHelp') }}</p>
-            <label class="mb-1 flex items-center gap-2 text-sm text-ink-soft"><input v-model="claimInstallments" type="checkbox" class="h-4 w-4 accent-rosso" /> {{ t('settings.ads.claims.installments') }}</label>
-            <label class="mb-1 flex items-center gap-2 text-sm text-ink-soft"><input v-model="claimTradeIn" type="checkbox" class="h-4 w-4 accent-rosso" /> {{ t('settings.ads.claims.tradeIn') }}</label>
-            <label class="mb-1 flex items-center gap-2 text-sm text-ink-soft"><input v-model="claimTestDrive" type="checkbox" class="h-4 w-4 accent-rosso" /> {{ t('settings.ads.claims.testDrive') }}</label>
-            <label class="mb-1 flex items-center gap-2 text-sm text-ink-soft"><input v-model="claimInspection" type="checkbox" class="h-4 w-4 accent-rosso" /> {{ t('settings.ads.claims.inspection') }}</label>
-            <div v-if="claimInspection" class="mt-2 max-w-md">
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ads-wording">{{ t('settings.ads.inspectionWording') }}</label>
-              <input id="ads-wording" v-model="inspectionWording" type="text" maxlength="60" class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none" />
-            </div>
-          </fieldset>
+        <BudgetSettingsSection v-if="campaignBudgetSupported" v-model:floor="campaignBudgetFloor" v-model:ceiling="campaignBudgetCeiling" />
 
-          <div class="mt-5 border-t border-border pt-4">
-            <label class="flex items-start gap-3">
-              <input v-model="adsWriteEnabled" type="checkbox" class="mt-0.5 h-4 w-4 accent-rosso" />
-              <span class="text-sm text-ink-soft">
-                <span class="font-medium text-ink">{{ t('settings.ads.writeTitle') }}</span><br />
-                {{ t('settings.ads.writeDesc') }}
-              </span>
-            </label>
-            <p class="mt-1 text-xs text-ink-faint">{{ t('settings.ads.mode', { mode: adsWriteMode === 'simulated' ? t('settings.ads.modeSimulated') : adsWriteMode }) }}</p>
-          </div>
-        </div>
-
-        <div v-if="campaignBudgetSupported" class="mt-5 border-t border-border pt-5">
-          <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
-            {{ t('settings.campaignBudget.title') }}
-          </h2>
-          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="cb-floor">
-                {{ t('settings.campaignBudget.floor') }}
-              </label>
-              <input
-                id="cb-floor"
-                v-model="campaignBudgetFloor"
-                type="text"
-                inputmode="numeric"
-                placeholder="20000"
-                class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
-              />
-              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.campaignBudget.floorHelp') }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="cb-ceiling">
-                {{ t('settings.campaignBudget.ceiling') }}
-              </label>
-              <input
-                id="cb-ceiling"
-                v-model="campaignBudgetCeiling"
-                type="text"
-                inputmode="numeric"
-                placeholder="100000"
-                class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
-              />
-              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.campaignBudget.ceilingHelp') }}</p>
-            </div>
-          </div>
-          <p class="mt-2 text-xs text-ink-faint">{{ t('settings.campaignBudget.note') }}</p>
-        </div>
-
-        <div v-if="keywordSettingsSupported" class="mt-5 border-t border-border pt-5">
-          <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">
-            {{ t('settings.keywordOptimizer.title') }}
-          </h2>
-          <label class="flex items-start gap-3">
-            <input v-model="keywordOptimizerEnabled" type="checkbox" class="mt-0.5 h-4 w-4 accent-rosso" />
-            <span class="text-sm text-ink-soft">
-              <span class="font-medium text-ink">{{ t('settings.keywordOptimizer.enabledTitle') }}</span><br />
-              {{ t('settings.keywordOptimizer.enabledDesc') }}
-            </span>
-          </label>
-
-          <div v-if="keywordRunTimeSupported" class="mt-4 max-w-xs">
-            <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ko-run-time">
-              {{ t('settings.keywordOptimizer.runTime') }}
-            </label>
-            <input
-              id="ko-run-time"
-              v-model="keywordRunTime"
-              type="time"
-              class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent-ink focus:outline-none"
-            />
-            <p class="mt-1 text-xs text-ink-faint">{{ t('settings.keywordOptimizer.runTimeHelp') }}</p>
-          </div>
-
-          <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ko-test-share">
-                {{ t('settings.keywordOptimizer.testBudgetShare') }}
-              </label>
-              <input
-                id="ko-test-share"
-                v-model="keywordTestBudgetShare"
-                type="text"
-                inputmode="decimal"
-                placeholder="0.2"
-                class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
-              />
-              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.keywordOptimizer.testBudgetShareHelp') }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ko-min-p">
-                {{ t('settings.keywordOptimizer.minConfidenceP') }}
-              </label>
-              <input
-                id="ko-min-p"
-                v-model="keywordMinConfidenceP"
-                type="text"
-                inputmode="decimal"
-                placeholder="0.05"
-                class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
-              />
-              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.keywordOptimizer.minConfidencePHelp') }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ko-spend-share">
-                {{ t('settings.keywordOptimizer.allowedSpendShare') }}
-              </label>
-              <input
-                id="ko-spend-share"
-                v-model="inventoryAllowedSpendShare"
-                type="text"
-                inputmode="decimal"
-                placeholder="0.2"
-                class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
-              />
-              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.keywordOptimizer.allowedSpendShareHelp') }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint" for="ko-lead-rate">
-                {{ t('settings.keywordOptimizer.leadToSaleRate') }}
-              </label>
-              <input
-                id="ko-lead-rate"
-                v-model="inventoryLeadToSaleRate"
-                type="text"
-                inputmode="decimal"
-                placeholder="0.02"
-                class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent-ink focus:outline-none"
-              />
-              <p class="mt-1 text-xs text-ink-faint">{{ t('settings.keywordOptimizer.leadToSaleRateHelp') }}</p>
-            </div>
-          </div>
-
-          <!-- Status only. The inventory connection string lives in the server's .env and is never shown or edited here. -->
-          <p v-if="inventory" class="mt-4 text-sm text-ink-soft">
-            {{ t('settings.keywordOptimizer.inventoryStatus', { source: t(`keywordOptimizer.inventory.source.${inventory.source}`) }) }}
-            <span v-if="inventory.error" class="text-flag-caution"> · {{ inventory.error }}</span>
-          </p>
-          <p class="mt-1 text-xs text-ink-faint">{{ t('settings.keywordOptimizer.inventoryNote') }}</p>
-        </div>
+        <KeywordSettingsSection
+          v-if="keywordSettingsSupported"
+          v-model:enabled="keywordOptimizerEnabled"
+          v-model:runTime="keywordRunTime"
+          v-model:testBudgetShare="keywordTestBudgetShare"
+          v-model:minConfidenceP="keywordMinConfidenceP"
+          v-model:allowedSpendShare="inventoryAllowedSpendShare"
+          v-model:leadToSaleRate="inventoryLeadToSaleRate"
+          :run-time-supported="keywordRunTimeSupported"
+          :inventory="inventory"
+        />
 
         <button
           type="button"
