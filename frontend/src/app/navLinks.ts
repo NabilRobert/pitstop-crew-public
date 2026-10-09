@@ -12,3 +12,9 @@ export const navLinks = [
   { to: '/api-reference', labelKey: 'nav.apiReference' },
   { to: '/aska', labelKey: 'nav.aska' },
 ]
+
+/** Pages the read-only demo account never sees: hidden from the menu and redirected to the dashboard if typed in.
+ * The write-only and private ones (settings, Aska, the Time Machine) and the three documentation pages. */
+export const DEMO_HIDDEN_PATHS = ['/settings', '/aska', '/time-machine', '/how-it-works', '/engineering-notes', '/api-reference']
+
+export const isDemoHidden = (path: string): boolean => DEMO_HIDDEN_PATHS.some((p) => path === p || path.startsWith(`${p}/`))

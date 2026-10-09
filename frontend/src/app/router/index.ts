@@ -8,6 +8,7 @@ import ReportsListPage from '../../features/reports/ReportsListPage.vue'
 import ReportDetailPage from '../../features/reports/ReportDetailPage.vue'
 import SystemHealthPage from '../../features/system-health/SystemHealthPage.vue'
 import { isDemo } from '../../shared/composables/auth'
+import { isDemoHidden } from '../navLinks'
 import RunInspectorPage from '../../features/run-inspector/RunInspectorPage.vue'
 import TimeMachinePage from '../../features/time-machine/TimeMachinePage.vue'
 import SettingsPage from '../../features/settings/SettingsPage.vue'
@@ -41,11 +42,10 @@ const router = createRouter({
   routes,
 })
 
-// Pages that only make sense with write access (or show the owner's private
-// chats). The API refuses a demo token on all of them anyway.
-const DEMO_HIDDEN = ['/settings', '/aska', '/time-machine']
+// Pages the demo account does not get (see DEMO_HIDDEN_PATHS): the ones that need write access or show the owner's
+// private chats, and the documentation pages. The API refuses a demo token on the private ones anyway.
 router.beforeEach((to) => {
-  if (isDemo.value && DEMO_HIDDEN.some((p) => to.path.startsWith(p))) return '/'
+  if (isDemo.value && isDemoHidden(to.path)) return '/'
 })
 
 export default router

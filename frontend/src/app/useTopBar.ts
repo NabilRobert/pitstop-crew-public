@@ -2,7 +2,7 @@ import { computed, inject, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { setLocale, getLocale, type Locale } from '../i18n/index.js'
 import { api } from '../shared/api/api'
-import { navLinks } from './navLinks.js'
+import { isDemoHidden, navLinks } from './navLinks.js'
 import { logout, isDemo } from '../shared/composables/auth'
 
 export function useTopBar() {
@@ -29,7 +29,7 @@ export function useTopBar() {
   }
 
   const visibleNavLinks = computed(() =>
-    isDemo.value ? navLinks.filter((l) => !['/settings', '/aska'].includes(l.to)) : navLinks
+    isDemo.value ? navLinks.filter((l) => !isDemoHidden(l.to)) : navLinks
   )
 
   return { dataSource, isActive, currentLocale, switchLocale, logout, isDemo, visibleNavLinks }
