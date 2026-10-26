@@ -1,5 +1,7 @@
 # Pitstop
 
+[![CI](https://github.com/NabilRobert/pitstop-crew-public/actions/workflows/ci.yml/badge.svg)](https://github.com/NabilRobert/pitstop-crew-public/actions/workflows/ci.yml)
+
 An AI performance dashboard for Google Ads. A small team of LLM agents
 reads an account's stored performance data and writes the analysis. It
 turns that into recommendations and summarises the result. A fourth agent,
