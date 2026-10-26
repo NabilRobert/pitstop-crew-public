@@ -1,93 +1,132 @@
-# Pitstop — Google Ads AI Performance Dashboard
+# Pitstop
 
-Pulls performance data from a Google Ads account, stores it over time, and runs it through a small team of AI agents (Anna, Rico, Sammy) that analyze it, recommend action, and summarize the result — daily and weekly, automatically. A fourth agent, Ciri the critic, grades every output against a strict rubric before anyone sees it; approval is decided in code from the grade and each issue's severity, not from the model's own opinion of itself, and a flagged output goes back for a bounded revision pass. Every recommendation is a suggestion, never an applied change. See [`PROJECT.md`](./PROJECT.md) for the full design rationale, [`docs/case-study.md`](./docs/case-study.md) for a narrative write-up with screenshots, and the app's own **How It Works** and **Engineering Notes** pages for a guided walkthrough once it's running.
+An AI performance dashboard for Google Ads. A small team of LLM agents
+reads an account's stored performance data and writes the analysis. It
+turns that into recommendations and summarises the result. A fourth agent,
+the critic, reviews every output before anyone sees it.
 
-`backend/` and `frontend/` are two fully separate deployable units, talking only over the REST API on `:8000` — there's no shared runtime or merged build. This repo just makes it convenient to install and run both from one place during development.
+![Dashboard overview](docs/images/dashboard-overview.webp)
 
-## Beyond the core pipeline
+- **Live demo:** https://gads.my.id. It runs in demo mode on synthetic
+  data, and a read-only account is available on request.
+- **Status:** built from August to October 2026 and ran unattended on a
+  daily schedule. Paused since October 2026.
 
-- **A Run Inspector** records every step of a pipeline run as a nested trace — the data it read, each agent, every model call with its full prompt and response, each critic review, and the approve/revise/flag decision that followed — with per-step tokens and cost, live while a run is in flight.
-- **A keyword optimizer** runs on its own schedule (every day at a time you set, 06:00 by default, and it can be switched off) as its own agent in the same pipeline and produces ranked, evidence-backed suggestions: negative keywords, search terms worth promoting, keywords to pause, match-type changes, new keywords and campaign ideas, each tied to the dealer's stock. Code finds the candidates and computes every number; the model only ranks and explains them, and the critic grades the result. Suggestions only, with a paste-ready negatives export; the owner marks each applied or dismissed. See [`overhaul-v3.md`](./overhaul-v3.md) for the scope and API contract, plus [`overhaul-v3-backend.md`](./overhaul-v3-backend.md) and [`overhaul-v3-frontend.md`](./overhaul-v3-frontend.md) for the implementation plans.
-- **Ad suggestions and a simulated launch.** The optimizer also proposes ads, built from the dealer's stock and the keywords that have proven themselves: template copy that code checks (length limits, only claims the owner has switched on, no invented facts), with the model only polishing the wording. The owner can review a proposed campaign and "create" it, but the launch is simulated: it writes paused rows into this app's own tables, tagged SIMULATED, behind an exact-name confirmation, an audit log and a kill switch that is off by default. Nothing is sent to Google Ads; a real write path is a separate, later phase.
-- **A third color theme, Atom-Eve** (a bold pop-art pink with black type), alongside Ferrari and Blueprint; Ferrari stays the default.
-- **A Learning page** tracks Ciri's verdicts over time (approved clean / approved with notes / flagged / no review, by week and agent) and the weekly self-improvement job's suggestion history — never auto-applied, always reviewed by hand.
-- **Auth gates the whole app**: a full-access owner login, plus an optional read-only demo account (enforced server-side — a demo token gets a 403 on anything but GET, not just hidden buttons) for sharing a public link without risking real changes or model spend.
-- **A monthly spend ceiling** (Settings page) will actually refuse to start a new pipeline run once the month's tracked AI cost passes the configured cap, not just alert after the fact.
-- **Operational guardrails**: a dead-man's-switch that catches the schedule itself silently going quiet (not just a failed run), daily backups with retention, and automatic recovery from an orphaned run after a crash.
-- **Regression tests** (`backend`, `npm test`) on the logic where a silent bug would matter most — the critic's approval decision, secret redaction, and the spend ceiling.
+## Why it exists
 
-## Quickstart
+Google Ads' own Recommendations tab leans towards spending more. Its
+Optimization Score only rises when you accept changes that expand spend,
+whatever they do to cost per lead. Pitstop gives the owner of a small
+account an analysis that isn't selling anything. It shows what changed,
+why, and what to do about it, with the evidence attached.
 
-**Prerequisites:** Node.js 20+, a Postgres database (hosted, not local — see below), and API credentials for Google Ads + an LLM gateway if you want live data (demo mode works with none of that).
+## How it works
+
+```
+Google Ads data ──► Postgres ──► Anna (analysis) ──► Rico (recommendations) ──► Sammy (summary)
+  (or demo data)                    ▲                    ▲                         ▲
+                                    └──── Ciri, the critic: approve / revise / flag ┘
+```
+
+- **Data layer.** It stores a trailing window of account data in
+  Postgres, so trends come from history rather than live snapshots. Facts
+  like rankings, totals and impression-share splits are computed in SQL
+  and handed to the agents as facts. Models are worst at arithmetic over
+  tables.
+- **The critic.** Ciri reviews each agent's output against what that agent
+  was actually given, and can send it back for revision, at most twice.
+  **Code decides approval, not the model:** each issue carries a severity,
+  and an output passes only if there are no high-severity issues.
+- **Every claim can be traced.** Each report section has a "why" trail:
+  draft, critique, revision.
+- **The Run Inspector** records every run as a nested trace: the data it
+  read, every model call with its full prompt and response, each critic
+  review, and the decision that followed.
+- **A keyword optimizer** turns keyword and search-term data into ranked
+  suggestions: negatives, pauses, match-type changes and new keywords.
+  - The ranking engine is deterministic and tested against planted
+    problems with known answers.
+  - Ad copy is built from templates and checked in code: length limits,
+    and only claims the account can back up.
+- **A learning loop.** A weekly job reads recurring patterns in the
+  critic's reviews and drafts prompt changes. They are never applied
+  automatically.
+
+## Running it unattended
+
+The project is as much about operating agents as building them:
+
+- **A monthly spend ceiling.** The pipeline refuses to start a run once
+  the month's tracked AI cost passes the cap. It doesn't just alert
+  afterwards.
+- **A dead-man's switch.** It catches the schedule itself going quiet, not
+  only runs that fail.
+- **Loud failures.** An empty model response retries with a larger budget,
+  then fails the run and sends an alert. It is never saved as a blank
+  draft.
+- **Recovery.** Daily backups with retention, and automatic recovery from
+  a run orphaned by a crash.
+- **Read-only demo access is enforced on the server.** A demo login gets
+  a 403 on anything but a read; the buttons aren't just hidden.
+
+## What's real and what isn't
+
+- **Real:** the agent pipeline, the critic loop and its grading, cost
+  tracking, the Run Inspector and the operations tooling. They ran on a
+  schedule, making live model calls.
+- **Synthetic:** the ad data. A seeded generator produces an account with
+  deliberate patterns for the agents to find: a declining campaign, a
+  seasonal spike and an outperforming segment. The UI labels it.
+- **Built but not used on a real account:** the live Google Ads path. It
+  reaches the API correctly, but the developer token was never approved
+  beyond test access.
+- **Single-user:** one owner login plus an optional read-only demo login.
+  No multi-tenancy.
+
+The full write-up, with what went wrong and what changed, is in
+[docs/case-study.md](docs/case-study.md).
+
+## Run it locally
+
+You need Node.js 20+ and a Postgres database. Without Google Ads or model
+credentials it runs in demo mode (`DATA_SOURCE=demo`).
 
 ```bash
-npm install                    # installs both backend/ and frontend/ (npm workspaces)
-cp .env.example .env           # fill in DB connection string, API keys — see comments in the file
-cp frontend/.env.local.example frontend/.env.local   # points the frontend dev server at :8000
+npm install                                          # backend and frontend (npm workspaces)
+cp .env.example .env                                 # database URL, AUTH_USERNAME / AUTH_PASSWORD
+cp frontend/.env.local.example frontend/.env.local
+cd backend && npx tsx scripts/initDb.ts && cd ..     # create the schema (safe to re-run)
+npm run dev:backend                                  # API on :8000
+npm run dev:frontend                                 # UI on :5173
 ```
 
-Set a login — the app has no default credentials, nothing loads without one:
+Running a pipeline makes paid model calls, so it needs a model API key in
+`.env`. To look at the UI with no backend and no keys, run
+`npm run mock-api -w frontend`, which serves test data on `:8000`.
+
+## Tests
+
 ```bash
-# in .env
-AUTH_USERNAME=whatever-you-want
-AUTH_PASSWORD=a-real-password
-# optional: a second, read-only account for sharing a public demo link
-DEMO_USERNAME=
-DEMO_PASSWORD=
+npm run test:backend     # Vitest
+npm run test:frontend    # renders the real pages against a mocked API
 ```
 
-Initialize the database schema (safe to re-run):
-```bash
-cd backend && npx tsx scripts/initDb.ts
-```
+The backend tests focus on the logic where a silent bug would matter
+most: the critic's approval decision, secret redaction, the spend
+ceiling, and the keyword optimizer's ranking.
 
-Run both dev servers (in separate terminals, from the repo root):
-```bash
-npm run dev:backend    # http://localhost:8000
-npm run dev:frontend   # http://localhost:5173
-```
-
-Run the backend's test suite:
-```bash
-npm run test:backend
-```
-
-Run the frontend's checks (they render the real pages and composables against a mocked API, no browser or backend needed):
-```bash
-npm run test:frontend
-```
-To look at the UI without a backend, `npm run mock-api -w frontend` serves the test data on :8000; start the frontend with `VITE_API_URL=http://localhost:8000` and set a token in localStorage (`pitstop-auth-token`).
-
-## Project structure
+## Layout
 
 ```
-backend/src/
-  agents/       Anna, Rico, Sammy, Ciri (the critic), the shared LLM client and prompt text
-  pipeline/     orchestration — ties the agents together for a daily/weekly run
-  data/         Google Ads ingestion, Postgres access, demo-mode data generation
-  reporting/    read-side queries and content formatting for the frontend + email
-  platform/     cross-cutting infra — config, settings, auth, email transport, event bus,
-                redaction, structured run tracing (the Run Inspector's writer), timezone
-  api/          the Express app — main.ts wires it up, routes/ holds one file per resource
-
-frontend/src/
-  app/          the app shell — top bar, login, live console panel, router (not a feature)
-  features/     one folder per page — dashboard/, reports/, learning/, run-inspector/,
-                keyword-optimizer/, engineering-notes/, settings/, etc.
-  shared/       cross-feature code — the report viewer (used by both Dashboard and Reports),
-                generic UI primitives, the API client, composables, and utils
-
-docs/
-  case-study.md   narrative write-up of the project, with screenshots
-  images/         the screenshots that write-up embeds
+backend/src/    agents/ · pipeline/ · data/ (ingestion, demo generator) · reporting/ · platform/ (config, auth, tracing, redaction) · api/
+frontend/src/   app/ (shell) · features/ (one folder per page) · shared/
+agents/         one spec per agent: model choice, prompt design, guardrails
+docs/           case study and screenshots
+PROJECT.md      the design doc: decisions, pipeline, cost guardrails, known gaps
 ```
 
-`backend/scripts/` holds one-off/cron entry points (`initDb.ts`, `runDaily.ts`, `backupDb.ts`, `generateRefreshToken.ts`) — see [`backend/deploy/README.md`](./backend/deploy/README.md) for production setup (crontab, VPS deploy steps).
+## Stack
 
-## Digging deeper
-
-- [`PROJECT.md`](./PROJECT.md) — the full design doc: architecture decisions, the agent pipeline, cost guardrails, deployment plan, known gaps.
-- [`docs/case-study.md`](./docs/case-study.md) — a narrative case study with screenshots: what was built, what didn't work at first, and what's real vs. simulated.
-- The app's own **Engineering Notes** page (`/engineering-notes` once running) — the non-obvious engineering decisions: the critic's approval-in-code trust model, the cost work (including a caching claim that was wrong on first read and corrected against real data), and the access-control and operational posture.
-- [`agents/*.md`](./agents/) — one spec per AI agent (model choice, prompt design, guardrails).
-- [`research.md`](./research.md), [`dummy.md`](./dummy.md) — supporting research and the demo dataset's design notes.
+TypeScript throughout. Node and Express on the backend, with Postgres and
+an OpenAI-compatible model gateway. Vue 3, Vite and Tailwind on the
+frontend.
