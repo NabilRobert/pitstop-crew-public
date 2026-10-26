@@ -1,7 +1,8 @@
 // Rico — Recommendation agent. See agents/recommendation.md.
 
 import { MODEL_FULL, complete } from './llm.js'
-import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, languageInstruction } from './prompts.js'
+import { SHARED_GUARDRAILS, CALIBRATION_STANDARD, VOICE_ANSWER_GUARDRAIL, languageInstruction } from './prompts.js'
+import { revisionPrompt, type RevisionInput } from './revision.js'
 
 // gpt-5.4 is also a reasoning model — see anna.ts's MAX_TOKENS comment.
 // These leave headroom for hidden reasoning_tokens before the visible
@@ -21,19 +22,17 @@ ${SHARED_GUARDRAILS}`
 
 export async function recommend(
   analysis: string,
-  criticFeedback?: string | null,
+  revision?: RevisionInput | null,
   language = 'en'
 ): Promise<string> {
   let userPrompt = analysis
-  if (criticFeedback) {
-    userPrompt += `\n\nCiri (the Critic agent) reviewed your previous draft and found:\n${criticFeedback}\n\nRevise your recommendation to address this.`
-  }
+  if (revision) userPrompt += revisionPrompt('recommendation', revision)
   userPrompt += languageInstruction(language)
   return complete(MODEL_FULL, SYSTEM_PROMPT, userPrompt, RECOMMEND_MAX_TOKENS)
 }
 
 /** Ask feature (decided) — see agents/recommendation.md. */
 export async function answerQuestion(reportContext: string, question: string, language = 'en'): Promise<string> {
-  const userPrompt = `Report context:\n${reportContext}\n\nUser question: ${question}${languageInstruction(language)}`
+  const userPrompt = `Report context:\n${reportContext}\n\nUser question: ${question}\n\n${VOICE_ANSWER_GUARDRAIL}${languageInstruction(language)}`
   return complete(MODEL_FULL, SYSTEM_PROMPT, userPrompt, ASK_MAX_TOKENS)
 }

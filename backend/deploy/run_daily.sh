@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Crontab target — fires every 15 min, runDaily.js itself decides whether
-# it's actually due (see backend/src/settings.ts and crontab.txt). See
+# it's actually due (see src/platform/settings.ts and crontab.txt). See
 # deploy/README.md for the full setup. Wraps the compiled runDaily.js with
 # logging, since cron discards stdout/stderr unless redirected. Runs the
 # built output (dist/), not tsx-on-the-fly, for production robustness —

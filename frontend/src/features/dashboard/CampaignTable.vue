@@ -1,16 +1,24 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatMicrosAsIDR, formatNumber, formatPercent } from '../../shared/utils/format'
 import type { CampaignRow } from './useDashboard'
+import type { Campaign } from '../../shared/api/types'
 
-defineProps<{ rows: CampaignRow[] }>()
+const props = defineProps<{ rows: CampaignRow[]; campaigns?: Campaign[] }>()
 
 const { t } = useI18n()
+
+// Maps a campaign's name (all PerformanceRow/CampaignRow carries) to its id
+// (needed for the /campaigns/:id drill-down link) — see useDashboard.ts's
+// campaigns ref for why this lookup exists instead of an id on CampaignRow
+// directly.
+const idByName = computed(() => new Map((props.campaigns ?? []).map((c) => [c.name, c.id])))
 </script>
 
 <template>
   <div class="overflow-x-auto rounded-lg border border-border bg-surface">
-    <table class="w-full border-collapse text-left">
+    <table class="w-full min-w-max border-collapse text-left">
       <thead>
         <tr class="border-b border-border">
           <th
@@ -57,7 +65,16 @@ const { t } = useI18n()
           :key="row.campaign"
           class="border-b border-border/60 last:border-0 hover:bg-surface-raised"
         >
-          <td class="px-4 py-3 font-medium text-ink">{{ row.campaign }}</td>
+          <td class="px-4 py-3 font-medium text-ink">
+            <router-link
+              v-if="idByName.get(row.campaign)"
+              :to="`/campaigns/${idByName.get(row.campaign)}`"
+              class="hover:text-accent-ink hover:underline"
+            >
+              {{ row.campaign }}
+            </router-link>
+            <span v-else>{{ row.campaign }}</span>
+          </td>
           <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ formatNumber(row.impressions) }}</td>
           <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ formatNumber(row.clicks) }}</td>
           <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ formatPercent(row.ctr) }}</td>

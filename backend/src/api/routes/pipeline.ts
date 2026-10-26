@@ -3,8 +3,10 @@ import * as pipelineRuns from '../../pipeline/pipelineRuns.js'
 import { runDaily, runWeekly } from '../../pipeline/orchestrator.js'
 import { formatReportEmail, formatFailureAlert } from '../../reporting/reports.js'
 import { deliverReport } from '../../platform/emailDelivery.js'
-import { emitEvent, getRecentEvents, subscribe } from '../../platform/eventBus.js'
+import { emitEvent, getRecentEvents, subscribe, type ConsoleEvent } from '../../platform/eventBus.js'
 import { wibDate } from '../../platform/timezone.js'
+import { safeEventText } from '../../platform/redact.js'
+import * as inspector from '../../reporting/runInspector.js'
 import { asyncHandler } from '../asyncHandler.js'
 
 export const router = Router()
@@ -15,63 +17,193 @@ router.get(
   asyncHandler(async (_req, res) => {
     const lastDaily = await pipelineRuns.getLastSuccessfulRun('daily')
     const recentRuns = await pipelineRuns.getRecentRuns(undefined, 20)
-    res.json({ last_successful_daily_run: lastDaily, recent_runs: recentRuns })
+    const demo = res.locals.role === 'demo'
+    res.json({
+      last_successful_daily_run: demo ? demoRun(lastDaily) : lastDaily,
+      recent_runs: demo ? recentRuns.map(demoRun) : recentRuns,
+    })
   })
 )
 
-/** Backs the live console panel — replays recent history, then streams
- * new events as they're emitted. Plain SSE, no client library needed. */
+/** Run Inspector — the newest runs with status, duration, total cost and LLM
+ * call count. Read-only, so demo tokens can use it (error text is redacted). */
+router.get(
+  '/pipeline/runs',
+  asyncHandler(async (req, res) => {
+    const limit = req.query.limit === undefined ? 20 : Number(req.query.limit)
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      res.status(400).json({ detail: 'limit must be an integer from 1 to 100' })
+      return
+    }
+    res.json(await inspector.listRuns(limit, res.locals.role === 'demo'))
+  })
+)
+
+/** A run's trace as a flat list (parent_id + seq give the tree), without any
+ * prompt/response text — fetch that per step from /trace/events/:id/payloads. */
+router.get(
+  '/pipeline/runs/:id/trace',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ detail: 'id must be an integer' })
+      return
+    }
+    const trace = await inspector.getRunTrace(id, res.locals.role === 'demo')
+    if (!trace) {
+      res.status(404).json({ detail: `No pipeline run with id ${id}` })
+      return
+    }
+    res.json(trace)
+  })
+)
+
+/** The stored prompt / response / context text of one trace step. */
+router.get(
+  '/trace/events/:id/payloads',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ detail: 'id must be an integer' })
+      return
+    }
+    const result = await inspector.getEventPayloads(id)
+    if (!result) {
+      res.status(404).json({ detail: `No trace event with id ${id}` })
+      return
+    }
+    res.json(result)
+  })
+)
+
+/** Status-polling alternative to holding an SSE connection open — poll
+ * this instead of /console/stream if you just want to know when a
+ * specific run (returned as `runId` from POST /pipeline/run) finishes. */
+router.get(
+  '/pipeline/runs/:id',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ detail: 'id must be an integer' })
+      return
+    }
+    const run = await pipelineRuns.getRunById(id)
+    if (!run) {
+      res.status(404).json({ detail: `No pipeline run with id ${id}` })
+      return
+    }
+    res.json(res.locals.role === 'demo' ? demoRun(run) : run)
+  })
+)
+
+/** A run's error_message can carry a stack trace or connection details; a demo
+ * viewer gets one redacted line. */
+function demoRun<T extends { error_message?: string | null }>(run: T): T {
+  if (!run || !run.error_message) return run
+  return { ...run, error_message: safeEventText(run.error_message) }
+}
+
+const HEARTBEAT_INTERVAL_MS = 20_000 // comfortably under Caddy's default proxy idle timeout
+
+/** Backs the live console panel — replays recent history, then streams new
+ * events as they're emitted. Plain SSE, no client library needed.
+ * ?runId= filters to just one run's events (buffer replay + live). The
+ * Last-Event-ID request header (sent automatically by EventSource on
+ * reconnect) resumes from that point instead of replaying everything —
+ * limited by the 200-event ring buffer, so a long enough gap still loses
+ * the earliest events in it. */
 router.get('/console/stream', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
   })
-  for (const event of getRecentEvents()) {
-    res.write(`data: ${JSON.stringify(event)}\n\n`)
+  res.flushHeaders()
+
+  const runIdFilter = req.query.runId !== undefined ? Number(req.query.runId) : undefined
+  const lastEventIdHeader = req.get('Last-Event-ID')
+  const resumeAfterSeq = lastEventIdHeader !== undefined ? Number(lastEventIdHeader) : undefined
+
+  const matches = (event: ConsoleEvent) => runIdFilter === undefined || event.runId === runIdFilter
+  // A demo viewer gets event text only: one redacted line, never a stack trace,
+  // connection string or env value (errors are emitted as "message\n\nstack").
+  const demo = res.locals.role === 'demo'
+  const write = (event: ConsoleEvent) => {
+    const out = demo ? { ...event, message: safeEventText(event.message) } : event
+    res.write(`id: ${event.seq}\ndata: ${JSON.stringify(out)}\n\n`)
   }
-  const unsubscribe = subscribe((event) => res.write(`data: ${JSON.stringify(event)}\n\n`))
-  req.on('close', unsubscribe)
+
+  for (const event of getRecentEvents()) {
+    if (!matches(event)) continue
+    if (resumeAfterSeq !== undefined && event.seq <= resumeAfterSeq) continue
+    write(event)
+  }
+
+  const unsubscribe = subscribe((event) => {
+    if (matches(event)) write(event)
+  })
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), HEARTBEAT_INTERVAL_MS)
+
+  req.on('close', () => {
+    clearInterval(heartbeat)
+    unsubscribe()
+  })
 })
 
-let runInProgress = false
-
-/** "Generate report now" — deliberately not wrapped in asyncHandler
- * (which awaits the whole handler): responds immediately, then runs the
- * real pipeline in the background, visible via the console stream above.
- * Bypasses runDaily.ts's "already ran today" scheduling guard on purpose
- * — an explicit manual trigger should always actually run. Emails the
- * result the same way the scheduled cron run does (deliverReport reads
+/** "Generate report now" — deliberately not wrapped in asyncHandler (which
+ * awaits the whole handler): the run id is created synchronously so it can
+ * be returned to the caller, but the real pipeline work runs in the
+ * background after the response is sent, visible via the console stream
+ * above. Bypasses runDaily.ts's "already ran today" scheduling guard on
+ * purpose — an explicit manual trigger should always actually run. Emails
+ * the result the same way the scheduled cron run does (deliverReport reads
  * the recipient from Settings), so manual triggers aren't a silent,
  * email-free side path. */
-router.post('/pipeline/run', (req, res) => {
-  if (runInProgress) {
-    res.status(409).json({ detail: 'A pipeline run is already in progress' })
-    return
-  }
+router.post('/pipeline/run', async (req, res) => {
   const period = req.body.period === 'weekly' ? 'weekly' : 'daily'
   const today = wibDate()
-  runInProgress = true
-  res.json({ started: true, period, target_date: today })
-  ;(period === 'weekly' ? runWeekly(today) : runDaily(today))
+
+  let runId: number
+  try {
+    runId = await pipelineRuns.startRun(period)
+  } catch (err) {
+    if (err instanceof pipelineRuns.PipelineRunInProgressError) {
+      res.status(409).json({ detail: err.message })
+      return
+    }
+    if (err instanceof pipelineRuns.SpendCeilingExceededError) {
+      res.status(429).json({ detail: err.message })
+      return
+    }
+    // Not asyncHandler-wrapped, so nothing else catches this — must
+    // respond here rather than rethrow into the void.
+    res.status(500).json({ detail: err instanceof Error ? err.message : String(err) })
+    return
+  }
+
+  res.json({ started: true, period, target_date: today, runId })
+
+  ;(period === 'weekly' ? runWeekly(today, runId) : runDaily(today, undefined, undefined, runId))
     .then(async (result) => {
       try {
         const { subject, body } = await formatReportEmail(result, today, period)
-        emitEvent(`Emil: emailing ${period} report…`)
-        await deliverReport(period, subject, body)
+        emitEvent(`Emil: emailing ${period} report…`, 'info', runId)
+        const outcome = await deliverReport(period, subject, body, runId)
+        emitEvent(
+          outcome === 'sent' ? `Emil: ${period} report email sent` : `Emil: no recipient configured — ${period} report not emailed`,
+          'info',
+          runId
+        )
       } catch (err) {
         // The pipeline run itself succeeded — a failed send here shouldn't
         // be reported as a pipeline failure, just its own separate warning.
-        emitEvent(`Report generated but email failed to send: ${err instanceof Error ? err.message : String(err)}`, 'warn')
+        emitEvent(`Report generated but email failed to send: ${err instanceof Error ? err.message : String(err)}`, 'warn', runId)
       }
     })
     .catch(async (err: unknown) => {
       const message = err instanceof Error ? `${err.message}\n\n${err.stack}` : String(err)
-      emitEvent(`Pipeline run failed: ${message}`, 'error')
+      emitEvent(`Pipeline run failed: ${message}`, 'error', runId)
       const { subject, body } = formatFailureAlert(period, message)
-      await deliverReport(period, subject, body).catch(() => {})
-    })
-    .finally(() => {
-      runInProgress = false
+      await deliverReport(period, subject, body, runId).catch(() => {})
     })
 })

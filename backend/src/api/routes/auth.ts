@@ -10,8 +10,8 @@ router.post(
   asyncHandler(async (req, res) => {
     const { username, password } = req.body ?? {}
     try {
-      const token = auth.login(String(username ?? ''), String(password ?? ''), req.ip ?? 'unknown')
-      res.json({ token })
+      const { token, role } = auth.login(String(username ?? ''), String(password ?? ''), req.ip ?? 'unknown')
+      res.json({ token, role })
     } catch (err) {
       res.status(401).json({ detail: err instanceof Error ? err.message : String(err) })
     }
@@ -26,5 +26,5 @@ router.post('/auth/logout', authMiddleware, (req, res) => {
 })
 
 router.get('/auth/verify', authMiddleware, (_req, res) => {
-  res.json({ ok: true })
+  res.json({ ok: true, role: res.locals.role })
 })

@@ -47,7 +47,7 @@ const { health, loading, error, switchStatus } = useSystemHealth()
 
       <h2 class="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{{ t('systemHealth.recentRuns') }}</h2>
       <div class="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table class="w-full border-collapse text-left">
+        <table class="w-full min-w-max border-collapse text-left">
           <thead>
             <tr class="border-b border-border">
               <th class="px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">{{ t('systemHealth.columns.type') }}</th>
@@ -55,6 +55,7 @@ const { health, loading, error, switchStatus } = useSystemHealth()
               <th class="px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">{{ t('systemHealth.columns.finished') }}</th>
               <th class="px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">{{ t('systemHealth.columns.status') }}</th>
               <th class="px-4 py-3 text-right font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint">{{ t('systemHealth.columns.cost') }}</th>
+              <th class="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -65,13 +66,21 @@ const { health, loading, error, switchStatus } = useSystemHealth()
                 <td class="px-4 py-3 text-ink-soft">{{ formatDateTime(run.finished_at) }}</td>
                 <td class="px-4 py-3"><RunStatusPill :status="run.status" /></td>
                 <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ formatMicrosAsUSD(run.cost_usd_micros) }}</td>
+                <td class="px-4 py-3 text-right">
+                  <router-link
+                    :to="`/runs/${run.id}`"
+                    class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-accent-ink"
+                  >
+                    {{ t('systemHealth.inspect') }} →
+                  </router-link>
+                </td>
               </tr>
               <tr v-if="run.error_message" class="border-b border-border/60 last:border-0">
-                <td colspan="5" class="px-4 pb-3 text-sm text-flag-critical">{{ run.error_message }}</td>
+                <td colspan="6" class="px-4 pb-3 text-sm text-flag-critical">{{ run.error_message }}</td>
               </tr>
             </template>
             <tr v-if="!health.recent_runs.length">
-              <td colspan="5" class="px-4 py-8 text-center text-ink-faint">{{ t('systemHealth.noRuns') }}</td>
+              <td colspan="6" class="px-4 py-8 text-center text-ink-faint">{{ t('systemHealth.noRuns') }}</td>
             </tr>
           </tbody>
         </table>

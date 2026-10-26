@@ -9,7 +9,9 @@ export const router = Router()
 router.get(
   '/settings',
   asyncHandler(async (_req, res) => {
-    res.json(await settings.getSettings())
+    const current = await settings.getSettings()
+    // The recipient is the owner's real address; a demo viewer doesn't get it.
+    res.json(res.locals.role === 'demo' ? { ...current, report_recipient_email: '[hidden in demo]' } : current)
   })
 )
 

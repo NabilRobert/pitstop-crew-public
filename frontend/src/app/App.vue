@@ -5,7 +5,7 @@ import ConsolePanel from './ConsolePanel.vue'
 import LoginPage from './LoginPage.vue'
 import { consoleOpen } from '../shared/composables/consoleState'
 import { useDataSource } from './useDataSource'
-import { token, isAuthenticated, clearToken } from '../shared/composables/auth'
+import { token, isAuthenticated, clearToken, setRole } from '../shared/composables/auth'
 import { api } from '../shared/api/api'
 
 useDataSource()
@@ -13,7 +13,8 @@ useDataSource()
 onMounted(async () => {
   if (token.value) {
     try {
-      await api.verifyAuth()
+      const { role } = await api.verifyAuth()
+      setRole(role)
     } catch {
       clearToken()
     }

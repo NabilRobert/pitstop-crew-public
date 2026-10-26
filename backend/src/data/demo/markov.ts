@@ -1,4 +1,4 @@
-// Markov chain for demo-mode daily state — see PROJECT.md → Generation
+// Markov chain for demo-mode daily state — see docs/PROJECT.md → Generation
 // algorithm. 4 states, biased toward persistence so streaks/momentum
 // emerge naturally. Not exported directly; use resolveStateSequence() to
 // walk the chain.

@@ -2,17 +2,17 @@
 # wherever the repo actually lives on the VPS).
 #
 # Runs every 15 minutes and no-ops until it's past the configured daily/
-# weekly run time (Settings page, backend/src/settings.ts) and hasn't
+# weekly run time (Settings page, src/platform/settings.ts) and hasn't
 # already succeeded today — the crontab line itself no longer encodes the
 # run time, so changing it doesn't need a VPS login. Times are compared in
-# WIB (Asia/Jakarta, UTC+7 — see backend/src/timezone.ts), pinned in code,
+# WIB (Asia/Jakarta, UTC+7 — see src/platform/timezone.ts), pinned in code,
 # so this is correct regardless of what timezone the VPS's own OS is set
 # to — "6am" always means 6am in Indonesia.
 
-*/15 * * * * /path/to/google-ads/backend/deploy/run_daily.sh
+*/15 * * * * /path/to/pitcrew-ai-backend/deploy/run_daily.sh
 
 # DB backup — runs before the earliest possible daily-pipeline fire time
 # so a bad run never overwrites the last known-good backup window.
 # Requires `postgresql-client` installed on the host (apt install
 # postgresql-client) for pg_dump.
-30 5 * * * cd /path/to/google-ads/backend && node dist/scripts/backupDb.js >> logs/backup.log 2>&1
+30 5 * * * cd /path/to/pitcrew-ai-backend && node dist/scripts/backupDb.js >> logs/backup.log 2>&1

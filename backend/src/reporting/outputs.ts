@@ -35,7 +35,7 @@ export interface InsertOutputArgs {
   /** Set only on critic rows — see schema.sql. */
   grade?: string | null
   gradeRationale?: string | null
-  issues?: { quote: string; reason: string }[] | null
+  issues?: { quote: string; reason: string; severity?: 'high' | 'medium' | 'low' }[] | null
   /** Which pipeline_runs row this output belongs to — lets a report be
    * looked up by exact generation, not just report_date. See schema.sql. */
   pipelineRunId?: number | null

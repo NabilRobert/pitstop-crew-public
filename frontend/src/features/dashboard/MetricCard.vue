@@ -14,7 +14,7 @@ defineProps({
     <div
       class="mt-2 font-display text-3xl font-bold tabular-nums"
       :class="{
-        'text-rosso': accent === 'rosso',
+        'text-accent-ink': accent === 'rosso',
         'text-flag-good': accent === 'verde',
         'text-flag-caution': accent === 'giallo',
         'text-ink': accent === 'ink',

@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Pitstop: Panduan Pengguna</title>
+<style>
+  :root {
+    --purple: #552583;
+    --purple-dark: #3b1a5c;
+    --purple-soft: #efe8f6;
+    --gold: #fdb927;
+    --gold-soft: #fff4d6;
+    --ink: #1d1428;
+    --ink-soft: #4a4057;
+    --line: #d9cfe6;
+  }
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+    @bottom-center { content: "Pitstop · Panduan Pengguna · " counter(page); font: 9pt Helvetica, Arial, sans-serif; color: #6b5f7b; }
+  }
+  @page :first { margin: 0; @bottom-center { content: none; } }
+  * { box-sizing: border-box; }
+  html { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; }
+  body { margin: 0; }
+
+  /* cover */
+  .cover { height: 297mm; background: var(--purple); color: #fff; position: relative; page-break-after: always; overflow: hidden; }
+  .cover::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 14mm; background: var(--gold); }
+  .cover::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 14mm; background: var(--gold); }
+  .cover .inner { position: absolute; left: 22mm; right: 22mm; top: 78mm; }
+  .cover .kicker { font-size: 11pt; letter-spacing: .28em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+  .cover h1 { font-size: 58pt; line-height: 1; margin: 6mm 0 6mm; letter-spacing: -.02em; color: #fff; }
+  .cover h1 span { color: var(--gold); }
+  .cover p.lead { font-size: 15pt; line-height: 1.4; max-width: 140mm; color: #f1e9fa; margin: 0; }
+  .cover .meta { position: absolute; left: 22mm; bottom: 30mm; font-size: 10pt; color: #d9c9ee; }
+  .cover .stripe { position: absolute; right: 22mm; top: 50mm; width: 34mm; height: 34mm; border: 3mm solid var(--gold); border-radius: 50%; }
+
+  h2 { font-size: 20pt; color: var(--purple); margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 3px solid var(--gold); page-break-after: avoid; }
+  h3 { font-size: 13pt; color: var(--purple-dark); margin: 7mm 0 2mm; page-break-after: avoid; }
+  h4 { font-size: 10.5pt; color: var(--purple); margin: 4mm 0 1mm; text-transform: uppercase; letter-spacing: .06em; page-break-after: avoid; }
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+  section { page-break-before: always; }
+  section.flow { page-break-before: auto; margin-top: 8mm; }
+  .toc { page-break-after: always; }
+  .toc ol { list-style: none; padding: 0; counter-reset: t; }
+  .toc li { counter-increment: t; padding: 2.4mm 0; border-bottom: 1px solid var(--line); font-size: 12pt; }
+  .toc li::before { content: counter(t) "."; display: inline-block; width: 9mm; color: var(--purple); font-weight: 700; }
+  .toc li small { display: block; margin-left: 9mm; color: var(--ink-soft); font-size: 9.5pt; }
+
+  .callout { border-left: 4px solid var(--gold); background: var(--gold-soft); padding: 3mm 4mm; margin: 3mm 0 4mm; border-radius: 0 3px 3px 0; page-break-inside: avoid; }
+  .callout.purple { border-left-color: var(--purple); background: var(--purple-soft); }
+  .callout strong.t { display: block; color: var(--purple-dark); margin-bottom: 1mm; }
+
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.6pt; page-break-inside: auto; }
+  th { background: var(--purple); color: #fff; text-align: left; padding: 2mm 3mm; font-weight: 700; }
+  td { padding: 2mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr { page-break-inside: avoid; }
+  tr:nth-child(even) td { background: #faf7fd; }
+  td.k { white-space: nowrap; font-weight: 700; color: var(--purple-dark); }
+
+  figure { margin: 3mm 0 5mm; page-break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 3px; display: block; }
+  figcaption { font-size: 9pt; color: var(--ink-soft); margin-top: 1.5mm; }
+  figure.small img { width: 78%; }
+  figure.tiny img { width: 64%; }
+
+  .badge { display: inline-block; padding: 0 2mm; border-radius: 2px; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; border: 1px solid #000; }
+  .b-win { background: #039b4e; color: #000; }
+  .b-waste { background: #e42528; color: #fff; }
+  .b-nostock { background: #000; color: #fff; }
+  .b-test { background: #f8e823; color: #000; }
+  .b-early { background: #fff; color: #000; }
+  .steps { counter-reset: s; list-style: none; padding: 0; }
+  .steps li { counter-increment: s; position: relative; padding-left: 10mm; margin-bottom: 2.4mm; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 6.5mm; height: 6.5mm; border-radius: 50%; background: var(--purple); color: var(--gold); font-weight: 800; text-align: center; line-height: 6.5mm; font-size: 9.5pt; }
+  .two { display: flex; gap: 6mm; }
+  .two > div { flex: 1; }
+  code, .kbd { font-family: ui-monospace, Menlo, monospace; font-size: 9.3pt; background: var(--purple-soft); padding: 0 1.4mm; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="stripe"></div>
+  <div class="inner">
+    <div class="kicker">Panduan Pengguna</div>
+    <h1>Pit<span>stop</span></h1>
+    <p class="lead">Dasbor performa Google Ads bertenaga AI untuk dealer mobil bekas: apa isinya, bagaimana memakainya, dan apa arti setiap warna, tombol, dan angka.</p>
+  </div>
+  <div class="meta">Versi 1 · Oktober 2026<br />Berlaku untuk akun Pemilik dan akun Demo</div>
+</div>
+
+<div class="toc">
+  <h2>Isi panduan</h2>
+  <ol>
+    <li>Mengenal Pitstop<small>Apa ini, aturan emasnya, dan dua jenis akun</small></li>
+    <li>Peta aplikasi<small>Setiap menu dalam satu tabel</small></li>
+    <li>Rutinitas harian: 5 menit<small>Apa yang perlu Anda lakukan setiap hari</small></li>
+    <li>Pengoptimal Kata Kunci<small>Halaman utama: papan, usulan kampanye, iklan, dan panel samping</small></li>
+    <li>Halaman Kampanye<small>Kartu kampanye dan kata kuncinya</small></li>
+    <li>Inventaris<small>Stok mobil yang menjadi dasar semua saran</small></li>
+    <li>Membuat kampanye dan iklan (simulasi)<small>Alur dari usulan sampai terbuat, dan pengamannya</small></li>
+    <li>Pengaturan<small>Setiap bagian dijelaskan</small></li>
+    <li>Menu lainnya<small>Dasbor, Laporan, Kondisi Sistem, Pembelajaran, Aska</small></li>
+    <li>Kamus istilah dan tanya jawab<small>Arti semua label dan jawaban untuk pertanyaan umum</small></li>
+  </ol>
+</div>
+
+<!-- 1 -->
+<section class="flow" style="page-break-before: auto; margin-top: 0;">
+  <h2>1. Mengenal Pitstop</h2>
+  <p>Pitstop menarik data performa dari akun Google Ads, menyimpannya dari waktu ke waktu, lalu menjalankannya lewat tim kecil agen AI yang menganalisis, merekomendasikan tindakan, dan merangkum hasilnya. Setiap hari juga ada pengoptimal kata kunci yang mencari kata kunci yang boros, kata kunci yang layak ditambah, kampanye dan iklan baru yang pantas dibuat, dengan memperhatikan <strong>mobil yang benar-benar ada di stok</strong>.</p>
+
+  <div class="callout">
+    <strong class="t">Aturan emas: semuanya hanya saran</strong>
+    Tidak ada yang bisa mengubah akun Google Ads Anda dari aplikasi ini: bid, anggaran, dan penargetan tidak pernah disentuh. Anda membaca saran, menerapkannya sendiri di Google Ads bila setuju, lalu menandainya di sini. Fitur &ldquo;Buat kampanye&rdquo; saat ini adalah <strong>simulasi</strong>: hanya menulis baris yang dijeda ke dalam aplikasi ini, ditandai SIMULASI, dan tidak ada yang dikirim ke Google Ads.
+  </div>
+
+  <h3>Siapa yang mengerjakan apa</h3>
+  <p>Kode (SQL dan statistik) yang menentukan kandidat dan semua angkanya. Model AI (Kai) hanya menyusun peringkat dan menjelaskan. Agen penilai (Ciri) memeriksa hasilnya dan memberi nilai A sampai F. Jadi angka di layar tidak pernah &ldquo;dikarang&rdquo; oleh AI, dan jawaban &ldquo;belum cukup data&rdquo; dianggap jawaban yang sah.</p>
+
+  <h3>Dua jenis akun</h3>
+  <table>
+    <tr><th>Akun</th><th>Bisa apa</th></tr>
+    <tr><td class="k">Pemilik</td><td>Semuanya: menandai saran, merencanakan dan membuat kampanye (simulasi), menjalankan proses sekarang, mengubah Pengaturan, memakai Aska, melihat halaman dokumentasi teknis.</td></tr>
+    <tr><td class="k">Demo (hanya-baca)</td><td>Melihat semua halaman data dan juga Pengaturan (hanya untuk dibaca: isiannya terkunci dan tombol Simpan tidak ada), tetapi tidak bisa mengubah apa pun. Menu Aska, Mesin Waktu, Cara Kerja, Catatan Teknis, dan Referensi API tidak ditampilkan. Larangan menulis dijaga di server, bukan hanya tombol yang disembunyikan.</td></tr>
+  </table>
+
+  <h3>Di bagian atas setiap halaman</h3>
+  <ul>
+    <li><strong>EN / ID</strong>: ganti bahasa tampilan.</li>
+    <li><strong>FER / BP / AE</strong>: ganti tema warna. Ferrari (gelap, merah), Blueprint (terang, biru), Atom-Eve (merah muda pop-art). Ferrari adalah bawaan.</li>
+    <li><strong>Mode Demo</strong>: lencana kuning yang muncul bila datanya buatan (bukan akun Google Ads sungguhan).</li>
+    <li><strong>Konsol</strong> (bilah di bagian bawah): menampilkan aktivitas sistem secara langsung saat proses berjalan.</li>
+  </ul>
+</section>
+
+<!-- 2 -->
+<section>
+  <h2>2. Peta aplikasi</h2>
+  <table>
+    <tr><th style="width:34mm">Menu</th><th>Untuk apa</th><th style="width:22mm">Akun</th></tr>
+    <tr><td class="k">Dasbor</td><td>Performa akun dalam grafik, ringkasan laporan AI terbaru, dan daftar kampanye.</td><td>Semua</td></tr>
+    <tr><td class="k">Kampanye</td><td>Kartu setiap kampanye (biaya, prospek, biaya per prospek, kata kunci dan penilaiannya), serta usulan kampanye baru dari AI.</td><td>Semua</td></tr>
+    <tr><td class="k">Pengoptimal Kata Kunci</td><td>Halaman utama. Papan kata kunci, usulan kampanye dan iklan, saran harian, dan tombol Jalankan sekarang.</td><td>Semua (Pemilik bisa bertindak)</td></tr>
+    <tr><td class="k">Inventaris</td><td>Stok mobil per model: jumlah, lama dipasang, harga, margin, dan apakah modelnya sedang diiklankan.</td><td>Semua</td></tr>
+    <tr><td class="k">Laporan</td><td>Laporan harian dan mingguan hasil kerja AI (analisis, rekomendasi, ringkasan) lengkap dengan nilai dari Ciri.</td><td>Semua</td></tr>
+    <tr><td class="k">Kondisi Sistem</td><td>Apakah semuanya berjalan sendiri dengan benar: proses terakhir, penanda &ldquo;sistem diam&rdquo;, log setiap proses, dan biayanya.</td><td>Semua</td></tr>
+    <tr><td class="k">Pembelajaran</td><td>Bagaimana nilai Ciri berubah dari minggu ke minggu dan riwayat usulan perbaikan prompt.</td><td>Semua</td></tr>
+    <tr><td class="k">Pengaturan</td><td>Jam proses otomatis, email laporan, profil dealer, klaim iklan, anggaran harian, dan sakelar pembuatan. Akun Demo bisa melihatnya, tetapi tidak bisa mengubahnya.</td><td>Semua (Pemilik bisa mengubah)</td></tr>
+    <tr><td class="k">Tanya Aska</td><td>Asisten umum: tanya apa saja tentang akun, lewat ketikan atau suara.</td><td>Pemilik</td></tr>
+    <tr><td class="k">Cara Kerja, Catatan Teknis, Referensi API</td><td>Penjelasan teknis: agen-agennya, keputusan rancangan, dan daftar endpoint.</td><td>Pemilik</td></tr>
+  </table>
+</section>
+
+<!-- 3 -->
+<section>
+  <h2>3. Rutinitas harian: 5 menit</h2>
+  <ol class="steps">
+    <li><strong>Buka Pengoptimal Kata Kunci.</strong> Lihat kotak kuning di atas: &ldquo;N hal yang perlu dilakukan minggu ini&rdquo;. Itu ringkasan satu kalimat.</li>
+    <li><strong>Lihat usulan kampanye baru</strong> di bagian paling atas (kartu kuning). Bila ada yang masuk akal, tekan <em>Rencanakan</em> untuk menyimpannya; bila tidak, <em>Abaikan</em>.</li>
+    <li><strong>Baca papan.</strong> Mulai dari catatan <span class="badge b-waste">Boros</span> (uang keluar tanpa prospek) dan <span class="badge b-win">Jagoan</span> (layak diberi lebih banyak).</li>
+    <li><strong>Terapkan sendiri di Google Ads</strong> saran yang Anda setujui. Lalu seret selotip saran itu ke kotak <em>Selesai</em> (atau tekan <em>Tandai diterapkan</em> di panel samping). Yang tidak cocok: seret ke <em>Nanti dulu</em> atau tekan <em>Abaikan</em>.</li>
+    <li><strong>Cek Kondisi Sistem</strong> seminggu sekali untuk memastikan proses harian berjalan dan biayanya wajar.</li>
+  </ol>
+  <div class="callout purple">
+    <strong class="t">Tidak perlu menekan apa pun agar data baru muncul</strong>
+    Pengoptimal berjalan sendiri setiap hari pada jam yang Anda atur di Pengaturan (bawaan 06.00 WIB). Halaman Pengoptimal dan halaman Kampanye memperbarui dirinya sendiri begitu proses selesai, jadi saran baru muncul tanpa memuat ulang halaman.
+  </div>
+</section>
+
+<!-- 4 -->
+<section>
+  <h2>4. Pengoptimal Kata Kunci</h2>
+  <figure><img src="img/pengoptimal.jpg" alt="" /><figcaption>Bagian atas halaman Pengoptimal Kata Kunci (tema Ferrari, bahasa Indonesia, data uji).</figcaption></figure>
+
+  <h3>Bagian atas halaman</h3>
+  <ul>
+    <li><strong>Kalimat penjelas</strong> di bawah judul: mengingatkan bahwa ini hanya saran.</li>
+    <li><strong>Berjalan otomatis setiap hari pukul &hellip;</strong>: kapan proses harian berikutnya, dengan tautan <em>Ubah di Pengaturan</em>. Bila dimatikan, tertulis bahwa proses otomatis mati.</li>
+    <li><strong>Jalankan sekarang</strong> (Pemilik): memulai proses saat itu juga. Berjalan di latar belakang dan <em>memakai biaya model AI sungguhan</em>, jadi tekan seperlunya. Bila sudah ada proses berjalan, atau batas biaya bulanan tercapai, tombol ditolak dengan pesan yang jelas.</li>
+    <li><strong>Proses terakhir</strong>: kapan selesai, berhasil atau tidak, dan nomor proses (klik untuk melihat jejak lengkapnya: data yang dibaca, setiap agen, setiap panggilan model, dan biayanya).</li>
+    <li><strong>Inventaris</strong>: sumber stok yang dipakai (demo atau milik dealer) dan tanggal datanya.</li>
+    <li><strong>Papan / Daftar</strong>: dua tampilan untuk saran yang sama. Pilihan Anda diingat.</li>
+  </ul>
+
+  <h3>Kampanye baru yang diusulkan AI</h3>
+  <p>Kartu kuning di paling atas adalah ide kampanye utuh yang disusun dari mobil di stok yang belum punya kampanye atau kata kunci. Tulisan <strong>DIUSULKAN</strong> di sudutnya menegaskan bahwa ini <em>belum kampanye sungguhan</em>. Setiap kartu menunjukkan jumlah mobil, grup iklan, kata kunci, dan anggaran harian yang disarankan.</p>
+  <ul>
+    <li><strong>Tampilkan N kata kunci / Tampilkan iklan</strong>: buka daftar isinya.</li>
+    <li><strong>Detail</strong>: rincian lengkap, serta tombol <em>Unduh brief (CSV)</em> dan <em>Unduh ringkasan (teks)</em> yang bisa dibawa ke Google Ads atau Google Ads Editor. Kolom CSV-nya belum diperiksa terhadap ekspor Editor yang sungguhan.</li>
+    <li><strong>Rencanakan</strong>: simpan ide itu. Kartu pindah ke jalur <em>Direncanakan</em> (putih, garis putus-putus) dan tombol berubah menjadi <em>Tinjau dan buat</em>.</li>
+    <li><strong>Abaikan</strong>: buang ide ini.</li>
+    <li><strong>&ldquo;Belum terverifikasi&rdquo;</strong>: ide itu hanya didukung aturan umum, belum oleh data akun Anda.</li>
+  </ul>
+  <figure class="small"><img src="img/kampanye-usulan.jpg" alt="" /><figcaption>Usulan kampanye pada halaman Kampanye (kartu yang sama juga ada di halaman Pengoptimal).</figcaption></figure>
+</section>
+
+<section class="flow">
+  <h3>Papan kata kunci</h3>
+  <p>Papan gabus berisi satu <strong>catatan</strong> untuk setiap kata kunci. Warna dan label di catatan memberi tahu apakah kata kunci itu sehat atau bermasalah, tanpa Anda perlu membaca angka.</p>
+  <figure><img src="img/ringkasan-legenda.jpg" alt="" /><figcaption>Kotak ringkasan (atas) dan &ldquo;Cara membaca papan&rdquo; (tengah), lalu kolom pencarian dan filter.</figcaption></figure>
+
+  <h4>Kotak ringkasan</h4>
+  <ul>
+    <li><strong>Kotak kuning besar</strong>: &ldquo;N hal yang perlu dilakukan minggu ini&rdquo;, dipecah menjadi yang menghentikan pemborosan, yang menambah hasil, dan yang baru diuji.</li>
+    <li><strong>Tidak ke mana-mana</strong>: uang yang dikeluarkan untuk kata kunci boros atau tanpa mobil.</li>
+    <li><strong>Berjalan baik</strong>: uang yang dikeluarkan untuk kata kunci yang mendatangkan prospek.</li>
+    <li><strong>Perlu dikerjakan</strong>: jumlah saran yang masih terbuka.</li>
+  </ul>
+
+  <h4>Arti label pada catatan</h4>
+  <table>
+    <tr><th style="width:32mm">Label</th><th>Artinya</th></tr>
+    <tr><td><span class="badge b-win">Jagoan</span></td><td>Mendatangkan prospek dengan harga bagus. Layak dipertahankan dan diberi lebih banyak.</td></tr>
+    <tr><td><span class="badge b-waste">Boros</span></td><td>Diklik cukup banyak tetapi hampir tidak ada yang jadi prospek. Sudah cukup klik untuk memastikan ini bukan sekadar sial.</td></tr>
+    <tr><td><span class="badge b-nostock">Tanpa mobil</span></td><td>Anda membayar klik untuk mobil yang saat ini tidak ada di stok.</td></tr>
+    <tr><td><span class="badge b-test">Uji coba</span></td><td>Ide baru yang sedang diuji dengan anggaran kecil yang dibatasi.</td></tr>
+    <tr><td><span class="badge b-early">Terlalu dini</span></td><td>Klik belum cukup untuk menilai. Saran di sini hanya petunjuk, bukan temuan.</td></tr>
+    <tr><td>Tanpa label</td><td>Putih dan polos: baik-baik saja, tidak ada yang perlu diubah.</td></tr>
+  </table>
+  <div class="callout purple">
+    <strong class="t">Warna tidak pernah menjadi satu-satunya petunjuk</strong>
+    Setiap warna selalu dicetak dengan labelnya. Warna mengikuti tema yang aktif (hijau, merah, hitam, kuning pada Ferrari; biru dan abu-abu pada Blueprint; warna pop-art pada Atom-Eve), tetapi arti labelnya sama di semua tema.
+  </div>
+
+  <h4>Cara membaca sebuah catatan</h4>
+  <ul>
+    <li><strong>Ukuran catatan</strong>: makin besar, makin banyak biaya yang dikeluarkan untuk kata kunci itu.</li>
+    <li><strong>Angka di dalamnya</strong>: biaya dan jumlah prospek.</li>
+    <li><strong>Selotip kuning</strong>: saran untuk kata kunci itu (misalnya &ldquo;Blokir &lsquo;lowongan&rsquo;&rdquo;). Klik selotip untuk membuka rinciannya.</li>
+    <li><strong>Catatan bergaris putus-putus</strong>: kata kunci yang dijeda.</li>
+    <li><strong>Tidak ada stok mobil</strong>: dicetak bila modelnya tidak punya unit.</li>
+  </ul>
+</section>
+
+<section class="flow">
+  <figure><img src="img/papan.jpg" alt="" /><figcaption>Papan kata kunci. Kolom di kanan berisi ide untuk seluruh akun, serta kotak Selesai dan Nanti dulu.</figcaption></figure>
+
+  <h4>Kolom di sebelah kanan papan</h4>
+  <ul>
+    <li><strong>Ide untuk seluruh akun</strong>: saran yang tidak terkait satu kata kunci saja, dikelompokkan menurut jenis: Iklan, Ide kampanye, Kata kunci baru, Negatif.</li>
+    <li><strong>Selesai</strong> (hijau/biru): seret selotip ke sini setelah Anda menerapkannya di Google Ads. Angkanya menunjukkan jumlahnya.</li>
+    <li><strong>Nanti dulu</strong> (merah muda): seret selotip ke sini untuk menyembunyikannya.</li>
+  </ul>
+
+  <h4>Mencari dan menyaring</h4>
+  <ul>
+    <li><strong>Kolom pencarian</strong>: ketik sebagian kata kunci, kampanye, atau grup iklan. Beberapa kata dicari bersamaan.</li>
+    <li><strong>Tombol kampanye</strong> dan <strong>tombol penilaian</strong>: tampilkan hanya satu kampanye, atau hanya satu jenis label (misalnya Boros).</li>
+    <li>Papan menampilkan sejumlah catatan teratas menurut biaya; tombol <em>Tampilkan N kata kunci lagi</em> membuka sisanya.</li>
+  </ul>
+
+  <h3>Panel samping</h3>
+  <p>Klik sebuah catatan atau selotip untuk membuka panel di sisi kanan. Tekan <span class="kbd">Esc</span>, tombol <em>Tutup</em>, atau klik area gelap untuk menutupnya.</p>
+  <figure><img src="img/panel-samping.jpg" alt="" /><figcaption>Panel samping sebuah kata kunci: penilaian, biaya dan klik, maksud pencarian, stok, dan sarannya.</figcaption></figure>
+  <ul>
+    <li><strong>Buka kampanye ini</strong> (di bawah nama kata kunci): langsung ke halaman kampanye kata kunci itu.</li>
+    <li><strong>Penilaian</strong>: label beserta penjelasan dalam satu kalimat.</li>
+    <li><strong>Biaya, Klik, Konversi, Biaya per konversi</strong>: angka dari periode 90 hari.</li>
+    <li><strong>Maksud pencarian</strong>: perkiraan seberapa banyak biaya berasal dari pembeli, peneliti, pencari kerja, dan lain-lain. Ini perkiraan, bukan fakta pasti.</li>
+    <li><strong>Stok</strong>: jumlah mobil yang cocok dengan kata kunci itu dan berapa lama sudah dipasang.</li>
+    <li><strong>Saran</strong>: setiap saran menampilkan apa yang harus dilakukan, angka pendukungnya (klik, tayangan, biaya, konversi), tingkat keyakinan, apakah <em>didukung data</em> atau <em>belum terverifikasi</em>, dan penjelasan singkat dari AI. Angka selalu berasal dari data di atasnya, bukan dari kalimat AI.</li>
+    <li><strong>Tombol di setiap saran</strong> (Pemilik): <em>Tandai diterapkan</em>, <em>Abaikan</em>, dan <em>Buka lagi</em> bila Anda berubah pikiran.</li>
+  </ul>
+
+  <h3>Tampilan Daftar</h3>
+  <p>Tombol <strong>Daftar</strong> menampilkan semua saran sebagai kartu, dengan filter status (Terbuka, Direncanakan, Diterapkan, Diabaikan, Semua) dan filter jenis. Saran <em>Negatif</em> yang terbuka bisa diunduh atau disalin sebagai daftar untuk ditempel ke Google Ads Editor.</p>
+</section>
+
+<!-- 5 -->
+<section>
+  <h2>5. Halaman Kampanye</h2>
+  <figure class="tiny"><img src="img/kartu-kampanye.jpg" alt="" /><figcaption>Kartu kampanye. Kampanye dengan label SIMULASI adalah hasil pembuatan simulasi dan belum punya data.</figcaption></figure>
+  <p>Satu kartu untuk setiap kampanye. Gunakan tombol periode di kanan atas (1M, 1B, 3B, 6B, 1T, 2T, 5T) untuk mengganti jangka waktunya; bawaan 3 bulan.</p>
+  <table>
+    <tr><th style="width:38mm">Bagian kartu</th><th>Artinya</th></tr>
+    <tr><td class="k">Biaya</td><td>Total uang yang dikeluarkan kampanye dalam periode itu.</td></tr>
+    <tr><td class="k">Prospek</td><td>Jumlah konversi: telepon, klik WhatsApp, kunjungan halaman pembiayaan, dan sebagainya.</td></tr>
+    <tr><td class="k">Biaya per prospek</td><td>Biaya dibagi prospek. Makin kecil makin baik.</td></tr>
+    <tr><td class="k">Baris kata kunci</td><td>Jumlah kata kunci dan label penilaiannya (berapa yang Jagoan, Boros, dan seterusnya).</td></tr>
+    <tr><td class="k">Daftar kata kunci</td><td>Beberapa kata kunci teratas menurut biaya. <em>Tampilkan semua</em> membuka seluruhnya.</td></tr>
+    <tr><td class="k">N saran menunggu</td><td>Jumlah saran terbuka untuk kampanye ini.</td></tr>
+    <tr><td class="k">SIMULASI</td><td>Kampanye hasil pembuatan simulasi. Tidak ada di Google Ads, tidak punya data performa, dan kata kuncinya baru muncul bila ada data.</td></tr>
+  </table>
+  <ul>
+    <li><strong>Klik sebuah kata kunci</strong> di kartu untuk membuka panel samping yang sama dengan di papan, tanpa meninggalkan halaman Kampanye.</li>
+    <li><strong>Buka kampanye</strong> (atau klik nama kampanye): halaman detail dengan papan khusus kampanye itu, grup iklan, kata kunci, dan istilah pencarian.</li>
+    <li>Di bagian atas halaman ini juga ada <em>Kampanye baru yang diusulkan AI</em> dan di bagian bawah <em>Log peluncuran</em>: catatan setiap percobaan membuat kampanye, termasuk yang ditolak.</li>
+  </ul>
+</section>
+
+<!-- 6 -->
+<section>
+  <h2>6. Inventaris</h2>
+  <figure class="small"><img src="img/inventaris.jpg" alt="" /><figcaption>Halaman Inventaris: ringkasan, filter pada setiap kolom, dan tabel model.</figcaption></figure>
+  <p>Stok mobil yang dijadikan patokan pengoptimal. Dari sinilah datang saran seperti &ldquo;kata kunci untuk model yang tidak punya unit&rdquo; dan ide kampanye baru.</p>
+  <ul>
+    <li><strong>Tersedia, Dipesan, Terjual 30 hari terakhir</strong>: tiga angka besar di atas.</li>
+    <li><strong>Lama dipasang</strong>: berapa mobil berada pada rentang 0&ndash;30, 31&ndash;60, 61&ndash;90, dan 90+ hari. Mobil yang lama menumpuk adalah kandidat untuk diiklankan.</li>
+    <li><strong>Kolom pencarian dan tombol filter</strong>: saring menurut merek, ketersediaan, lama dipasang, harga, margin, dan apakah modelnya diiklankan. Setiap kolom bisa difilter dan diurutkan.</li>
+    <li><strong>Tabel</strong>: model, jumlah tersedia, rata-rata hari dipasang, rata-rata harga, rata-rata margin, dan jumlah kata kunci. Merah &ldquo;Diiklankan, tanpa stok&rdquo; artinya Anda membayar iklan untuk model yang kosong.</li>
+    <li><strong>Sembunyikan inventaris</strong>: tombol di kanan atas untuk melipat blok ini (diingat oleh browser Anda).</li>
+    <li>Sumber data dibaca-saja. Alamat koneksi ke basis data dealer hanya ada di server dan tidak pernah ditampilkan.</li>
+  </ul>
+  <div class="callout">
+    <strong class="t">Catatan: inventaris demo</strong>
+    Selama Pengaturan menunjukkan &ldquo;Inventaris demo&rdquo;, angkanya data uji. Sambungan ke basis data stok dealer yang sebenarnya belum dipasang.
+  </div>
+</section>
+
+<!-- 7 -->
+<section>
+  <h2>7. Membuat kampanye dan iklan (simulasi)</h2>
+  <p>Selain saran kata kunci, pengoptimal mengusulkan <strong>kampanye utuh</strong> dan <strong>iklan</strong> yang disusun dari stok dan kata kunci yang sudah terbukti. Anda bisa &ldquo;membuatnya&rdquo;, tetapi untuk saat ini itu hanya simulasi.</p>
+
+  <h3>Alurnya</h3>
+  <ol class="steps">
+    <li><strong>Diusulkan.</strong> AI mengusulkan kampanye (kartu kuning). Belum ada apa pun yang dibuat.</li>
+    <li><strong>Rencanakan.</strong> Anda menyimpan ide itu. Iklan yang menyertainya ikut dalam rencana.</li>
+    <li><strong>Tinjau dan buat.</strong> Panel terbuka dan menunjukkan <em>persis</em> apa yang akan dibuat: anggaran, kampanye, grup iklan, kata kunci, iklan, dan kata kunci negatif. Semuanya dalam keadaan dijeda.</li>
+    <li><strong>Periksa dulu (tidak ada yang dibuat).</strong> Menjalankan semua pemeriksaan tanpa menulis apa pun.</li>
+    <li><strong>Ketik nama persis, lalu Buat (simulasi).</strong> Nama kampanye harus diketik sama persis sebagai konfirmasi.</li>
+  </ol>
+  <figure class="small"><img src="img/tinjau-buat.jpg" alt="" /><figcaption>Panel &ldquo;Tinjau dan buat&rdquo;. Spanduk kuning menegaskan simulasi; spanduk merah muda muncul selama sakelar pembuatan mati.</figcaption></figure>
+
+  <h3>Iklan yang diusulkan</h3>
+  <p>Iklan disusun dari templat oleh kode dan diperiksa: batas panjang (judul maksimal 30 karakter, deskripsi 90), hanya klaim yang Anda izinkan di Pengaturan, dan hanya angka yang ada di data stok (harga dibulatkan ke bawah ke juta penuh). Model AI hanya boleh memoles kata-katanya; bila hasil polesnya gagal pemeriksaan, templat aslinya yang dipakai.</p>
+  <table>
+    <tr><th style="width:36mm">Alasan iklan</th><th>Artinya</th></tr>
+    <tr><td class="k">Kampanye baru</td><td>Iklan untuk kampanye yang diusulkan. Dibuat bersama kampanyenya.</td></tr>
+    <tr><td class="k">Iklan lemah</td><td>Menggantikan iklan yang kekuatannya rendah atau sedang pada grup iklan yang sudah ada.</td></tr>
+    <tr><td class="k">Jagoan belum tercakup</td><td>Kata kunci jagoan yang katanya belum muncul di judul iklan mana pun pada grupnya.</td></tr>
+  </table>
+  <p>Iklan untuk grup iklan yang sudah ada punya tombol <em>Tinjau dan buat</em> sendiri; konfirmasinya adalah nama grup iklan.</p>
+
+  <h3>Pengaman</h3>
+  <ul>
+    <li><strong>Sakelar pembuatan</strong> di Pengaturan (<em>Izinkan pembuatan kampanye dan iklan</em>) mati secara bawaan. Selama mati, tombol Buat tetap nonaktif.</li>
+    <li><strong>Semuanya dibuat dalam keadaan dijeda</strong>, dalam satu transaksi: jadi sepenuhnya berhasil atau sepenuhnya dibatalkan.</li>
+    <li><strong>Konfirmasi nama persis</strong> dan <strong>pemeriksaan ulang</strong> terhadap pengaturan saat itu. Klaim yang dimatikan setelah iklan diusulkan akan membuat iklan itu gagal diperiksa.</li>
+    <li><strong>Log peluncuran</strong>: setiap percobaan, termasuk yang ditolak atau gagal, tercatat. Percobaan dari akun Demo juga dicatat dan ditolak.</li>
+    <li><strong>Tidak ada yang dikirim ke Google Ads.</strong> Jalur penulisan sungguhan sengaja belum dibuat.</li>
+  </ul>
+</section>
+
+<!-- 8 -->
+<section>
+  <h2>8. Pengaturan</h2>
+  <p>Akun Pemilik mengubah isian lalu menekan <strong>Simpan</strong> di bagian bawah; akun Demo hanya bisa melihatnya (isian terkunci, tanpa tombol Simpan). Bila ada isian yang tidak valid, pesan merah muncul dan tidak ada yang tersimpan.</p>
+  <figure class="small"><img src="img/pengaturan-iklan.jpg" alt="" /><figcaption>Bagian &ldquo;Iklan: profil dealer dan apa yang boleh dikatakan iklan&rdquo;.</figcaption></figure>
+  <table>
+    <tr><th style="width:44mm">Pengaturan</th><th>Fungsi</th></tr>
+    <tr><td class="k">Buat dan kirim laporan otomatis</td><td>Bila dimatikan, laporan harian/mingguan terjadwal dilewati. Tombol &ldquo;Buat laporan sekarang&rdquo; tetap berfungsi.</td></tr>
+    <tr><td class="k">Jam proses harian / mingguan</td><td>Dalam WIB (UTC+7), tidak peduli zona waktu server atau browser Anda. Laporan mingguan berjalan hari Senin.</td></tr>
+    <tr><td class="k">Email penerima laporan</td><td>Setiap laporan dikirim ke sini. Kosongkan untuk hanya mencatatnya tanpa email.</td></tr>
+    <tr><td class="k">Bahasa laporan</td><td>Bahasa yang dipakai agen AI saat menulis laporan.</td></tr>
+    <tr><td class="k">Batas biaya bulanan (USD)</td><td>Pengaman biaya model AI. Bila biaya bulan ini mencapai batas, proses baru ditolak (bawaan 20). Kosong berarti tanpa batas.</td></tr>
+    <tr><td class="k">Iklan: profil dealer</td><td>Nama dealer, nomor WhatsApp, kota, daerah, dan halaman tujuan. Dipakai sebagai satu-satunya sumber fakta dealer di teks iklan. Halaman tujuan boleh kosong; iklan lalu tidak memuat tautan.</td></tr>
+    <tr><td class="k">Klaim yang boleh dibuat iklan</td><td>Cicilan/DP, tukar tambah, test drive, pemeriksaan/garansi. <strong>Iklan tidak akan menyebut tawaran yang tidak dicentang.</strong> Untuk pemeriksaan, Anda menentukan kalimat persisnya.</td></tr>
+    <tr><td class="k">Izinkan pembuatan kampanye dan iklan</td><td>Sakelar pengaman. Mati secara bawaan. Mode saat ini hanya <em>Simulasi</em>.</td></tr>
+    <tr><td class="k">Usulan kampanye: anggaran harian</td><td>Batas bawah dan batas atas (dalam rupiah bulat) untuk anggaran harian yang disarankan.</td></tr>
+    <tr><td class="k">Jalankan pengoptimal kata kunci secara otomatis</td><td>Saklar proses harian otomatis. Terpisah dari laporan otomatis. &ldquo;Jalankan sekarang&rdquo; tetap berfungsi walau dimatikan.</td></tr>
+    <tr><td class="k">Jam proses otomatis (WIB)</td><td>Kapan proses harian pengoptimal berjalan sendiri (bawaan 06.00).</td></tr>
+    <tr><td class="k">Porsi anggaran uji</td><td>Seberapa besar bagian anggaran yang boleh dipakai untuk menguji ide baru (0 sampai 1).</td></tr>
+    <tr><td class="k">Tingkat signifikansi</td><td>Seberapa kecil peluang &ldquo;hanya kebetulan&rdquo; yang diterima sebelum sebuah kata kunci dinilai boros (di atas 0, maksimal 1). Makin kecil makin ketat: butuh lebih banyak klik sebelum menyimpulkan.</td></tr>
+    <tr><td class="k">Porsi margin untuk iklan, rasio prospek jadi penjualan</td><td>Dasar perhitungan anggaran harian usulan kampanye dari margin mobil. Isi dengan perkiraan jujur; angka ini langsung memengaruhi anggaran yang disarankan.</td></tr>
+  </table>
+  <div class="callout purple">
+    <strong class="t">Status inventaris</strong>
+    Di bagian bawah Pengaturan pengoptimal hanya ada <em>status</em> sumber stok. Alamat koneksinya sengaja tidak pernah bisa dilihat atau diubah dari aplikasi.
+  </div>
+</section>
+
+<!-- 9 -->
+<section>
+  <h2>9. Menu lainnya</h2>
+  <h3>Dasbor (Performa Akun)</h3>
+  <p>Grafik performa dengan tombol periode yang sama (1M sampai 5T), daftar kampanye, dan bagian <em>Laporan AI</em> berisi ringkasan laporan terbaru dengan tautan <em>Lihat laporan lengkap</em>. Tombol &ldquo;Apa maksud semua ini?&rdquo; membuka penjelasan jenis kampanye dan metrik.</p>
+
+  <h3>Laporan</h3>
+  <p>Daftar semua laporan harian dan mingguan. Laporan memuat tiga bagian berurutan: <strong>analisis</strong> (Anna), <strong>rekomendasi</strong> (Rico), dan <strong>ringkasan</strong> (Sammy). Setiap bagian memiliki nilai A&ndash;F dari Ciri; arahkan kursor ke lencana nilai untuk melihat alasannya.</p>
+  <ul>
+    <li><strong>&ldquo;Kenapa begini?&rdquo;</strong>: membuka riwayat lengkap draf, kritik, dan revisi, bukti bahwa pemeriksaan Ciri nyata.</li>
+    <li><strong>&ldquo;Tanya soal ini&rdquo;</strong>: ajukan pertanyaan lanjutan; dijawab berdasarkan data yang sama dengan laporan.</li>
+    <li><strong>Buat laporan sekarang</strong> (Pemilik): menjalankan proses sungguhan. Konsol terbuka otomatis agar Anda bisa menontonnya; biayanya sekitar beberapa belas sen dolar.</li>
+    <li>Tampilan <em>Kolom</em> atau <em>Tab</em> dapat dipilih dan diingat.</li>
+  </ul>
+
+  <h3>Kondisi Sistem</h3>
+  <p>Dibuat agar Anda tahu sistem berjalan tanpa dijaga: proses terakhir yang berhasil, penanda <em>dead-man's-switch</em> (menyala bila terlalu lama tidak ada proses berhasil, karena peringatan kegagalan tidak berbunyi bila jadwalnya sendiri tidak jalan), dan log setiap proses termasuk pesan kesalahannya. Klik <em>Periksa</em> pada sebuah proses untuk melihat jejak lengkap: data yang dibaca, setiap agen, setiap panggilan model, dan biayanya.</p>
+
+  <h3>Pembelajaran</h3>
+  <p>Menampilkan nilai Ciri dari minggu ke minggu per agen dan riwayat usulan perbaikan prompt. Usulan perbaikan <strong>tidak pernah diterapkan otomatis</strong>; selalu ditinjau manusia. Naiknya jumlah persetujuan belum tentu berarti laporan makin baik, jadi dua grafik ini dibaca bersama.</p>
+
+  <h3>Tanya Aska (Pemilik)</h3>
+  <p>Asisten umum, tidak terikat pada satu laporan. Ketik pertanyaan, atau ketuk bola untuk bicara. Percakapan disimpan sebagai utas yang bisa diganti namanya atau dihapus.</p>
+
+  <h3>Mesin Waktu (Pemilik, hanya mode demo)</h3>
+  <p>Memungkinkan menetapkan keadaan (baik, buruk, mandek, bergejolak) untuk tanggal tertentu pada kalender simulasi. Hanya berguna untuk data buatan.</p>
+</section>
+
+<!-- 10 -->
+<section>
+  <h2>10. Kamus istilah dan tanya jawab</h2>
+  <h3>Jenis saran</h3>
+  <table>
+    <tr><th style="width:40mm">Jenis</th><th>Artinya</th></tr>
+    <tr><td class="k">Negatif</td><td>Blokir kata pencarian tertentu (misalnya &ldquo;lowongan&rdquo;) supaya iklan tidak tayang di sana.</td></tr>
+    <tr><td class="k">Promosikan</td><td>Istilah pencarian yang sering berhasil dan layak dijadikan kata kunci sendiri.</td></tr>
+    <tr><td class="k">Tipe pencocokan</td><td>Ubah cara kata kunci dicocokkan (misalnya ketatkan dari luas ke frasa).</td></tr>
+    <tr><td class="k">Jeda</td><td>Hentikan kata kunci yang boros.</td></tr>
+    <tr><td class="k">Ide kampanye</td><td>Pindahkan kata kunci yang berprestasi ke kampanye sendiri dengan anggarannya sendiri.</td></tr>
+    <tr><td class="k">Kata kunci baru</td><td>Ide kata kunci dari stok yang sedang dipasang.</td></tr>
+    <tr><td class="k">Bid</td><td>Kandidat untuk menaikkan bid pada kata kunci yang berhasil.</td></tr>
+    <tr><td class="k">Kampanye baru</td><td>Kampanye utuh yang diusulkan dari stok (lihat bagian 7).</td></tr>
+    <tr><td class="k">Iklan baru</td><td>Iklan responsif yang diusulkan (lihat bagian 7).</td></tr>
+  </table>
+
+  <h3>Status saran</h3>
+  <table>
+    <tr><th style="width:40mm">Status</th><th>Artinya</th></tr>
+    <tr><td class="k">Terbuka</td><td>Baru, belum Anda tangani.</td></tr>
+    <tr><td class="k">Direncanakan</td><td>Hanya untuk kampanye dan iklan baru: disimpan untuk dibuat.</td></tr>
+    <tr><td class="k">Diterapkan</td><td>Anda sudah melakukannya di Google Ads (atau, untuk kampanye, dibuat lewat simulasi).</td></tr>
+    <tr><td class="k">Diabaikan</td><td>Anda memutuskan tidak melakukannya.</td></tr>
+    <tr><td class="k">Digantikan</td><td>Datanya berubah sehingga saran baru menggantikannya. Tidak bisa diubah lagi.</td></tr>
+  </table>
+
+  <h3>Istilah lain</h3>
+  <table>
+    <tr><th style="width:40mm">Istilah</th><th>Artinya</th></tr>
+    <tr><td class="k">Prospek / konversi</td><td>Tindakan berharga dari pengunjung: telepon, klik WhatsApp, dan sebagainya.</td></tr>
+    <tr><td class="k">Didukung data</td><td>Saran berdasar data akun Anda sendiri.</td></tr>
+    <tr><td class="k">Belum terverifikasi</td><td>Saran hanya berdasar aturan umum karena data akun belum cukup.</td></tr>
+    <tr><td class="k">Keyakinan</td><td>Seberapa kuat bukti di balik saran: rendah, sedang, tinggi.</td></tr>
+    <tr><td class="k">SIMULASI</td><td>Dibuat di dalam aplikasi ini saja. Tidak ada di Google Ads.</td></tr>
+    <tr><td class="k">Kai, Ciri, Anna, Rico, Sammy</td><td>Kai menyusun peringkat saran kata kunci. Anna menganalisis, Rico merekomendasikan, Sammy merangkum. Ciri menilai semuanya.</td></tr>
+    <tr><td class="k">Dibatasi / ditandai</td><td>Bila Ciri masih menemukan masalah setelah dua kali revisi, laporan tetap terbit tetapi diberi tanda &ldquo;ditandai&rdquo;, terlihat jelas, tidak diam-diam.</td></tr>
+  </table>
+
+  <h3>Tanya jawab</h3>
+  <h4>Apakah aplikasi ini mengubah akun Google Ads saya?</h4>
+  <p>Tidak. Tidak ada jalur penulisan ke Google Ads. &ldquo;Buat kampanye&rdquo; hanya simulasi di dalam aplikasi.</p>
+  <h4>Datanya asli?</h4>
+  <p>Selama lencana <strong>Mode Demo</strong> tampil, datanya buatan (dengan pola yang disengaja agar AI punya sesuatu untuk ditemukan). Jalur Google Ads sungguhan sudah dibangun tetapi belum dicoba pada akun nyata.</p>
+  <h4>Kenapa ada kata kunci yang diberi &ldquo;Terlalu dini&rdquo; dan tidak diberi saran?</h4>
+  <p>Karena kliknya belum cukup untuk menyimpulkan apa pun. Sistem sengaja mengatakan &ldquo;belum cukup data&rdquo; daripada menebak.</p>
+  <h4>Saran baru tidak muncul. Kenapa?</h4>
+  <p>Cek kalimat &ldquo;Berjalan otomatis setiap hari pukul &hellip;&rdquo; di bagian atas Pengoptimal. Bila tertulis mati, hidupkan di Pengaturan atau tekan <em>Jalankan sekarang</em>. Cek juga <em>Kondisi Sistem</em> untuk melihat apakah proses terakhir gagal.</p>
+  <h4>Tombol Jalankan sekarang ditolak. Kenapa?</h4>
+  <p>Ada dua kemungkinan: proses lain sedang berjalan (tunggu selesai), atau batas biaya bulanan tercapai (naikkan di Pengaturan bila Anda memang ingin lanjut).</p>
+  <h4>Tombol Buat dalam keadaan nonaktif.</h4>
+  <p>Sakelar <em>Izinkan pembuatan kampanye dan iklan</em> di Pengaturan masih mati. Itu pengaman yang disengaja. Bila Anda hidupkan, hanya simulasi yang terjadi.</p>
+  <h4>Apa bedanya akun Pemilik dan Demo?</h4>
+  <p>Demo hanya bisa melihat. Semua tombol yang menulis disembunyikan, dan server juga menolak setiap permintaan menulis dari akun Demo.</p>
+</section>
+
+</body>
+</html>

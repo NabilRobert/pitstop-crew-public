@@ -17,7 +17,7 @@ const { t } = useI18n()
         v-for="s in SECTIONS"
         :key="s.id"
         :href="`#${s.id}`"
-        class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-rosso"
+        class="font-mono text-[11px] font-bold uppercase tracking-wide text-ink-faint hover:text-accent-ink"
       >
         {{ t(s.labelKey) }}
       </a>
@@ -60,7 +60,7 @@ const { t } = useI18n()
         </ol>
         <p>
           {{ t('howItWorks.pipeline.consoleNoteBefore') }}
-          <router-link to="/" class="text-giallo underline">{{ t('howItWorks.pipeline.consoleNoteLink') }}</router-link>
+          <router-link to="/" class="text-link underline">{{ t('howItWorks.pipeline.consoleNoteLink') }}</router-link>
           {{ t('howItWorks.pipeline.consoleNoteAfter') }}
         </p>
       </section>
@@ -77,7 +77,7 @@ const { t } = useI18n()
           <li>
             <strong>{{ t('howItWorks.ciri.gradeLabel') }}</strong>
             {{ t('howItWorks.ciri.gradeDescBefore') }}
-            <router-link to="/learning" class="text-giallo underline">{{ t('howItWorks.ciri.gradeDescLink') }}</router-link>
+            <router-link to="/learning" class="text-link underline">{{ t('howItWorks.ciri.gradeDescLink') }}</router-link>
             {{ t('howItWorks.ciri.gradeDescAfter') }}
           </li>
         </ul>
@@ -125,6 +125,18 @@ const { t } = useI18n()
         <p>
           {{ t('howItWorks.learning.body') }}
         </p>
+      </section>
+
+      <section id="keyword-optimizer">
+        <h2>{{ t('howItWorks.keywordOptimizer.title') }}</h2>
+        <p>{{ t('howItWorks.keywordOptimizer.body') }}</p>
+        <ul>
+          <li>{{ t('howItWorks.keywordOptimizer.item1') }}</li>
+          <li>{{ t('howItWorks.keywordOptimizer.item2') }}</li>
+          <li>{{ t('howItWorks.keywordOptimizer.item3') }}</li>
+          <li>{{ t('howItWorks.keywordOptimizer.item4') }}</li>
+          <li>{{ t('howItWorks.keywordOptimizer.item5') }}</li>
+        </ul>
       </section>
 
       <section id="health">

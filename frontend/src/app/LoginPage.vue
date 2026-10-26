@@ -43,7 +43,7 @@ async function submit() {
           type="text"
           autocomplete="username"
           required
-          class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-rosso focus:outline-none"
+          class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent-ink focus:outline-none"
         />
       </div>
 
@@ -56,7 +56,7 @@ async function submit() {
           type="password"
           autocomplete="current-password"
           required
-          class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-rosso focus:outline-none"
+          class="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent-ink focus:outline-none"
         />
       </div>
 

@@ -30,6 +30,14 @@
   --color-verde: #039b4e;
   --color-verde-soft: #039b4e26;
   --color-bianco: #ffffff;
+  /* Accent used AS TEXT or as a state border, and link text. Separate from
+     rosso/giallo because a theme's brand fill color is not always legible as
+     text (Atom-Eve's cyan is 2.22:1 on white). Equal to today's value in
+     Ferrari and Blueprint, so those render exactly as before. */
+  --color-accent-ink: #e42528;
+  --color-link: #f8e823;
+  /* Middle stop of the top-bar gradient strip. */
+  --color-stripe-mid: #ffffff;
   --glow-1: #e4252814;
   --glow-2: #f8e82310;
 
@@ -83,6 +91,9 @@
   --color-verde: #8a8d92;
   --color-verde-soft: #8a8d9224;
   --color-bianco: #ffffff;
+  --color-accent-ink: #0090d1;
+  --color-link: #16181c;
+  --color-stripe-mid: #ffffff;
   --glow-1: #0090d10d;
   --glow-2: #00000008;
 
@@ -92,6 +103,77 @@
   --color-flag-caution-soft: #9a63001f;
   --color-flag-critical: #c81e21;
   --color-flag-critical-soft: #c81e211f;
+}
+
+/* "Atom-Eve" — a bold POP-ART theme from the owner's palette (cyan #00BCF0,
+   yellow #FFE556, pink #FF91AF, light pink #F4C2C2, black), modeled on a
+   Dribbble pop-art storefront the owner chose: one huge flat saturated ground
+   (here a bold pink, deeper than the palette's #FF91AF), pure black type and
+   outlines, black solid primary buttons with white text, and small hits of
+   yellow and cyan. Cards are the palette's light pink on that ground, inputs
+   and hover rows are yellow, table headers are cyan, page titles are yellow
+   blocks. Black is the text color almost everywhere (7.1:1 on the ground,
+   13.3 on light pink, 16.6 on yellow, 9.5 on cyan); white only appears on the
+   black primary fill (21:1). The pink ground is a saturated colour, not a
+   white page, but it is a bright theme, so status text uses dark shades.
+   See overhaul-v3-frontend.md section 15. Not the default theme. */
+:root[data-theme='atom-eve'] {
+  --color-bg: #ff6aa0;
+  --color-surface: #f4c2c2;
+  --color-surface-raised: #ffe556;
+  --color-border: #000000;
+  --color-border-strong: #000000;
+
+  --color-ink: #000000;
+  --color-ink-soft: #2e0a18;
+  --color-ink-faint: #4a0f26;
+
+  /* "rosso" is the PRIMARY fill: solid black with white text, as in the example. */
+  --color-rosso: #000000;
+  --color-rosso-dark: #26262b;
+  --color-rosso-soft: #00000014;
+  --color-giallo: #ffe556;
+  --color-giallo-soft: #ffe55680;
+  --color-verde: #00bcf0;
+  --color-verde-soft: #00bcf033;
+  --color-bianco: #ffffff;
+  --color-accent-ink: #000000;
+  --color-link: #000000;
+  --color-stripe-mid: #ffe556;
+  --color-wave-cursor: #000000;
+  --glow-1: #ffffff2e;
+  --glow-2: #ffe55640;
+
+  /* Hard-edged panels: sharp corners (pills stay round). */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+
+  --color-flag-good: #023a1c;
+  --color-flag-good-soft: #023a1c26;
+  --color-flag-caution: #4f2c00;
+  --color-flag-caution-soft: #4f2c0026;
+  --color-flag-critical: #6e000d;
+  --color-flag-critical-soft: #6e000d26;
+}
+
+/* Flat colour blocks with black type, as in the reference. Scoped to this theme. */
+:root[data-theme='atom-eve'] main h1 {
+  display: inline-block;
+  background: var(--color-giallo);
+  color: #000000;
+  padding: 0.1em 0.45em;
+  border: 2px solid #000000;
+}
+:root[data-theme='atom-eve'] thead {
+  background: #00bcf0;
+}
+:root[data-theme='atom-eve'] thead th {
+  color: #000000;
+}
+:root[data-theme='atom-eve'] .top-stripe {
+  height: 8px;
 }
 
 body {
@@ -107,6 +189,63 @@ body {
     radial-gradient(ellipse 900px 500px at 15% -10%, var(--glow-1) 0%, transparent 60%),
     radial-gradient(ellipse 700px 500px at 100% 0%, var(--glow-2) 0%, transparent 55%);
   background-attachment: fixed;
+}
+
+/* Board colours (keyword optimizer): each theme paints its notes, stickers, tapes and posters from its own palette.
+   Ferrari uses the racing flags (green / red / yellow), Blueprint its blues and greys, Atom-Eve the pop-art set.
+   Ink on every paper stays black; only a sticker on a dark fill prints white. Every sticker also prints its label, so
+   colour is never the only cue. Contrast of each sticker ink on its fill is at least 4.5:1. */
+:root {
+  --kv-winner-paper: #d3ecdc;  --kv-winner-sticker: #039b4e;  --kv-winner-ink: #000000;
+  --kv-wasting-paper: #f6d2d2; --kv-wasting-sticker: #e42528; --kv-wasting-ink: #ffffff;
+  --kv-nostock-paper: #d9d4d4; --kv-nostock-sticker: #000000; --kv-nostock-ink: #ffffff;
+  --kv-testing-paper: #fbf6b0; --kv-testing-sticker: #f8e823; --kv-testing-ink: #000000;
+  --kv-tape: #f8e823;
+  --kv-poster: #fbf6b0;
+  --kv-headline: #f8e823;
+  --kv-good: #039b4e;
+  --kv-warn: #f6d2d2;
+}
+:root[data-theme='blueprint'] {
+  --kv-winner-paper: #d6ecf8;  --kv-winner-sticker: #0090d1;  --kv-winner-ink: #000000;
+  --kv-wasting-paper: #f6d9d9; --kv-wasting-sticker: #c81e21; --kv-wasting-ink: #ffffff;
+  --kv-nostock-paper: #dcdde0; --kv-nostock-sticker: #000000; --kv-nostock-ink: #ffffff;
+  --kv-testing-paper: #ececef; --kv-testing-sticker: #b7bbc1; --kv-testing-ink: #000000;
+  --kv-tape: #cfe6f3;
+  --kv-poster: #e6f2f9;
+  --kv-headline: #0090d1;
+  --kv-good: #0090d1;
+  --kv-warn: #f6d9d9;
+}
+:root[data-theme='atom-eve'] {
+  --kv-winner-paper: #d6f4fd;  --kv-winner-sticker: #00bcf0;  --kv-winner-ink: #000000;
+  --kv-wasting-paper: #ffd5e4; --kv-wasting-sticker: #ff6aa0; --kv-wasting-ink: #000000;
+  --kv-nostock-paper: #f4c2c2; --kv-nostock-sticker: #000000; --kv-nostock-ink: #ffffff;
+  --kv-testing-paper: #fff1a8; --kv-testing-sticker: #ffe556; --kv-testing-ink: #000000;
+  --kv-tape: #ffe556;
+  --kv-poster: #fff1a8;
+  --kv-headline: #ffe556;
+  --kv-good: #00bcf0;
+  --kv-warn: #f4c2c2;
+}
+
+/* The keyword optimizer's cork board: one tan in every theme, because a board is a physical
+   object. The dots are decorative only. */
+.cork-board {
+  background-color: #c99a62;
+  background-image:
+    radial-gradient(rgba(0, 0, 0, 0.14) 1px, transparent 1.6px),
+    radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1.6px);
+  background-size: 7px 7px, 11px 11px;
+  background-position: 0 0, 3px 4px;
+  border: 2px solid #000;
+}
+
+/* Horizontally scrollable rows (the top-bar nav, chart tab groups): a thin,
+   theme-colored scrollbar instead of the browser's chunky default. */
+.nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 
 h1, h2, h3, h4 {
@@ -149,7 +288,43 @@ h1, h2, h3, h4 {
 .agent-prose ol { list-style-type: decimal; }
 .agent-prose code { font-family: var(--font-mono); font-size: 0.9em; background: var(--color-surface-raised); padding: 0.1em 0.35em; border-radius: 3px; }
 .agent-prose hr { border: none; border-top: 1px solid var(--color-border); margin: 1.2em 0; }
-.agent-prose a { color: var(--color-giallo); text-decoration: underline; }
+.agent-prose a { color: var(--color-link); text-decoration: underline; }
+
+/* GFM tables (marked parses these automatically) — agents return these
+   for genuinely tabular answers, e.g. Aska breaking down a metric per
+   campaign. display:block + overflow-x lets a wide table scroll within
+   itself instead of forcing a narrow drawer/panel wider. */
+.agent-prose table {
+  display: block;
+  overflow-x: auto;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92em;
+  margin: 1em 0;
+}
+.agent-prose thead { background: var(--color-surface-raised); }
+.agent-prose th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-faint);
+  padding: 0.5em 0.75em;
+  border-bottom: 1px solid var(--color-border-strong);
+  white-space: nowrap;
+}
+.agent-prose td {
+  padding: 0.5em 0.75em;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-ink-soft);
+}
+.agent-prose tbody tr:last-child td { border-bottom: none; }
+.agent-prose tbody tr:hover { background: var(--color-surface-raised); }
+/* Right-align numeric-looking columns for readability — marked adds this
+   class from `| --- | ---: |` alignment syntax in the source markdown. */
+.agent-prose td[align='right'], .agent-prose th[align='right'] { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Shared pure-CSS hover/focus tooltip — used by GradeBadge's grade
    rationale and .critic-highlight's per-issue reason below. No JS

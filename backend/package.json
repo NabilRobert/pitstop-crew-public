@@ -6,18 +6,22 @@
   "scripts": {
     "dev": "tsx watch src/api/main.ts",
     "build": "tsc",
-    "start": "node dist/src/api/main.js"
+    "start": "node dist/src/api/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@types/multer": "^2.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "google-ads-api": "^24.1.0",
     "google-auth-library": "^11.0.0",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
     "openai": "^7.4.0",
     "pg": "^8.23.0",
@@ -30,6 +34,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.21.0",
     "tsx": "^4.23.11",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.7"
   }
 }

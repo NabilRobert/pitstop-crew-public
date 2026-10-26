@@ -30,14 +30,14 @@ const { dataSource, overrides, loading, error, saving, newDate, newState, setOve
               v-model="newDate"
               type="date"
               required
-              class="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-rosso focus:outline-none"
+              class="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent-ink focus:outline-none"
             />
           </div>
           <div>
             <label class="mb-1 block font-mono text-[10px] uppercase tracking-wide text-ink-faint">{{ t('timeMachine.stateLabel') }}</label>
             <select
               v-model="newState"
-              class="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm capitalize text-ink focus:border-rosso focus:outline-none"
+              class="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm capitalize text-ink focus:border-accent-ink focus:outline-none"
             >
               <option v-for="s in STATES" :key="s" :value="s">{{ t(`timeMachine.states.${s}`) }}</option>
             </select>

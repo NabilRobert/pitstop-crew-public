@@ -1,7 +1,7 @@
 // Shared Chart.js setup for the dashboard's charts. Chart.js needs raw
 // color strings, not CSS custom properties, so the brand-accent entries
-// here mirror style.css's --color-rosso/-giallo/-verde by hand, for BOTH
-// themes — keep the two in sync if either palette changes.
+// here mirror style.css's --color-rosso/-giallo/-verde by hand, for ALL
+// themes — keep them in sync if any palette changes.
 import { computed, type ComputedRef } from 'vue'
 import {
   Chart as ChartJS,
@@ -26,6 +26,19 @@ interface Palette {
   verde: string
   inkFaint: string
   gridColor: string
+  // v2 Stage 4 — genuinely distinct from rosso/giallo/verde above: those
+  // are Ferrari-brand accent colors (only green/yellow/red in the Ferrari
+  // theme itself; Blueprint reassigns them to gray/near-black/blue for
+  // its own light aesthetic). flagGood/Caution/Critical mirror
+  // style.css's --color-flag-* tokens instead — the app's actual
+  // semantic good/caution/critical colors, which stay green/amber/red in
+  // BOTH themes (just different shades for Blueprint's light background;
+  // see KeywordTable.vue's qsColorClass for the same semantic system via
+  // CSS classes). Needed for the impression-share stacked bar, where the
+  // 3 segments must mean "good/caution/critical" regardless of theme.
+  flagGood: string
+  flagCaution: string
+  flagCritical: string
 }
 
 const PALETTES: Record<ThemeName, Palette> = {
@@ -35,6 +48,9 @@ const PALETTES: Record<ThemeName, Palette> = {
     verde: '#039b4e',
     inkFaint: '#6f6c74',
     gridColor: 'rgba(255, 255, 255, 0.06)',
+    flagGood: '#039b4e',
+    flagCaution: '#f8e823',
+    flagCritical: '#e42528',
   },
   // Blueprint is a light theme (white chart canvas), not just a recolor —
   // grid lines and axis ticks need a dark-on-light treatment here, not the
@@ -45,6 +61,23 @@ const PALETTES: Record<ThemeName, Palette> = {
     verde: '#8a8d92',
     inkFaint: '#7d818a',
     gridColor: 'rgba(0, 0, 0, 0.08)',
+    flagGood: '#067a3f',
+    flagCaution: '#9a6300',
+    flagCritical: '#c81e21',
+  },
+  // Atom-Eve charts sit on its light-pink cards, where the brand cyan and yellow
+  // fills are nearly invisible (1.4:1 and 1.2:1), so the three series use black
+  // and darker companions of the palette: black, a deep cyan (2.9:1) and a deep
+  // pink (4.5:1). Flags are the theme's own dark shades.
+  'atom-eve': {
+    rosso: '#000000',
+    giallo: '#007fa8',
+    verde: '#b0004f',
+    inkFaint: '#4a0f26',
+    gridColor: 'rgba(0, 0, 0, 0.15)',
+    flagGood: '#023a1c',
+    flagCaution: '#4f2c00',
+    flagCritical: '#6e000d',
   },
 }
 

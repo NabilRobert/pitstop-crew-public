@@ -1,22 +1,31 @@
 // Weekly feedback job — reads the past week's critic critiques and drafts
 // a suggested prompt patch. NOT auto-applied; the returned text is meant
 // to be surfaced via the reporting channels (frontend + email) for manual
-// review. See PROJECT.md → "Critic feedback loop" and agents/critic.md →
+// review. See docs/PROJECT.md → "Critic feedback loop" and docs/agents/critic.md →
 // "Feedback loop".
 
 import { query } from '../data/db.js'
 import { MODEL_FULL, complete } from '../agents/llm.js'
+import { SHARED_GUARDRAILS } from '../agents/prompts.js'
 import { trackRun } from './pipelineRuns.js'
 
 // See anna.ts's MAX_TOKENS comment — reasoning models spend an
 // unpredictable share of the budget on hidden reasoning tokens first.
 const MAX_TOKENS = 2500
 
+// This was the one LLM call in the pipeline with no guardrail text at all —
+// every other agent (Anna/Rico/Sammy/Ciri/Aska) includes SHARED_GUARDRAILS.
+// Its input (a week of Ciri's critique text) is already once-removed from
+// raw campaign data, and it runs fully unattended before its output reaches
+// email + the Learning page, so there's no reason for it to be the odd one
+// out on secret-leak/scope/untrusted-input protection.
 const SYSTEM_PROMPT = `You are drafting a weekly prompt-improvement suggestion for a Google Ads AI dashboard's agent team (Anna/analysis, Rico/recommendation, Sammy/summary).
 
 You'll be given this week's critic critiques, each tagged with which agent it was about. Look for recurring patterns — the same kind of issue flagged more than once for the same agent — and draft a specific, concrete suggested edit to that agent's system prompt to address it. If an agent has no recurring pattern (only one-off critiques, or none), say so and suggest nothing for it. Do not invent patterns that aren't actually there across multiple critiques.
 
-This is a suggestion for a human to review and apply manually — never phrase it as something you're doing yourself.`
+This is a suggestion for a human to review and apply manually — never phrase it as something you're doing yourself.
+
+${SHARED_GUARDRAILS}`
 
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T00:00:00Z')
@@ -36,7 +45,12 @@ async function getWeekCritiques(asOf: string): Promise<WeekCritique[]> {
      FROM ai_outputs critic
      JOIN ai_outputs reviewed ON reviewed.id = critic.critiques_id
      WHERE critic.agent_type = 'critic'
+       -- The report agents only: Kai (keyword_optimizer) writes a ranked
+       -- suggestion list, not a report, and her reviews would skew the
+       -- prompt-patch suggestions this job makes for Anna, Rico and Sammy.
+       AND reviewed.agent_type IN ('analysis', 'recommendation', 'summary')
        AND critic.content != '(no issues found)'
+       AND critic.grade IS NOT NULL
        AND critic.created_at >= $1
      ORDER BY critic.created_at`,
     [start]

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatMicrosAsIDR, formatNumber, formatPercent } from '../../shared/utils/format'
 import MetricCard from './MetricCard.vue'
@@ -12,22 +12,37 @@ import WhyTrailPanel from '../../shared/report/WhyTrailPanel.vue'
 import TrendChart from './TrendChart.vue'
 import CampaignBarChart from './CampaignBarChart.vue'
 import SegmentBreakdownChart from './SegmentBreakdownChart.vue'
+import ConversionActionChart from './ConversionActionChart.vue'
+import RecommendationsList from './RecommendationsList.vue'
+import ChangeEventTimeline from './ChangeEventTimeline.vue'
 import { useReportDrawer } from '../../shared/report/useReportDrawer'
-import { useDashboard } from './useDashboard'
+import { useDashboard, PERIOD_OPTIONS } from './useDashboard'
+import PeriodSelector from './PeriodSelector.vue'
 
 const { t } = useI18n()
 const {
   loading,
   error,
+  days,
   performance,
   segmentPerformance,
+  conversionActions,
+  recommendations,
+  changeEvents,
   dailyReport,
+  campaigns,
   totals,
   ctr,
+  blendedImpressionShare,
+  blendedOptimizationScore,
   campaignRows,
   lastRunLabel,
   latestReportLink,
 } = useDashboard()
+
+const activePeriodSubtitleKey = computed(
+  () => PERIOD_OPTIONS.find((opt) => opt.days === days.value)?.subtitleKey ?? PERIOD_OPTIONS[0].subtitleKey
+)
 
 const showCampaignGlossary = ref(false)
 
@@ -50,8 +65,11 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
       <div class="mb-6 flex items-center justify-between">
         <div>
           <h1 class="font-display text-2xl font-bold text-ink">{{ t('dashboard.title') }}</h1>
-          <p class="mt-1 font-mono text-xs text-ink-faint">{{ t('dashboard.subtitle', { lastRun: lastRunLabel }) }}</p>
+          <p class="mt-1 font-mono text-xs text-ink-faint">
+            {{ t('dashboard.subtitle', { period: t(activePeriodSubtitleKey), lastRun: lastRunLabel }) }}
+          </p>
         </div>
+        <PeriodSelector v-model="days" />
       </div>
 
       <div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -59,6 +77,17 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
         <MetricCard :label="t('metrics.clicks')" :value="formatNumber(totals.clicks)" />
         <MetricCard :label="t('metrics.ctr')" :value="formatPercent(ctr)" accent="giallo" />
         <MetricCard :label="t('metrics.cost')" :value="formatMicrosAsIDR(totals.cost_micros)" accent="rosso" />
+        <MetricCard
+          v-if="blendedImpressionShare !== null"
+          :label="t('metrics.impressionShare')"
+          :value="formatPercent(blendedImpressionShare * 100, 0)"
+          accent="verde"
+        />
+        <MetricCard
+          v-if="blendedOptimizationScore !== null"
+          :label="t('metrics.optimizationScore')"
+          :value="formatPercent(blendedOptimizationScore * 100, 0)"
+        />
       </div>
 
       <div class="mb-8">
@@ -139,7 +168,7 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
               </div>
             </div>
 
-            <CampaignTable :rows="campaignRows" />
+            <CampaignTable :rows="campaignRows" :campaigns="campaigns" />
           </div>
         </div>
         <div class="lg:col-span-2">
@@ -148,7 +177,11 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
               {{ t('dashboard.aiReportHeading') }}
             </h2>
             <div class="flex items-center gap-3">
-              <StatusPill v-if="dailyReport.summary" :status="dailyReport.summary.status" />
+              <StatusPill
+                v-if="dailyReport.summary"
+                :status="dailyReport.summary.status"
+                :notes="dailyReport.summary.status === 'approved' && (dailyReport.summary.critique?.issues?.length ?? 0) > 0"
+              />
               <router-link
                 v-if="latestReportLink"
                 :to="latestReportLink"
@@ -167,8 +200,14 @@ const drawerTitle = () => (activeDrawer.value?.type === 'ask' ? t('askPanel.titl
         </div>
       </div>
 
-      <div class="mt-8">
+      <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SegmentBreakdownChart :rows="segmentPerformance" />
+        <ConversionActionChart :rows="conversionActions" />
+      </div>
+
+      <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <RecommendationsList :rows="recommendations" />
+        <ChangeEventTimeline :rows="changeEvents" />
       </div>
 
       <ReportDrawer :open="!!activeDrawer" :title="drawerTitle()" @close="closeDrawer">
