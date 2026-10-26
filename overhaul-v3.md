@@ -37,7 +37,7 @@ Principles, carried over from v1/v2 and not negotiable:
 
 | # | Decision | Source |
 |---|---|---|
-| 1 | The advertiser is the **existing demo used-car dealer**. Extend it. The earlier Beobot-as-advertiser draft is obsolete | owner, 2026-10-06 |
+| 1 | The advertiser is the **existing demo used-car dealer**. Extend it. An earlier draft with a different advertiser is obsolete | owner, 2026-10-06 |
 | 2 | Build **intent per search term** first, plus **value tiers** (separate conversion actions with different values). Closed-loop sale attribution comes later | owner accepted the recommendation |
 | 3 | Frontend domain is `https://pitcrewai.my.id` | owner |
 | 4 | Stays on the same VPS (no migration) | owner |
