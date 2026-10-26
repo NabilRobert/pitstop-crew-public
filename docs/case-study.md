@@ -11,11 +11,13 @@ as a case study.
 
 This write-up covers what was built, how it behaved while it ran, and what
 went wrong. Every number in it comes from a query over the system's own
-records, in [`evidence/`](evidence/). The ad data was synthetic throughout;
+records: the results are in [`docs/evidence/`](evidence/), and the SQL
+that produces them is in [`evidence/queries/`](../evidence/queries/). The
+ad data was synthetic throughout;
 see [What is and isn't real](#what-is-and-isnt-real).
 
-- **Live demo:** `<demo-domain>`. It's moving to a new server; the demo
-  runs on synthetic data, read-only.
+- **Live demo:** https://pitcrew-public.my.id (being set up on a new server). It runs on
+  synthetic data, read-only.
 - **Code:** this repo. The design rationale is in
   [`PROJECT.md`](../PROJECT.md), and the per-agent specs are in
   [`agents/`](../agents/).
@@ -53,7 +55,8 @@ Pitstop is the opposite:
   status pill.
 - **Ask.** Rico and Sammy can be questioned on demand, against the same
   data the report used.
-- **A weekly feedback job** reads recurring patterns in Ciri's critiques
+- **A weekly feedback job** (`weekly_feedback` in the run records, shown on
+  the Learning page) reads recurring patterns in Ciri's critiques
   and drafts a prompt patch. It's never applied automatically; a person
   reviews it.
 - **A Run Inspector** records every step of a run as a nested trace: the
@@ -80,19 +83,26 @@ Pitstop is the opposite:
 
 ## How it ran, by the numbers
 
-The daily pipeline ran from **9 August to 6 October 2026**. The keyword
-optimizer ran nightly from 6 to 26 October. All dates are UTC+7.
+The daily pipeline ran from **9 August to 6 October 2026**, when the
+scheduled reports were switched off; the weekly jobs last ran on 21
+September. The keyword optimizer has its own switch and kept running
+nightly from 6 to 26 October
+([01](evidence/01-runs-by-type.csv), [15](evidence/15-schedule-switches.csv)).
+All dates are UTC+7.
 
 | | Value | Source |
 |---|---|---|
 | Daily-pipeline runs | 68: 65 succeeded, 3 failed | [01](evidence/01-runs-by-type.csv) |
-| Other runs | 5 weekly, 6 weekly-feedback, 23 keyword-optimizer (18 complete, 5 partial), 64 backups | [01](evidence/01-runs-by-type.csv) |
+| Other runs | 5 weekly reports; 6 weekly-feedback runs; 23 keyword-optimizer runs (18 complete, 5 partial: 3 skipped the model step by design, 2 refused by the model provider for billing); 64 backups | [01](evidence/01-runs-by-type.csv), [03](evidence/03-failures.csv) |
 | Why the 3 daily runs failed | one model-gateway timeout; one process restart mid-run, caught by startup recovery; one aborted by me during diagnostics | [03](evidence/03-failures.csv) |
 | Cost of a daily run | mean $0.15, median $0.17, max $0.24, over the 7 runs that recorded a cost | [05](evidence/05-cost-per-run.csv) |
 | Model calls per daily run | mean 7.3 (6–10), over the 8 runs traced after 28 September | [06](evidence/06-model-calls-per-run.csv) |
-| Critic reviews | 548, over 231 outputs | [08](evidence/08-critic-grades-by-month.csv), [09](evidence/09-revisions-per-output.csv) |
-| Outputs revised the maximum two times | 189 of 231 (82%) | [09](evidence/09-revisions-per-output.csv) |
+| Critic reviews | 548, over 231 outputs (an output is a report section and its revisions; 231 counts each once) | [13](evidence/13-headline-totals.csv) |
+| Outputs revised the maximum two times | 189 of 231 (82%) | [13](evidence/13-headline-totals.csv), by agent in [09](evidence/09-revisions-per-output.csv) |
 | Longest gap between daily runs | 8 days (19 to 28 August) | [04](evidence/04-daily-schedule-gaps.csv) |
+
+The revision loop rarely settled early: 82% of outputs used both
+revisions it allows.
 
 Two limits on these numbers:
 - **Cost is a floor.** It was only recorded once usage tracking existed:
@@ -132,10 +142,10 @@ Backend changes were synced into this repo in batches. That's why several
 fix commits share the date 28 September, and why a fix can appear in the
 data before its commit date.
 
-### 1. A metric that couldn't move
+### 1. A metric that hid how often the critic failed outputs
 
 - **Symptom:** the Learning page charted the share of outputs Ciri
-  flagged. It sat around 30% for two months, whatever happened to quality.
+  flagged. It sat around 30% through August and September.
 - **Cause:** it counted every draft and revision. A critic that blocks a
   first draft and passes the second pins that ratio. It measured the
   loop's shape, not the outputs.
@@ -150,7 +160,10 @@ data before its commit date.
 | September | 29.6% | 77.1% |
 | October | 17.3% | 36.0% |
 
-The old measure barely moved while the real one fell from 95% to 36%.
+In August the old chart showed 32.5% flagged, while 95.0% of final
+versions were flagged: **it understated failures about threefold.** This
+item claims only that measurement fix. Both measures fell later, mostly
+because of the rule change in item 2, which is counted there.
 
 ### 2. An approval rule that approved almost nothing
 
@@ -161,13 +174,21 @@ The old measure barely moved while the real one fell from 95% to 36%.
 - **Fix:** [`42a8710`](https://github.com/NabilRobert/pitstop-crew-public/commit/42a8710), severity-based approval,
   decided in code. The data dates it independently: the first
   severity-tagged review was on 28 September, the same day.
-- **Measured** ([11](evidence/11-critic-before-after-severity.csv)): of
-  final outputs, 7 of 186 (3.8%) were approved before the change and 34 of
-  45 (75.6%) after.
-- **What that does and doesn't show:** approval got easier to earn, so
-  more approvals doesn't by itself prove the reports got better. What
-  changed is that a flag now means a D or F grade, or a high-severity
-  issue. The Learning page marks this date and carries the same caveat.
+- **Measured:**
+  - **All agents** ([11](evidence/11-critic-before-after-severity.csv)):
+    7 of 186 final outputs (3.8%) were approved before the change, and 34
+    of 45 (75.6%) after.
+  - **Like for like** ([14](evidence/14-critic-before-after-same-agents.csv)):
+    the "after" group includes the keyword optimizer, which only started
+    in October. For the three report agents alone, all 23 final outputs
+    after the change were approved. All 9 flags after it were the
+    optimizer's.
+- **What that does and doesn't show:** 23 outputs, from the nine days
+  before the scheduled reports were switched off, is a small sample. 100%
+  approval shows the new rule passes what these agents produced; it
+  doesn't show the reports got better. What changed is what a flag means:
+  a D or F grade, or a high-severity issue. The Learning page marks this
+  date and carries the same caveat.
 
 ### 3. Blank drafts saved as content
 
@@ -177,9 +198,11 @@ The old measure barely moved while the real one fell from 95% to 36%.
   [`f8b9e9c`](https://github.com/NabilRobert/pitstop-crew-public/commit/f8b9e9c). An empty response now retries with a
   larger token budget. If the first draft is still empty, the run fails
   and alerts. A blank revision keeps the previous draft, flagged.
-- **Measured** ([12](evidence/12-blank-drafts.csv)): 10 blank outputs were
-  saved between 10 and 28 August, and none of the 326 in September and
-  October.
+- **Measured** ([12](evidence/12-blank-drafts.csv),
+  [13](evidence/13-headline-totals.csv)): 10 blank drafts were saved
+  between 10 and 28 August, and none of the 326 drafts and revisions saved
+  in September and October. The fix commits are dated 28 September only
+  because of the batch sync above.
 
 ### Also
 

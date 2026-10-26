@@ -56,7 +56,7 @@ terminates TLS.
    the server.
    - Use mode 600, and edit them with `nano`.
    - Use fresh passwords; never reuse the old server's.
-   - Set `FRONTEND_ORIGIN=https://<demo-domain>`.
+   - Set `FRONTEND_ORIGIN=https://pitcrew-public.my.id`.
    - Add no keys.
 3. **Start it:**
    ```bash
@@ -67,11 +67,11 @@ terminates TLS.
 5. **Proxy the domain.** Add one site to the server's Caddy, reaching
    `127.0.0.1:8090` the same way it reaches MCP-backbone:
    ```
-   <demo-domain> {
+   pitcrew-public.my.id {
        reverse_proxy 127.0.0.1:8090
    }
    ```
-6. **Check it from outside:** `https://<demo-domain>/api/health` should
+6. **Check it from outside:** `https://pitcrew-public.my.id/api/health` should
    return `{"status":"ok"}`.
 
 Install no crontab for it. Pitstop's schedules are all external cron, so

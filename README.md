@@ -9,9 +9,9 @@ the critic, reviews every output before anyone sees it.
 
 ![Dashboard overview](docs/images/dashboard-overview.webp)
 
-- **Live demo:** `<demo-domain>` (moving to a new server; the address is
-  coming soon). It runs in demo mode on synthetic data, and a read-only
-  account is available on request.
+- **Live demo:** https://pitcrew-public.my.id (being set up on a new server). It runs in
+  demo mode on synthetic data, and a read-only account is available on
+  request.
 - **Status:** built as a commissioned prototype for a used-car
   dealership's Google Ads, from August to October 2026. It ran unattended
   on a daily schedule. The project was shelved before launch, and I've
@@ -53,7 +53,7 @@ Google Ads data ──► Postgres ──► Anna (analysis) ──► Rico (rec
     problems with known answers.
   - Ad copy is built from templates and checked in code: length limits,
     and only claims the account can back up.
-- **A learning loop.** A weekly job reads recurring patterns in the
+- **A weekly feedback job** (shown on the Learning page) reads recurring patterns in the
   critic's reviews and drafts prompt changes. They are never applied
   automatically.
 
@@ -110,7 +110,8 @@ npm run dev:frontend                                 # UI on :5173
 Running a pipeline makes paid model calls, so it needs a model API key in
 `.env`. It uses Sumopod, an OpenAI-compatible gateway, by default. To call
 OpenAI directly instead, set `SUMOPOD_BASE_URL=https://api.openai.com/v1`
-and put an OpenAI key in `sumopod-api-key`. No code changes are needed. To look at the UI with no backend and no keys, run
+and put an OpenAI key in `sumopod-api-key` (the variable that holds the
+model gateway's key). No code changes are needed. To look at the UI with no backend and no keys, run
 `npm run mock-api -w frontend`, which serves test data on `:8000`.
 
 ## Tests
@@ -133,6 +134,9 @@ frontend/src/   app/ (shell) · features/ (one folder per page) · shared/
 agents/         one spec per agent: model choice, prompt design, guardrails
 docs/           case study and screenshots
 PROJECT.md      the design doc: decisions, pipeline, cost guardrails, known gaps
+evidence/       the SQL behind every number in the case study (results in docs/evidence/)
+deploy/demo/    the read-only demo: containers, data cleaning, and the zero-spend check
+*.md (root)     working notes from the build: overhaul-v3*, research, the demo dataset (dummy.md), voice
 ```
 
 ## Stack

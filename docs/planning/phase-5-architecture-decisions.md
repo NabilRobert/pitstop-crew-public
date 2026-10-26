@@ -43,7 +43,7 @@ through the server's existing proxy.
 | `db` | `postgres:16` holding the cleaned data | 256 MB, own volume, no published port |
 | `web` | `caddy:2-alpine` serving the built frontend | 64 MB |
 
-The server's existing Caddy serves `<demo-domain>` and proxies all of it
+The server's existing Caddy serves `pitcrew-public.my.id` and proxies all of it
 to `web`, the only published container (on loopback). `web`'s own Caddy
 serves the frontend and passes `/api/*` to `api`, with the prefix stripped
 (`handle_path`), since the API's routes sit at the root. *(As built,
@@ -55,8 +55,8 @@ the same stack runs unchanged on a laptop.)*
 - It's isolated from MCP-backbone: separate database cluster, separate
   processes, and separate memory caps on a shared server.
 - It's one domain and one certificate, with the frontend and API on the
-  same origin. The frontend is built with
-  `VITE_API_URL=https://<demo-domain>/api`.
+  same origin. *(As built:* the frontend is built with `VITE_API_URL=/api`,
+  a relative address, so the image needs no domain.)
 
 **Rejected:**
 - *Running it natively under systemd, the way MCP-backbone runs:* it would
@@ -115,7 +115,7 @@ no keys, even the owner can't make it spend.
 |---|---|---|
 | **1. Evidence** | The existing tests run in this clone (fixed if needed); the queries, `run.sh` and results in `docs/evidence/` | One command rebuilds the results byte for byte; the snapshot's hash is recorded |
 | **2. Case study** | `docs/case-study.md` rewritten on the evidence, with three failures tied to commits; README links checked | Every number is traceable to a file; nothing is estimated without saying so |
-| **3. Demo** | The cleaning script; the compose files; the demo-route test; a full local run on the Mac with no keys; then the server deploy through Arthur | The demo serves the cleaned data at `<demo-domain>`; the env holds no keys; no crontab; the demo login gets a 403 on writes |
+| **3. Demo** | The cleaning script; the compose files; the demo-route test; a full local run on the Mac with no keys; then the server deploy through Arthur | The demo serves the cleaned data at `pitcrew-public.my.id`; the env holds no keys; no crontab; the demo login gets a 403 on writes |
 | **(Should)** | CI for the tests; the cleaned metadata export; JOURNEY | |
 
 Slices 1 and 2 are local and free. Slice 3's server part waits for the

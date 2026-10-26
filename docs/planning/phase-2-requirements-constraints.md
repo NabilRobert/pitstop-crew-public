@@ -33,7 +33,7 @@ goes in three slices.
 
 **Demo**
 - **D1.** Hosted on the server that runs Projects 1 and 2, under a new
-  domain (`<demo-domain>` until Arthur supplies it).
+  domain, `pitcrew-public.my.id` (supplied by Arthur, 2026-10-26).
 - **D2.** The demo server holds **no paid API keys**: no model gateway, no
   Google Ads, no voice and no email. With no keys present, a model call
   can't happen even if something is misconfigured.

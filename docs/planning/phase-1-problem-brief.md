@@ -117,7 +117,7 @@ three problems:
 4. **Hosting:** the demo moves to the server that runs Projects 1 and 2, as
    a read-only demo with its schedules switched off. It gets a new domain,
    which Arthur will supply; the old address isn't used. Until then, docs
-   say `<demo-domain>`.
+   say `<demo-domain>`. *(Supplied 2026-10-26: `pitcrew-public.my.id`.)*
 5. **Budget:** $0 for model calls.
 6. **Format:**
    - the README;

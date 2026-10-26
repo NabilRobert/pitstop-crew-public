@@ -85,6 +85,8 @@ Browser (frontend)
 ```
 
 ## Deployment (decided)
+> **Superseded (2026-10-26):** the original plan below put the frontend on Vercel. The public demo now runs entirely on one VPS, as three containers (database, API, and Caddy serving the frontend and `/api`), with no paid API keys. See [`deploy/demo/README.md`](deploy/demo/README.md).
+
 - **Backend:** VPS via **Sumopod** — to be provisioned later
 - **Frontend:** Vercel
 - **Auth on backend↔frontend boundary:** none planned — single-user (just the account owner), no multi-tenant access needed for v1
@@ -183,7 +185,7 @@ Beyond the core pipeline — the features meant to make this demo-able, not just
 8. **Guided "Story Mode" walkthrough.** The synthetic dataset already has a deliberate decline, seasonal spike, obvious insight, and subtle insight built in (see "What the synthetic dataset needs to contain") — currently invisible unless someone digs. Narrate the timeline as a business story for a non-technical viewer ("Week 3, this campaign started slipping. Anna caught it before it hit spend. Rico suggested reallocating to the SUV segment...") while every narrated beat is clickable into the pipeline trace (#2) and why-trail (#3) for a technical viewer. One experience, two depths — not two separate demos.
 
 ## Known Gaps (noted, not yet decided)
-- **Frontend has no auth and is publicly deployed on Vercel.** The "no auth" decision elsewhere is about the backend↔frontend API boundary, not the Reports UI itself — anyone with the URL can currently see real ad performance data. Needs a decision (password gate vs. accepting security-through-obscurity for v1).
+- **Frontend has no auth and is publicly deployed on Vercel.** *(Resolved since: a login gates the whole app, with an optional read-only demo account enforced server-side.)* The "no auth" decision elsewhere is about the backend↔frontend API boundary, not the Reports UI itself — anyone with the URL can currently see real ad performance data. Needs a decision (password gate vs. accepting security-through-obscurity for v1).
 
 ## V2 / Future Plans
 
