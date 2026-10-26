@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # npm workspaces, as the README installs it: dependencies hoisted to
+      # the root. The frontend checks and typecheck once broke under exactly
+      # this layout, so CI uses it.
+      - name: Install (exact versions from package-lock.json)
+        run: npm ci
+
+      - name: Backend build (tsc)
+        run: npm run build -w backend
+
+      - name: Backend tests (Vitest)
+        run: npm run test:backend
+
+      - name: Frontend typecheck (vue-tsc with the frontend's TypeScript)
+        run: npm run typecheck -w frontend
+
+      - name: Frontend checks (real pages against a mocked API)
+        run: npm run test:frontend
+
+      - name: Frontend production build
+        run: npm run build -w frontend
+
+      # The evidence is computed from a private database snapshot, so CI
+      # can't rerun the queries. It checks the evidence is complete instead:
+      # every query has a committed result, every result has its query, and
+      # every evidence file the case study links to exists.
+      - name: Evidence is complete and linked
+        run: |
+          set -eu
+          status=0
+          for q in evidence/queries/*.sql; do
+            n=$(basename "$q" .sql)
+            [ -f "docs/evidence/$n.csv" ] || { echo "no result for $q"; status=1; }
+          done
+          for c in docs/evidence/*.csv; do
+            n=$(basename "$c" .csv)
+            [ -f "evidence/queries/$n.sql" ] || { echo "no query for $c"; status=1; }
+          done
+          for f in $(grep -o '](evidence/[^)]*\.csv)' docs/case-study.md | sed 's/^](//; s/)$//' | sort -u); do
+            [ -f "docs/$f" ] || { echo "case study links a missing file: $f"; status=1; }
+          done
+          [ -s docs/evidence/SNAPSHOT ] || { echo "no SNAPSHOT"; status=1; }
+          exit $status
+
+  # The read-only demo's images. Running the stack needs the private seed,
+  # so CI builds the images (catching a broken Dockerfile or Caddyfile) and
+  # validates the Caddyfile; deploy/demo/verify.py checks a running stack.
+  demo-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Placeholder secrets (compose requires the files to exist)
+        run: |
+          : > deploy/demo/demo.env
+          : > deploy/demo/db_password.txt
+
+      - name: Build the demo images
+        run: docker compose -f deploy/demo/compose.yaml build
+
+      - name: Validate the web container's Caddyfile
+        run: docker compose -f deploy/demo/compose.yaml run --rm --no-deps --entrypoint caddy web validate --config /etc/caddy/Caddyfile
