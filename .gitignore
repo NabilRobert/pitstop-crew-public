@@ -37,3 +37,8 @@ backups/
 *.dump
 # Private working notes (internal context; never published)
 HANDOVER.md
+
+# Demo database seed: built from the private backup by deploy/demo/build-seed.sh
+deploy/demo/seed/
+deploy/demo/demo.env
+deploy/demo/db_password.txt
