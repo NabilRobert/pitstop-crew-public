@@ -16,8 +16,8 @@ that produces them is in [`evidence/queries/`](../evidence/queries/). The
 ad data was synthetic throughout;
 see [What is and isn't real](#what-is-and-isnt-real).
 
-- **Live demo:** https://pitcrew-public.my.id (being set up on a new server). It runs on
-  synthetic data, read-only.
+- **Live demo:** https://pitcrew-public.my.id. It runs on synthetic data,
+  read-only, with a login available on request.
 - **Code:** this repo. The design rationale is in
   [`PROJECT.md`](../PROJECT.md), and the per-agent specs are in
   [`agents/`](../agents/).

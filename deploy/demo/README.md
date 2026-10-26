@@ -67,14 +67,29 @@ terminates TLS.
    docker compose -f deploy/demo/compose.yaml up -d --build
    ```
 4. **Verify it:** run `python3 deploy/demo/verify.py`. It must print
-   `PASS`.
-5. **Proxy the domain.** Add one site to the server's Caddy, reaching
-   `127.0.0.1:8090` the same way it reaches MCP-backbone:
-   ```
-   pitcrew-public.my.id {
-       reverse_proxy 127.0.0.1:8090
-   }
-   ```
+   `PASS`. If you bound the demo elsewhere (step 5), add
+   `--base http://<that address>:8090`.
+5. **Proxy the domain.** Where Caddy runs decides where the demo listens:
+   - **Caddy on the host:** keep the default (loopback) and add
+     ```
+     pitcrew-public.my.id {
+         reverse_proxy 127.0.0.1:8090
+     }
+     ```
+   - **Caddy inside a container** (the case on the current server): inside
+     that container, `127.0.0.1` is the container itself. Bind the demo to
+     the Docker bridge gateway instead. Put
+     `PITSTOP_DEMO_BIND=172.18.0.1` in `deploy/demo/.env` (git-ignored; use
+     your network's gateway from `docker network inspect`), recreate `web`,
+     and proxy to that address:
+     ```
+     pitcrew-public.my.id {
+         reverse_proxy 172.18.0.1:8090
+     }
+     ```
+     The gateway address isn't reachable from the internet; check with
+     `curl -m 5 http://<public ip>:8090`, which must time out.
+   Back up the Caddy config, `caddy validate` it, then reload.
 6. **Check it from outside:** `https://pitcrew-public.my.id/api/health` should
    return `{"status":"ok"}`.
 

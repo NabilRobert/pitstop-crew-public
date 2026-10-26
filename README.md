@@ -9,9 +9,8 @@ the critic, reviews every output before anyone sees it.
 
 ![Dashboard overview](docs/images/dashboard-overview.webp)
 
-- **Live demo:** https://pitcrew-public.my.id (being set up on a new server). It runs in
-  demo mode on synthetic data, and a read-only account is available on
-  request.
+- **Live demo:** https://pitcrew-public.my.id. It runs in demo mode on
+  synthetic data, and a read-only account is available on request.
 - **Status:** built as a commissioned prototype for a used-car
   dealership's Google Ads, from August to October 2026. It ran unattended
   on a daily schedule. The project was shelved before launch, and I've

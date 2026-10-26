@@ -14,7 +14,7 @@ when it was checked, not because the work was done.
 | 3 | Cost per run, and the calls-per-run change confirmed or corrected | **Met** | Cost by run type ([05](../evidence/05-cost-per-run.csv)). Calls per run measured for the traced period: 7.3, correcting "about 6" ([06](../evidence/06-model-calls-per-run.csv)). "About 18 before" predates tracing, and the case study says it's unverified |
 | 4 | The critic's behaviour over time | **Met** | Final outcomes, grades, revisions, the flag rate counted two ways, and before/after the approval change ([07](../evidence/07-critic-final-outcomes-by-month.csv)–[11](../evidence/11-critic-before-after-severity.csv)) |
 | 5 | At least three failure modes, each with symptom, how it was found, cause, fixing commit and measured result | **Mostly met** | See below |
-| 6 | A read-only demo on the same server, zero model spend, verified | **Pending deploy** | See below |
+| 6 | A read-only demo on the same server, zero model spend, verified | **Met** | See below |
 | 7 | A reviewer gets it in about 15 minutes | **Stand-in passed; a human read is pending** | See below |
 
 **Metric 1: how it was checked.**
@@ -43,19 +43,23 @@ their fixing commits, each with a measured result:
 The gap: **"how it was found" is implied by each symptom rather than
 stated.** Only Arthur knows how each one was actually noticed.
 
-**Metric 6: what's verified, and what isn't yet.**
-- **Built and verified locally:**
-  - `deploy/demo/verify.py` calls all 55 routes with the demo login. Every
-    write gets a 403, and no read reaches a model.
-  - It confirms the API container holds no paid-service variables and
-    runs only the API.
-  - It was shown to fail with a key added and with the owner login.
-  - The data-cleaning checks were each shown to fail with their cleaning
-    step removed.
-  - The UI shows the read-only and demo-mode labels.
-- **Not done yet:** the server deploy. The domain, `pitcrew-public.my.id`,
-  was supplied on 2026-10-26 and didn't resolve yet when checked. This row
-  is re-checked after the deploy, with `verify.py` run on the server.
+**Metric 6: deployed and verified (2026-10-26).**
+- **Live** at https://pitcrew-public.my.id, on the same server as Projects
+  1 and 2. It has a valid Let's Encrypt certificate.
+- **On the server,** `deploy/demo/verify.py` passed:
+  - all 55 routes were called with the demo login;
+  - every write was refused, and no read reached a model;
+  - the container holds no paid-service variables and runs only the API.
+- **From outside:** `/api/health` answers, the frontend loads, an
+  unauthenticated write gets a 401, and the demo's port isn't reachable
+  from the internet.
+- **Footprint:** 166 runs loaded; about 66 MB of memory across the three
+  containers; no crontab.
+- **Two deploy problems, both now fixed in the repo:**
+  - The seed's permissions let the restore fail into an empty-but-healthy
+    database. `verify.py` now fails on an empty database.
+  - The server's Caddy runs in a container, so the demo binds to the
+    Docker bridge gateway (`PITSTOP_DEMO_BIND`).
 
 **Metric 7: a stand-in, not the real test.** The README is about 1,000
 words and the case study about 2,000, roughly 4 and 9 minutes of reading.
@@ -84,7 +88,7 @@ read is still to do.
 |---|---|---|
 | Must | E1–E4: queries, one-command runner, committed results, failures tied to commits | Done |
 | Must | W1: the case study rewritten on measured numbers | Done |
-| Must | D1: hosted on the server | **Pending deploy** |
+| Must | D1: hosted on the server | Done: live, verified on the server and from outside |
 | Must | D2–D6: no keys, no schedules, the demo-route test, cleaned data, the synthetic label | Done and verified locally |
 | Must | The existing tests pass in this clone | Done. They didn't at first (17 of 22 frontend checks failed, and the typecheck crashed); fixed |
 | Should | CI | Done: tests, typecheck, builds, evidence completeness, demo images |
@@ -106,10 +110,8 @@ read is still to do.
 
 ## What's left
 
-1. **Deploy the demo**, then re-check metric 6 on the server
-   (`verify.py`, then `/api/health` from outside).
-2. **A cold read** for metric 7.
-3. **The Should and Could items above**, if wanted:
+1. **A human cold read** for metric 7.
+2. **The Should and Could items above**, if wanted:
    - the metadata export;
    - screenshots;
    - a LICENSE.
