@@ -32,6 +32,8 @@ anyone can see exactly what was counted.
 | `08-critic-grades-by-month.csv` | The critic's letter grades over time |
 | `09-revisions-per-output.csv` | How many revisions each output went through (the maximum is two) |
 | `10-flag-rate-two-ways.csv` | The flag rate counted over every draft vs. over final versions only |
+| `11-critic-before-after-severity.csv` | Final outcomes before and after severity-based approval went live (date taken from the data) |
+| `12-blank-drafts.csv` | Outputs saved with empty content, by month |
 
 ## Read these with the caveats
 
@@ -50,7 +52,8 @@ anyone can see exactly what was counted.
   message to a category; the mapping is the whole classification. Raw
   messages aren't published, because some carry provider account and
   trace IDs.
-- **The critic's grade and its approval are separate.** Approval is
-  decided in code from the severity of the issues the critic raises. The
-  letter grade is the critic's own overall mark. They can move in
-  different directions; October has mostly D grades but more approvals.
+- **Grades and approvals count different things.** A grade is given on
+  every review, including first drafts that were sent back. Approval is
+  decided in code for the final version: no high-severity issue, and a
+  grade of A, B or C. So October can have mostly D grades (on drafts) and
+  more approvals (on final versions).
