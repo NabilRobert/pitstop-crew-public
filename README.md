@@ -84,8 +84,10 @@ The project is as much about operating agents as building them:
 - **Single-user:** one owner login plus an optional read-only demo login.
   No multi-tenancy.
 
-The full write-up, with what went wrong and what changed, is in
-[docs/case-study.md](docs/case-study.md).
+The full write-up is in [docs/case-study.md](docs/case-study.md): how it
+ran, what went wrong, and what each fix measurably changed. Every number
+in it comes from a SQL query over the system's own records, in
+[docs/evidence/](docs/evidence/).
 
 ## Run it locally
 
@@ -110,8 +112,9 @@ and put an OpenAI key in `sumopod-api-key`. No code changes are needed. To look 
 ## Tests
 
 ```bash
-npm run test:backend     # Vitest
-npm run test:frontend    # renders the real pages against a mocked API
+npm run test:backend     # Vitest: 388 tests
+npm run test:frontend    # 22 checks: render the real pages against a mocked API
+npm run typecheck -w frontend
 ```
 
 The backend tests focus on the logic where a silent bug would matter
