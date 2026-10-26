@@ -36,11 +36,13 @@ import { router as keywordOptimizerRoutes } from './routes/keywordOptimizer.js'
 import { router as launchesRoutes, auditDemoLaunch } from './routes/launches.js'
 
 const app = express()
-// Caddy is the only proxy in front of the API (and the API only listens on
-// loopback, below), so the one hop it adds is trusted: req.ip is then the real
-// client, which the login lockout is keyed on. Without this every visitor
+// On a bare server Caddy is the only proxy in front of the API (and the API
+// only listens on loopback, below), so the one hop it adds is trusted: req.ip
+// is then the real client, which the login lockout is keyed on. Without this every visitor
 // shares the proxy's address and five bad logins by anyone lock out everyone.
-app.set('trust proxy', 1)
+// TRUST_PROXY_HOPS: how many proxies sit in front. 1 on a bare server (Caddy);
+// the containerised demo has 2 (the server's Caddy, then the web container's).
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1)
 app.use(express.json())
 app.use(
   cors({
@@ -102,8 +104,11 @@ reconcileOrphanedRuns()
   .catch((err) => console.error('Failed to reconcile orphaned pipeline runs at startup:', err))
 
 const port = Number(process.env.PORT) || 8000
-// Loopback only: Caddy proxies to it, and a direct connection from outside
-// would bypass Caddy and could spoof X-Forwarded-For past 'trust proxy'.
-app.listen(port, '127.0.0.1', () => {
-  console.log(`Google Ads AI Performance Dashboard API listening on 127.0.0.1:${port}`)
+// Loopback by default: Caddy proxies to it, and a direct connection from
+// outside would bypass Caddy and could spoof X-Forwarded-For past 'trust
+// proxy'. In a container, HOST=0.0.0.0 binds the container's own interface,
+// which is reachable only on its private Docker network (no published port).
+const host = process.env.HOST || '127.0.0.1'
+app.listen(port, host, () => {
+  console.log(`Google Ads AI Performance Dashboard API listening on ${host}:${port}`)
 })
