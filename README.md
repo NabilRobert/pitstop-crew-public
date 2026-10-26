@@ -12,8 +12,10 @@ the critic, reviews every output before anyone sees it.
 - **Live demo:** `<demo-domain>` (moving to a new server; the address is
   coming soon). It runs in demo mode on synthetic data, and a read-only
   account is available on request.
-- **Status:** built from August to October 2026 and ran unattended on a
-  daily schedule. Paused since October 2026.
+- **Status:** built as a commissioned prototype for a used-car
+  dealership's Google Ads, from August to October 2026. It ran unattended
+  on a daily schedule. The project was shelved before launch, and I've
+  published it as a case study.
 
 ## Why it exists
 

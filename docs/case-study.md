@@ -5,6 +5,10 @@ reads the account's stored performance data and writes an analysis. It
 turns that into recommendations and summarises the result. A fourth
 agent, the critic, grades every output before anyone sees it.
 
+It was built as a commissioned prototype for a used-car dealership's
+Google Ads. The project was shelved before launch, and I've published it
+as a case study.
+
 This write-up covers what was built, how it behaved while it ran, and what
 went wrong. Every number in it comes from a query over the system's own
 records, in [`evidence/`](evidence/). The ad data was synthetic throughout;
