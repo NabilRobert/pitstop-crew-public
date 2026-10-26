@@ -90,8 +90,8 @@ optimizer ran nightly from 6 to 26 October. All dates are UTC+7.
 | Why the 3 daily runs failed | one model-gateway timeout; one process restart mid-run, caught by startup recovery; one aborted by me during diagnostics | [03](evidence/03-failures.csv) |
 | Cost of a daily run | mean $0.15, median $0.17, max $0.24, over the 7 runs that recorded a cost | [05](evidence/05-cost-per-run.csv) |
 | Model calls per daily run | mean 7.3 (6–10), over the 8 runs traced after 28 September | [06](evidence/06-model-calls-per-run.csv) |
-| Critic reviews | 548, over 231 outputs | [08](evidence/08-critic-grades-by-month.csv), [09](evidence/09-revisions-per-output.csv) |
-| Outputs revised the maximum two times | 189 of 231 (82%) | [09](evidence/09-revisions-per-output.csv) |
+| Critic reviews | 548, over 231 outputs | [13](evidence/13-headline-totals.csv) |
+| Outputs revised the maximum two times | 189 of 231 (82%) | [13](evidence/13-headline-totals.csv), by agent in [09](evidence/09-revisions-per-output.csv) |
 | Longest gap between daily runs | 8 days (19 to 28 August) | [04](evidence/04-daily-schedule-gaps.csv) |
 
 Two limits on these numbers:
@@ -177,7 +177,8 @@ The old measure barely moved while the real one fell from 95% to 36%.
   [`f8b9e9c`](https://github.com/NabilRobert/pitstop-crew-public/commit/f8b9e9c). An empty response now retries with a
   larger token budget. If the first draft is still empty, the run fails
   and alerts. A blank revision keeps the previous draft, flagged.
-- **Measured** ([12](evidence/12-blank-drafts.csv)): 10 blank outputs were
+- **Measured** ([12](evidence/12-blank-drafts.csv),
+  [13](evidence/13-headline-totals.csv)): 10 blank outputs were
   saved between 10 and 28 August, and none of the 326 in September and
   October.
 

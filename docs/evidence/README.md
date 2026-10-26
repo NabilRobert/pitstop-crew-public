@@ -34,6 +34,7 @@ anyone can see exactly what was counted.
 | `10-flag-rate-two-ways.csv` | The flag rate counted over every draft vs. over final versions only |
 | `11-critic-before-after-severity.csv` | Final outcomes before and after severity-based approval went live (date taken from the data) |
 | `12-blank-drafts.csv` | Outputs saved with empty content, by month |
+| `13-headline-totals.csv` | The totals the case study quotes that span several rows elsewhere, so none is added up by hand |
 
 ## Read these with the caveats
 
