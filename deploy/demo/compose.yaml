@@ -1,0 +1,73 @@
+# Pitstop's read-only demo: three containers, capped, on a private network.
+# Only the web container is published, and only on the server's loopback,
+# for the server's own Caddy to proxy the demo's domain to.
+#
+#   deploy/demo/build-seed.sh            # once: cleaned data -> seed/pitstop-demo.dump
+#   cp deploy/demo/demo.env.example deploy/demo/demo.env && edit it (mode 600)
+#   docker compose -f deploy/demo/compose.yaml up -d --build
+#
+# There are no model, Google Ads, voice or email keys here, and no crontab:
+# the demo can't spend money (docs/planning/phase-5-architecture-decisions.md, ADR-004).
+name: pitstop-demo
+
+services:
+  db:
+    image: postgres:16@sha256:9e2cf6287f25c3151f4c9421ccce2b17f3e60061c111a29165e0d2cdd9ff0a97
+    environment:
+      POSTGRES_DB: pitstop
+      POSTGRES_USER: pitstop
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./seed/pitstop-demo.dump:/seed/pitstop-demo.dump:ro
+      - ./restore-seed.sh:/docker-entrypoint-initdb.d/restore-seed.sh:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "pitstop", "-d", "pitstop"]
+      interval: 5s
+      retries: 30
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/demo/api.Dockerfile
+    env_file: demo.env
+    environment:
+      DATA_SOURCE: demo
+      TRUST_PROXY_HOPS: "2"
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: [/tmp]
+    mem_limit: 384m
+    cpus: 0.5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/demo/web.Dockerfile
+    depends_on: [api]
+    ports:
+      - "127.0.0.1:${PITSTOP_DEMO_PORT:-8090}:8080"
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: [/data, /config]
+    mem_limit: 64m
+    cpus: 0.25
+    restart: unless-stopped
+
+volumes:
+  db-data:
+
+secrets:
+  db_password:
+    file: ./db_password.txt

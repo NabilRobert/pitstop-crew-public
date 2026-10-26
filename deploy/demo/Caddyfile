@@ -1,0 +1,27 @@
+# Inside the web container. The server's own Caddy terminates TLS for the
+# demo's domain and proxies here; this serves the frontend and passes /api/*
+# to the API with the prefix stripped (the API's routes sit at the root).
+{
+	auto_https off
+	admin off
+	servers {
+		# Keep the visitor's address from the server's Caddy, so the API's
+		# login lockout is per visitor (the API trusts two hops).
+		trusted_proxies static private_ranges
+	}
+}
+
+:8080 {
+	encode gzip
+	handle_path /api/* {
+		reverse_proxy api:8000 {
+			# The live console is a server-sent event stream.
+			flush_interval -1
+		}
+	}
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
