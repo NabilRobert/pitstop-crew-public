@@ -1,3 +1,4 @@
+import { nodeModule } from './nodeModule.mjs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
@@ -8,9 +9,9 @@ const store = new Map()
 globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) }
 const server = await createServer({ root, server: { middlewareMode: true }, appType: 'custom', logLevel: 'error', configFile: path.join(root, 'vite.config.ts') })
 try {
-  const vue = await import(pathToFileURL(path.join(root, 'node_modules/vue/index.mjs')).href)
-  const { renderToString } = await import(pathToFileURL(path.join(root, 'node_modules/vue/server-renderer/index.mjs')).href)
-  const vr = await import(pathToFileURL(path.join(root, 'node_modules/vue-router/dist/vue-router.mjs')).href)
+  const vue = await import(pathToFileURL(nodeModule(root, 'vue/index.mjs')).href)
+  const { renderToString } = await import(pathToFileURL(nodeModule(root, 'vue/server-renderer/index.mjs')).href)
+  const vr = await import(pathToFileURL(nodeModule(root, 'vue-router/dist/vue-router.mjs')).href)
   globalThis.document = { documentElement: { dataset: {} } }
   const { i18n } = await server.ssrLoadModule('/src/i18n/index.ts')
   const load = async (f) => (await server.ssrLoadModule(`/src/features/keyword-optimizer/${f}`)).default

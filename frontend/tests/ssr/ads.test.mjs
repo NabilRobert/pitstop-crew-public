@@ -1,3 +1,4 @@
+import { nodeModule } from './nodeModule.mjs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
@@ -9,9 +10,9 @@ globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v
 globalThis.fetch = async (u) => { throw new Error('unexpected network call: ' + u) }
 const server = await createServer({ root, server: { middlewareMode: true }, appType: 'custom', logLevel: 'error', configFile: path.join(root, 'vite.config.ts'), define: { 'import.meta.env.VITE_KEYWORD_OPTIMIZER_FIXTURES': '"true"' } })
 try {
-  const vue = await import(pathToFileURL(path.join(root, 'node_modules/vue/index.mjs')).href)
-  const { renderToString } = await import(pathToFileURL(path.join(root, 'node_modules/vue/server-renderer/index.mjs')).href)
-  const vr = await import(pathToFileURL(path.join(root, 'node_modules/vue-router/dist/vue-router.mjs')).href)
+  const vue = await import(pathToFileURL(nodeModule(root, 'vue/index.mjs')).href)
+  const { renderToString } = await import(pathToFileURL(nodeModule(root, 'vue/server-renderer/index.mjs')).href)
+  const vr = await import(pathToFileURL(nodeModule(root, 'vue-router/dist/vue-router.mjs')).href)
   globalThis.document = { documentElement: { dataset: {} } }
   const { i18n } = await server.ssrLoadModule('/src/i18n/index.ts')
   const Card = (await server.ssrLoadModule('/src/features/keyword-optimizer/SuggestionCard.vue')).default

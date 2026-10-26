@@ -1,3 +1,4 @@
+import { nodeModule } from './nodeModule.mjs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
@@ -10,8 +11,8 @@ const server = await createServer({ root, server: { middlewareMode: true }, appT
 let bad = 0
 const eq = (n, a, b) => { const ok = JSON.stringify(a) === JSON.stringify(b); if (!ok) { bad++; console.log('FAIL', n, JSON.stringify(a), JSON.stringify(b)) } }
 try {
-  const vue = await import(pathToFileURL(path.join(root, 'node_modules/vue/index.mjs')).href)
-  const { renderToString } = await import(pathToFileURL(path.join(root, 'node_modules/vue/server-renderer/index.mjs')).href)
+  const vue = await import(pathToFileURL(nodeModule(root, 'vue/index.mjs')).href)
+  const { renderToString } = await import(pathToFileURL(nodeModule(root, 'vue/server-renderer/index.mjs')).href)
   globalThis.document = { documentElement: { dataset: {} }, hidden: false }
   const { useKeywordOptimizer } = await server.ssrLoadModule('/src/features/keyword-optimizer/useKeywordOptimizer.ts')
   const sug = (id, status) => ({ id, status, type: 'new_campaign' })
