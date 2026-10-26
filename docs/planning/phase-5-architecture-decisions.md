@@ -43,10 +43,13 @@ through the server's existing proxy.
 | `db` | `postgres:16` holding the cleaned data | 256 MB, own volume, no published port |
 | `web` | `caddy:2-alpine` serving the built frontend | 64 MB |
 
-The server's existing Caddy serves `<demo-domain>`:
-- `/` goes to `web`;
-- `/api/*` goes to `api`, with the prefix stripped (`handle_path`), since
-  the API's routes sit at the root.
+The server's existing Caddy serves `<demo-domain>` and proxies all of it
+to `web`, the only published container (on loopback). `web`'s own Caddy
+serves the frontend and passes `/api/*` to `api`, with the prefix stripped
+(`handle_path`), since the API's routes sit at the root. *(As built,
+2026-10-26: originally the server's Caddy was to split the routes itself.
+Doing it inside `web` makes the server step one `reverse_proxy` line, and
+the same stack runs unchanged on a laptop.)*
 
 **Why:**
 - It's isolated from MCP-backbone: separate database cluster, separate
