@@ -14,8 +14,8 @@ went wrong. Every number in it comes from a query over the system's own
 records, in [`evidence/`](evidence/). The ad data was synthetic throughout;
 see [What is and isn't real](#what-is-and-isnt-real).
 
-- **Live demo:** `<demo-domain>`. It's moving to a new server; the demo
-  runs on synthetic data, read-only.
+- **Live demo:** https://pitcrew-public.my.id (being set up on a new server). It runs on
+  synthetic data, read-only.
 - **Code:** this repo. The design rationale is in
   [`PROJECT.md`](../PROJECT.md), and the per-agent specs are in
   [`agents/`](../agents/).

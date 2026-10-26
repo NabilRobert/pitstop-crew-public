@@ -1,7 +1,6 @@
 # Deploying the API (VPS)
 
-The demo is being moved to a new server; its address is `<demo-domain>` until
-that's settled. See docs/PROJECT.md → Deployment.
+The demo is moving to a new server at `pitcrew-public.my.id`. See docs/PROJECT.md → Deployment.
 Steps below still apply for the initial setup and for redeploys.
 
 ## 1. Get the code on the box
@@ -76,10 +75,9 @@ in `.env` to its real URL (currently defaults to `http://localhost:5173`)
 so the API's CORS check accepts requests from it.
 
 ## 10. Domain
-Production base URL is **`https://<demo-domain>`** (placeholder until the new
-server's domain is settled). The API itself just listens on `:8000` (`PORT`
+Production base URL is **`https://pitcrew-public.my.id`**. The API itself just listens on `:8000` (`PORT`
 env var) — a reverse proxy (nginx/Caddy) with TLS termination sits in front,
-forwarding `<demo-domain>` to `localhost:8000`.
+forwarding `pitcrew-public.my.id` to `localhost:8000`.
 
 ## 11. Run the API server
 The scheduled scripts (`run_daily.sh`) are cron-driven, but the REST API
