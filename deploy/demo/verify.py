@@ -11,6 +11,7 @@ live stack after `docker compose up`:
    call a model (the client fails at once without a key).
 3. The API container must hold no model, Google Ads, voice or email
    variables, and run nothing but the API: no scheduler.
+4. The database must hold the seed's data, not be empty.
 
 Credentials are read from deploy/demo/demo.env and never printed. Exits 1
 if any check fails. `--as owner` runs the same checks with the owner login,
@@ -91,6 +92,12 @@ def main() -> int:
     since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 1))
 
     failures: list[str] = []
+    # A seed that fails to restore leaves Postgres up and "healthy" with an
+    # empty database (initdb doesn't run again on restart), so check it loaded.
+    count = subprocess.run(COMPOSE + ["exec", "-T", "db", "psql", "-U", "pitstop", "-d", "pitstop", "-At", "-c",
+                                      "select count(*) from pipeline_runs"], capture_output=True, text=True).stdout.strip()
+    if not count.isdigit() or int(count) == 0:
+        failures.append(f"the database is empty or unreadable (pipeline_runs: {count or 'no answer'}): the seed didn't load")
     table = routes()
     writes = reads = 0
     for method, path in table:
@@ -126,6 +133,7 @@ def main() -> int:
 
     print(f"{len(table)} routes: {reads} reads, {writes} writes checked, {len(EXEMPT)} exempt ({'; '.join(f'{m} {p}: {why}' for (m, p), why in EXEMPT.items())})")
     print(f"container: {len(names)} env vars, none for paid services" if not leaked else "container: paid-service variables present")
+    print(f"database: {count} pipeline runs")
     for f in failures:
         print("FAIL ", f)
     print("PASS: the demo can't reach a model" if not failures else f"{len(failures)} check(s) failed")
