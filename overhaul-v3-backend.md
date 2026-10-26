@@ -173,7 +173,7 @@ Every planted problem is a row in a `GROUND_TRUTH` export (in `profile.ts` or a 
 | Over-served aging stock / under-served fresh stock | 3 models | Drives "push" and "pull back" suggestions |
 | Cluster worth its own campaign: 4+ keywords on one make/model with CPA well below the account's | 2 clusters | Currently buried in a generic ad group |
 | **Decoys that must NOT be flagged** | 8 | Low-volume terms with 0 conversions but too few clicks to be significant. A correct engine says "not enough data", not "negative" |
-| Intents that are *legitimate* for a dealer: credit / cicilan / DP / tukar tambah | 6 terms | Must be classed `buyer`, not waste (these were leaks in the old Beobot draft) |
+| Intents that are *legitimate* for a dealer: credit / cicilan / DP / tukar tambah | 6 terms | Must be classed `buyer`, not waste (these were leaks in an earlier draft) |
 
 Decoys matter as much as the plants: they are what the false-positive score is measured on.
 
