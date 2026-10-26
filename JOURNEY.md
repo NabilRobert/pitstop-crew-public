@@ -157,3 +157,48 @@ Every step was run first in a fresh clone of the committed code. The
 evidence check was broken on purpose twice (a missing result, a bad link)
 and failed both times. CI can't rerun the queries or start the demo,
 because the snapshot stays private; `verify.py` covers the running demo.
+
+## 2026-10-26: The deploy, and what it caught
+
+The demo went live at https://pitcrew-public.my.id on the same server as
+the other two projects. The deploy found two problems the local runs
+couldn't.
+
+**A seed that restored into nothing.**
+- **What happened:** the seed file was readable only by the user who
+  copied it, but Postgres inside the container runs as a different user.
+  The restore failed, and the container restarted. Postgres runs its
+  first-time setup only once, so the second start skipped it, and the
+  database came up **healthy and empty**. Every check that only asked
+  "is it up?" passed.
+- **Why it didn't happen locally:** on a Mac, Docker's file sharing
+  ignores those permissions.
+- **The fix:** the seed is now readable by Postgres; it holds only cleaned
+  data, so that's safe. `verify.py` also fails if the database is empty.
+  That check was shown to fail with the seed missing, and to pass with 166
+  runs.
+
+**A proxy that couldn't see loopback.**
+- **What happened:** the runbook proxied the domain to `127.0.0.1:8090`.
+  On this server, Caddy runs inside another project's container, where
+  `127.0.0.1` is that container, not the server.
+- **The fix:** the demo now binds to the Docker bridge gateway instead.
+  That started as a one-line edit on the server, and is now a setting
+  (`PITSTOP_DEMO_BIND`, default loopback). The runbook covers both setups,
+  and the server runs the repo's code with no local edits.
+- **Checked from outside:** the address isn't reachable from the internet.
+
+**Checked after the deploy, from outside:**
+- the health check and the frontend answer;
+- the certificate is valid;
+- an unauthenticated write is refused;
+- the demo's port isn't exposed.
+
+On the server, `verify.py` passed: 55 routes, no paid-service keys, 166
+runs loaded.
+
+**Also: a cold read.** A fresh session given only the public repo read it
+as a reviewer would. It answered the three checks correctly, and found
+that two failure write-ups counted the same improvement twice. That was
+fixed, with a like-for-like comparison added, and it's recorded in the
+evaluation.
