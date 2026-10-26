@@ -101,7 +101,9 @@ npm run dev:frontend                                 # UI on :5173
 ```
 
 Running a pipeline makes paid model calls, so it needs a model API key in
-`.env`. To look at the UI with no backend and no keys, run
+`.env`. It uses Sumopod, an OpenAI-compatible gateway, by default. To call
+OpenAI directly instead, set `SUMOPOD_BASE_URL=https://api.openai.com/v1`
+and put an OpenAI key in `sumopod-api-key`. No code changes are needed. To look at the UI with no backend and no keys, run
 `npm run mock-api -w frontend`, which serves test data on `:8000`.
 
 ## Tests
@@ -128,5 +130,5 @@ PROJECT.md      the design doc: decisions, pipeline, cost guardrails, known gaps
 ## Stack
 
 TypeScript throughout. Node and Express on the backend, with Postgres and
-an OpenAI-compatible model gateway. Vue 3, Vite and Tailwind on the
-frontend.
+the official OpenAI SDK, pointed at Sumopod or any OpenAI-compatible
+endpoint. Vue 3, Vite and Tailwind on the frontend.
