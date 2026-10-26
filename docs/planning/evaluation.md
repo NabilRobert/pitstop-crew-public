@@ -15,7 +15,7 @@ when it was checked, not because the work was done.
 | 4 | The critic's behaviour over time | **Met** | Final outcomes, grades, revisions, the flag rate counted two ways, and before/after the approval change ([07](../evidence/07-critic-final-outcomes-by-month.csv)–[11](../evidence/11-critic-before-after-severity.csv)) |
 | 5 | At least three failure modes, each with symptom, how it was found, cause, fixing commit and measured result | **Mostly met** | See below |
 | 6 | A read-only demo on the same server, zero model spend, verified | **Pending deploy** | See below |
-| 7 | A reviewer gets it in about 15 minutes | **Unverified** | See below |
+| 7 | A reviewer gets it in about 15 minutes | **Stand-in passed; a human read is pending** | See below |
 
 **Metric 1: how it was checked.**
 - Every figure in `docs/case-study.md` was extracted and matched against
@@ -57,10 +57,26 @@ stated.** Only Arthur knows how each one was actually noticed.
   was supplied on 2026-10-26 and didn't resolve yet when checked. This row
   is re-checked after the deploy, with `verify.py` run on the server.
 
-**Metric 7: why it's unverified.** The README is 992 words and the case
-study 1,762, about 4 and 7 minutes of reading. That fits the budget, but
-whether a reviewer *understands* it in 15 minutes can only be tested by a
-cold reader. It hasn't been.
+**Metric 7: a stand-in, not the real test.** The README is about 1,000
+words and the case study about 2,000, roughly 4 and 9 minutes of reading.
+
+A fresh Claude session was given only the public repo, as a stand-in for
+a cold reviewer:
+- It answered all three checks correctly: what Pitstop does, what's real,
+  and one failure with its fix.
+- It traced a number from the case study to its SQL.
+- It estimated a busy reviewer gets the point in about 10 minutes.
+
+It also found real problems, now fixed:
+- **The biggest:** failure items 1 and 2 counted the same improvement
+  twice. Item 2's before/after also compared different kinds of output;
+  the like-for-like comparison is now
+  [14](../evidence/14-critic-before-after-same-agents.csv).
+- **Smaller:** an ambiguous "outputs", unexplained schedule stops, and a
+  feature with four names.
+
+A model reading cold is weaker evidence than a person, so a human cold
+read is still to do.
 
 ## Phase 2: Must / Should / Could
 
