@@ -1,0 +1,9 @@
+id,run_type,status,day,cause
+4,daily,failure,2026-08-10,model gateway timed out
+29,daily,failure,2026-08-16,process restarted mid-run; marked failed by startup recovery
+37,daily,failure,2026-08-28,aborted by the operator during manual diagnostics
+145,keyword_optimizer,partial,2026-10-06,model step skipped by design (no-model run); suggestions stored unranked
+146,keyword_optimizer,partial,2026-10-06,model step skipped by design (no-model run); suggestions stored unranked
+150,keyword_optimizer,partial,2026-10-07,model step skipped by design (no-model run); suggestions stored unranked
+167,keyword_optimizer,partial,2026-10-15,model provider refused the call (billing); suggestions stored unranked
+189,keyword_optimizer,partial,2026-10-26,model provider refused the call (billing); suggestions stored unranked

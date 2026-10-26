@@ -1,0 +1,8 @@
+run_type,status,runs,first_day,last_day,recorded_cost_usd
+backup,success,64,2026-08-28,2026-10-26,0.00
+daily,failure,3,2026-08-10,2026-08-28,0.00
+daily,success,65,2026-08-09,2026-10-06,1.07
+keyword_optimizer,partial,5,2026-10-06,2026-10-26,0.11
+keyword_optimizer,success,18,2026-10-08,2026-10-25,2.61
+weekly,success,5,2026-08-10,2026-09-21,0.00
+weekly_feedback,success,6,2026-08-10,2026-09-21,0.00

@@ -1,0 +1,4 @@
+run_type,traced_runs,model_calls,mean_calls_per_run,min_calls,max_calls,mean_tokens_in,mean_tokens_out
+backup,32,0,0.0,0,0,0,0
+daily,8,58,7.3,6,10,69234,9461
+keyword_optimizer,22,95,4.3,0,8,123552,6780
