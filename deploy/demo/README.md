@@ -52,6 +52,10 @@ terminates TLS.
    git clone <this repo> ~/pitstop-demo
    scp deploy/demo/seed/pitstop-demo.dump <server>:~/pitstop-demo/deploy/demo/seed/
    ```
+   Run the `scp` on the laptop, where the seed is. The seed must stay
+   readable by Postgres inside the container (`chmod 644`; it holds only
+   cleaned data). If it isn't, the restore fails and the database comes up
+   empty. `verify.py` catches that.
 2. **Create `deploy/demo/demo.env` and `deploy/demo/db_password.txt`** on
    the server.
    - Use mode 600, and edit them with `nano`.
