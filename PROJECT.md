@@ -214,6 +214,3 @@ The account still won't have meaningful live campaign history by the time v2 wor
 - Never expose client secret or refresh token in frontend code.
 - Frame all "audience" features around aggregate segments, never individual user identities.
 - Wait for a couple weeks of real campaign data before trusting/relying on AI-generated recommendations — thin data produces misleading suggestions.
-
-## Related but Separate Project
-User is also writing a novel requiring realistic fictional prop documents — unrelated to this build, noted here only in case it resurfaces in the same workspace.
