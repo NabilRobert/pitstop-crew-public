@@ -115,7 +115,9 @@ three problems:
 3. **Evidence source:** the 2026-10-26 database backup, analysed on a local
    restore. The analysis never touches the live database.
 4. **Hosting:** the demo moves to the server that runs Projects 1 and 2, as
-   a read-only demo with its schedules switched off.
+   a read-only demo with its schedules switched off. It gets a new domain,
+   which Arthur will supply; the old address isn't used. Until then, docs
+   say `<demo-domain>`.
 5. **Budget:** $0 for model calls.
 6. **Format:**
    - the README;
@@ -129,8 +131,6 @@ three problems:
 - **Should the read-only demo login be published,** or given on request?
   Publishing it is safe only once metric 6 holds: no model calls are
   reachable.
-- **Can `gads.my.id`'s DNS be pointed at the new server,** or does the demo
-  need a new name?
 - **Time budget** for this project.
 
 ## Cost of doing nothing

@@ -2,7 +2,7 @@
 
 An AI performance dashboard for Google Ads. A small team of LLM agents reads the account's stored performance data, writes an analysis, turns it into recommendations, and summarises the result. A fourth agent, the critic, grades every output before anyone sees it. This is a write-up of what was built and what was learned along the way, including the parts that didn't work at first.
 
-**Live demo:** https://gads.my.id (demo mode — see "What is and isn't real" below)
+**Live demo:** `<demo-domain>` (moving to a new server; demo mode — see "What is and isn't real" below)
 **Code:** this repo. Design rationale is in [`PROJECT.md`](../PROJECT.md), per-agent specs in [`agents/`](../agents/).
 
 ![Dashboard overview](images/dashboard-overview.webp)

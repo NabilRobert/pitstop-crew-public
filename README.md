@@ -7,8 +7,9 @@ the critic, reviews every output before anyone sees it.
 
 ![Dashboard overview](docs/images/dashboard-overview.webp)
 
-- **Live demo:** https://gads.my.id. It runs in demo mode on synthetic
-  data, and a read-only account is available on request.
+- **Live demo:** `<demo-domain>` (moving to a new server; the address is
+  coming soon). It runs in demo mode on synthetic data, and a read-only
+  account is available on request.
 - **Status:** built from August to October 2026 and ran unattended on a
   daily schedule. Paused since October 2026.
 
