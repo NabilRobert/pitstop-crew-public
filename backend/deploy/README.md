@@ -70,9 +70,11 @@ A manual run exercises the exact same script cron will call — if it
 works here, it'll work at 6am.
 
 ## 9. CORS
-The frontend is a separate repo/deployment (Vercel). Set `FRONTEND_ORIGIN`
-in `.env` to its real URL (currently defaults to `http://localhost:5173`)
-so the API's CORS check accepts requests from it.
+The frontend was originally deployed separately (Vercel). The public demo
+now serves it from the same server and origin; see
+[`deploy/demo/README.md`](../../deploy/demo/README.md). Set
+`FRONTEND_ORIGIN` in `.env` to the frontend's URL (it defaults to
+`http://localhost:5173`) so the API's CORS check accepts requests from it.
 
 ## 10. Domain
 Production base URL is **`https://pitcrew-public.my.id`**. The API itself just listens on `:8000` (`PORT`
