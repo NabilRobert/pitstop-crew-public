@@ -24,5 +24,7 @@ echo "cleaning:"
 docker exec "$NAME" psql -U postgres -d pitstop -X -v ON_ERROR_STOP=1 -f /clean.sql | sed 's/^/  /'
 mkdir -p "$(dirname "$OUT")"
 docker exec "$NAME" pg_dump -U postgres -d pitstop --format=custom --no-owner --no-privileges > "$OUT"
-chmod 600 "$OUT"
+# Readable by everyone: Postgres in the db container runs as a different
+# user (uid 999) and must read it to restore it. It holds only cleaned data.
+chmod 644 "$OUT"
 echo "wrote $OUT ($(wc -c < "$OUT" | tr -d ' ') bytes)"
