@@ -31,3 +31,9 @@ backend/backups/
 
 # Backend files dropped here by hand for review (copied from the VPS, never committed from this folder)
 diff_files/
+
+# Case-study work: full pg_dump backups of the live database, never committed
+backups/
+*.dump
+# Private working notes (internal context; never published)
+HANDOVER.md
