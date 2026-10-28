@@ -1,6 +1,6 @@
 # Research — Supporting Studies
 
-Reference list backing key design decisions in [PROJECT.md](PROJECT.md). Organized by which decision each supports. Academic/peer-reviewed sources are separated from industry-reported figures — the latter are directional context from vendors/agencies, not proven research, and should be cited as "industry reports suggest," not as fact.
+Reference list backing key design decisions in [design-doc.md](design-doc.md). Organized by which decision each supports. Academic/peer-reviewed sources are separated from industry-reported figures — the latter are directional context from vendors/agencies, not proven research, and should be cited as "industry reports suggest," not as fact.
 
 ## 1. Conversion lag → supports the trailing-window re-fetch decision
 Google's own documentation confirms delayed conversion attribution is real and systematic, especially for longer consideration cycles and cross-device journeys — directly validates why a single "yesterday only" pull would misreport recent days.

@@ -19,8 +19,9 @@ see [What is and isn't real](#what-is-and-isnt-real).
 - **Live demo:** https://pitcrew-public.my.id. It runs on synthetic data,
   read-only, with a login available on request.
 - **Code:** this repo. The design rationale is in
-  [`PROJECT.md`](../PROJECT.md), and the per-agent specs are in
-  [`agents/`](../agents/).
+  [the original design doc](planning/original-build/design-doc.md), and the
+  per-agent specs are in
+  [`planning/original-build/agents/`](planning/original-build/agents/).
 
 ![Dashboard overview](images/dashboard-overview.webp)
 ![Report with the "Why this?" trail open](images/why-this-trail.webp)

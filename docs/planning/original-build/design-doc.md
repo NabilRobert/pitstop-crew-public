@@ -85,7 +85,7 @@ Browser (frontend)
 ```
 
 ## Deployment (decided)
-> **Superseded (2026-10-26):** the original plan below put the frontend on Vercel. The public demo now runs entirely on one VPS, as three containers (database, API, and Caddy serving the frontend and `/api`), with no paid API keys. See [`deploy/demo/README.md`](deploy/demo/README.md).
+> **Superseded (2026-10-26):** the original plan below put the frontend on Vercel. The public demo now runs entirely on one VPS, as three containers (database, API, and Caddy serving the frontend and `/api`), with no paid API keys. See [`deploy/demo/README.md`](../../../deploy/demo/README.md).
 
 - **Backend:** VPS via **Sumopod** — to be provisioned later
 - **Frontend:** Vercel
@@ -190,7 +190,7 @@ Beyond the core pipeline — the features meant to make this demo-able, not just
 ## V2 / Future Plans
 
 ### Full Google Ads API surface — reporting depth (decided, in progress)
-See [docs/v2-backend-plan.md](docs/v2-backend-plan.md) (and its frontend counterpart) for the full staged plan — a separate initiative from "Full Google Ads API utilization" below, which is about eventually gaining *write* access. This one stays entirely read-only reporting: 9 items across two tiers (keywords/Quality Score, search terms, ads, impression share, conversion actions, PMax asset groups, Google's own Recommendations + Optimization Score, change history, demographic segments), built one vertical slice at a time. Stage 1 (ad groups + keywords + Quality Score) is live; see `dummy.md`'s "v2 Stage 1" section for the profile.
+See [v2-backend-plan.md](v2-backend-plan.md) (and its frontend counterpart) for the full staged plan — a separate initiative from "Full Google Ads API utilization" below, which is about eventually gaining *write* access. This one stays entirely read-only reporting: 9 items across two tiers (keywords/Quality Score, search terms, ads, impression share, conversion actions, PMax asset groups, Google's own Recommendations + Optimization Score, change history, demographic segments), built one vertical slice at a time. Stage 1 (ad groups + keywords + Quality Score) is live; see `dummy.md`'s "v2 Stage 1" section for the profile.
 
 ### Full Google Ads API utilization
 v1 deliberately uses a thin, safe slice of the API — read-only reporting plus suggestions-only AI (see Positioning). v2's goal is to actually use the rest of what the API can do, still gated by human approval, not by re-adopting v1's blanket "no writes" rule wholesale. Candidates, roughly ordered by how well they fit the existing no-auto-apply philosophy:
