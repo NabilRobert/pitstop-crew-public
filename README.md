@@ -129,14 +129,31 @@ ceiling, and the keyword optimizer's ranking.
 
 ```
 backend/src/    agents/ · pipeline/ · data/ (ingestion, demo generator) · reporting/ · platform/ (config, auth, tracing, redaction) · api/
+backend/deploy/ how the API ran on a schedule: crontab, log rotation, the cron wrapper
 frontend/src/   app/ (shell) · features/ (one folder per page) · shared/
-agents/         one spec per agent: model choice, prompt design, guardrails
-docs/           case study and screenshots
-PROJECT.md      the design doc: decisions, pipeline, cost guardrails, known gaps
+db/             the database schema
 evidence/       the SQL behind every number in the case study (results in docs/evidence/)
 deploy/demo/    the read-only demo: containers, data cleaning, and the zero-spend check
-*.md (root)     working notes from the build: overhaul-v3*, research, the demo dataset (dummy.md), voice
+docs/           the case study, its evidence, screenshots, the user manual, and every plan and spec (docs/planning/)
+JOURNEY.md      the log of turning the prototype into this case study
 ```
+
+## Docs
+
+- [docs/case-study.md](docs/case-study.md): how it ran, what went wrong,
+  and what each fix measurably changed.
+- [docs/evidence/](docs/evidence/): the result behind every number in the
+  case study, with the queries in [evidence/queries/](evidence/queries/).
+- [JOURNEY.md](JOURNEY.md): the log of the case-study work, in order.
+- [docs/planning/](docs/planning/): every spec and plan. That's the
+  case-study plan, plus the original build's design doc, agent specs, and
+  v2 and v3 plans.
+- [deploy/demo/README.md](deploy/demo/README.md): the read-only demo
+  stack, and how it's proven to spend nothing.
+- [backend/deploy/README.md](backend/deploy/README.md): how the API ran
+  unattended on its own server.
+- [docs/manual/](docs/manual/): the user manual, in Indonesian
+  ([HTML](docs/manual/panduan.html), [PDF](docs/manual/Pitstop-Panduan-Pengguna.pdf)).
 
 ## Stack
 
