@@ -148,7 +148,10 @@ data before its commit date.
   flagged. It sat around 30% through August and September.
 - **Cause:** it counted every draft and revision. A critic that blocks a
   first draft and passes the second pins that ratio. It measured the
-  loop's shape, not the outputs.
+  loop's shape, not the outputs. It also hid most rejections: a draft the
+  critic sends back is stored as `draft` or `revised`, never `flagged`
+  (`db/schema.sql`), so only outputs still failing after the last allowed
+  revision counted as flagged.
 - **Fix:** [`cdd56b3`](https://github.com/NabilRobert/pitstop-crew-public/commit/cdd56b3) replaced it with a chart over
   final outputs only, banded into approved clean, approved with notes,
   flagged and no review.
