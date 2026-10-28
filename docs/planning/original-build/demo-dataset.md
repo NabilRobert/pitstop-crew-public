@@ -1,6 +1,6 @@
 # Demo Dataset — Used Car Dealer Profile
 
-Concrete reference profile for the synthetic/demo dataset described in [PROJECT.md](PROJECT.md) → "Demo / Simulated Data Mode." Grounded in real automotive Google Ads benchmarks — see `research.md` §6 — not arbitrary numbers. This is what the generation algorithm (Markov chain + weekday seasonality + per-segment sensitivity) should target.
+Concrete reference profile for the synthetic/demo dataset described in [design-doc.md](design-doc.md) → "Demo / Simulated Data Mode." Grounded in real automotive Google Ads benchmarks — see `research.md` §6 — not arbitrary numbers. This is what the generation algorithm (Markov chain + weekday seasonality + per-segment sensitivity) should target.
 
 ## Scenario
 A single-location used car dealership running Google Ads. This is the account persona the demo data simulates.
@@ -18,7 +18,7 @@ Matches how real dealers structure accounts today — a split across Vehicle Ads
 
 ## v2 Stage 1 — Ad Groups + Keywords + Quality Score
 
-See [docs/v2-backend-plan.md](docs/v2-backend-plan.md) for the full staged plan this is part of. Only the 3 Search-type campaigns get ad groups — Performance Max has no ad-group level in the real API (asset-group based instead, v2 stage 6), and Display is excluded to bound row count.
+See [v2-backend-plan.md](v2-backend-plan.md) for the full staged plan this is part of. Only the 3 Search-type campaigns get ad groups — Performance Max has no ad-group level in the real API (asset-group based instead, v2 stage 6), and Display is excluded to bound row count.
 
 | Campaign | Ad Groups (share of campaign) |
 |---|---|

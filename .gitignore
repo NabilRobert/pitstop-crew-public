@@ -42,3 +42,6 @@ HANDOVER.md
 deploy/demo/seed/
 deploy/demo/demo.env
 deploy/demo/db_password.txt
+
+# Local tool settings (Claude Code preview config)
+.claude/

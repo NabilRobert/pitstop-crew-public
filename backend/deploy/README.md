@@ -1,12 +1,15 @@
 # Deploying the API (VPS)
 
-The demo is moving to a new server at `pitcrew-public.my.id`. See docs/PROJECT.md → Deployment.
-Steps below still apply for the initial setup and for redeploys.
+How the API ran on its own server, on a schedule, from August to October 2026.
+The public demo now runs as containers instead: see
+[`deploy/demo/README.md`](../../deploy/demo/README.md). The design doc's
+"Deployment" section is in
+[`docs/planning/original-build/design-doc.md`](../../docs/planning/original-build/design-doc.md).
 
 ## 1. Get the code on the box
 ```bash
-git clone https://github.com/NabilRobert/pitcrew-ai-backend.git
-cd pitcrew-ai-backend
+git clone <this repo> pitstop
+cd pitstop/backend
 ```
 
 ## 2. Node environment

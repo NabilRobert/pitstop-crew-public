@@ -2,7 +2,7 @@
   "name": "pitstop",
   "private": true,
   "version": "1.0.0",
-  "description": "Google Ads AI Performance Dashboard — see PROJECT.md",
+  "description": "Google Ads AI Performance Dashboard — see docs/planning/original-build/design-doc.md",
   "workspaces": ["backend", "frontend"],
   "scripts": {
     "dev:backend": "npm run dev -w backend",
