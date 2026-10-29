@@ -86,6 +86,13 @@ The project is as much about operating agents as building them:
   beyond test access.
 - **Single-user:** one owner login plus an optional read-only demo login.
   No multi-tenancy.
+- **Names and places:** Pitstop was built under the working name
+  "pitcrew". That name survives in the demo's address and in a few
+  identifiers, such as the "Pitcrew ad #…" names on simulated launches
+  and old deploy paths. The demo's dealer ("Pitstop Used Cars") and its
+  stock are generated too. The cities and suburbs in the data come from
+  the generator's fixed profile. They give the made-up dealer a realistic
+  market, and are illustrative.
 
 The full write-up is in [docs/case-study.md](docs/case-study.md): how it
 ran, what went wrong, and what each fix measurably changed. Every number
