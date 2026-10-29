@@ -5,6 +5,16 @@ read-only login given on request. It can't spend money. There are no model,
 Google Ads, voice or email keys, no crontab, and the demo account is refused
 every write. `verify.py` checks all of that against the running stack.
 
+What's in the data:
+- **Generated:** the ad data, the dealer's stock, and the dealer profile.
+  That's the default "Pitstop Used Cars" settings, which the seed keeps.
+  They come from `backend/src/data/demo/` and the default settings, so the
+  names and places in them are illustrative.
+- **Real:** the run history on top of it. That's the agents' drafts, the
+  critiques and the traces the system produced on its schedule, cleaned by
+  [`clean.sql`](clean.sql) (below) before the seed is built.
+- The domain uses Pitstop's working name, "pitcrew".
+
 | Container | What | Limits |
 |---|---|---|
 | `db` | Postgres 16 with the cleaned seed | 256 MB, 0.5 CPU, no published port |
