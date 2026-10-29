@@ -91,7 +91,9 @@ terminates TLS.
      `curl -m 5 http://<public ip>:8090`, which must time out.
    Back up the Caddy config, `caddy validate` it, then reload.
 6. **Check it from outside:** `https://pitcrew-public.my.id/api/health` should
-   return `{"status":"ok"}`.
+   return `{"status":"ok"}`. It answers that only when the API can reach the
+   database; otherwise it returns HTTP 503. It doesn't check the data, which
+   is `verify.py`'s job.
 
 Install no crontab for it. Pitstop's schedules are all external cron, so
 leaving it out is what keeps the pipeline from ever running here.

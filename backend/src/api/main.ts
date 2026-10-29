@@ -14,6 +14,7 @@ import cors from 'cors'
 import { DATA_SOURCE, FRONTEND_ORIGINS } from '../platform/config.js'
 import { reconcileOrphanedRuns } from '../pipeline/pipelineRuns.js'
 import { authMiddleware, demoReadOnly } from './authMiddleware.js'
+import { checkHealth } from './health.js'
 import { router as authRoutes } from './routes/auth.js'
 import { router as settingsRoutes } from './routes/settings.js'
 import { router as learningRoutes } from './routes/learning.js'
@@ -54,8 +55,10 @@ app.use(
   })
 )
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' })
+// 200 only when the database answers; 503 otherwise (see health.ts).
+app.get('/health', async (_req, res) => {
+  const { httpStatus, body } = await checkHealth()
+  res.status(httpStatus).json(body)
 })
 
 /** Backs the Demo Mode badge — always visible when active, per docs/PROJECT.md. */

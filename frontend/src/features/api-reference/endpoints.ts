@@ -25,7 +25,7 @@ export const SECTIONS: ApiSection[] = [
 ]
 
 export const AUTH_ENDPOINTS: EndpointDef[] = [
-  { method: 'GET', path: '/health', desc: '{status:"ok"}. No token needed.' },
+  { method: 'GET', path: '/health', desc: '{status:"ok"} when the database answers, or 503 when it doesn\'t. No token needed.' },
   { method: 'GET', path: '/config', desc: '{data_source:"demo"|"live"}. No token needed. Drives the "Demo Mode" badge.' },
   { method: 'POST', path: '/auth/login', desc: '{username, password} → {token, role}, role is "owner" or "demo". 401 {detail} for a wrong login. Five failed attempts from one address lock that address out for 15 minutes.' },
   { method: 'POST', path: '/auth/logout', desc: 'Ends the bearer token → {ok:true}.' },
