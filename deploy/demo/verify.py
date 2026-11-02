@@ -12,6 +12,8 @@ live stack after `docker compose up`:
 3. The API container must hold no model, Google Ads, voice or email
    variables, and run nothing but the API: no scheduler.
 4. The database must hold the seed's data, not be empty.
+5. The demo login must be refused the private reads, in any spelling of the
+   path: Express routes ignore case, so /TRACE/... reaches /trace/...
 
 Credentials are read from deploy/demo/demo.env and never printed. Exits 1
 if any check fails. `--as owner` runs the same checks with the owner login,
@@ -36,6 +38,8 @@ EXEMPT = {
     ("POST", "/auth/login"): "signs in; mounted before auth",
     ("POST", "/auth/logout"): "ends the caller's own session",
 }
+# Reads the demo login must never get (DEMO_BLOCKED_GET in authMiddleware.ts).
+PRIVATE_READS = ["/trace/events/1/payloads", "/assistant/conversations", "/outputs/1/ask-conversations", "/ask-conversations/1/messages"]
 STREAMS = {"/console/stream"}  # server-sent events: held open, checked by status only
 SECRET_VARS = re.compile(r"^(sumopod-api-key|gads-|client-id|client-secret|RESEND_API_KEY|GMAIL_|ELEVENLABS)", re.I)
 MODEL_CALL_SIGNS = ("sumopod-api-key not set", "OpenAIError", "APIConnectionError", "api.openai.com", "ai.sumopod.com")
@@ -116,6 +120,12 @@ def main() -> int:
             if status != 403:
                 failures.append(f"{method} {path}: HTTP {status}, expected 403")
 
+    for path in PRIVATE_READS:
+        for spelling in (path, path.upper(), path.title(), path + "/"):
+            status, _ = call(api, "GET", spelling, token)
+            if status != 403:
+                failures.append(f"GET {spelling}: HTTP {status}, expected 403 (private read)")
+
     time.sleep(1)
     logs = subprocess.run(COMPOSE + ["logs", "--no-color", "--since", since, "api"], capture_output=True, text=True).stdout
     for sign in MODEL_CALL_SIGNS:
@@ -134,6 +144,7 @@ def main() -> int:
     print(f"{len(table)} routes: {reads} reads, {writes} writes checked, {len(EXEMPT)} exempt ({'; '.join(f'{m} {p}: {why}' for (m, p), why in EXEMPT.items())})")
     print(f"container: {len(names)} env vars, none for paid services" if not leaked else "container: paid-service variables present")
     print(f"database: {count} pipeline runs")
+    print(f"private reads: {len(PRIVATE_READS)} paths, each in 4 spellings")
     for f in failures:
         print("FAIL ", f)
     print("PASS: the demo can't reach a model" if not failures else f"{len(failures)} check(s) failed")
