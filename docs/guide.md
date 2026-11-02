@@ -42,7 +42,8 @@ flowchart TD
 
 1. **The schedule wakes up.** Cron runs `backend/scripts/runDaily.ts: main`
    every 15 minutes (the crontab is in `backend/deploy/crontab.txt`).
-   - It first marks runs left "running" by a crash as failed
+   - It first marks runs left "running" for over 30 minutes as failed, since
+     a crash leaves them stuck
      (`backend/src/pipeline/pipelineRuns.ts: reconcileOrphanedRuns`).
    - It deletes prompt and response text older than 30 days
      (`backend/src/platform/trace.ts: pruneTracePayloads`).
@@ -57,9 +58,12 @@ flowchart TD
    (`backend/src/pipeline/cronAlerts.ts: checkDeadMansSwitch`). If a run is
    due, it calls `backend/src/pipeline/orchestrator.ts: runDaily`.
    - The "Generate report now" button reaches the same function through
-     `POST /pipeline/run` in `backend/src/api/routes/pipeline.ts`.
+     `POST /pipeline/run` in `backend/src/api/routes/pipeline.ts`. That route
+     opens the run itself, answers at once (409 if a run is going, 429 over
+     the spend cap), and does the work in the background.
 3. **The run is opened.** `pipelineRuns.ts: startRun` refuses to start if
    this month's tracked AI cost has reached the cap (`checkSpendCeiling`).
+   Only costs recorded on runs count, and backups skip the check.
    It then inserts a `pipeline_runs` row with status `running`. A database
    index allows only one running row, so two runs can't overlap.
    `pipelineRuns.ts: trackRun` wraps the rest of the run. It counts tokens
@@ -75,8 +79,8 @@ flowchart TD
    tables into one long text: campaigns, keywords, search terms, ads,
    impression share and so on. It ends with a block of facts computed in SQL
    (`buildFactsContext`), such as rankings and totals, because models are bad
-   at arithmetic over tables. It also builds a 60-day history that only the
-   critic sees (`buildCriticHistoricalContext`).
+   at arithmetic over tables. It also builds a 60-day history that only
+   Anna's critic sees (`buildCriticHistoricalContext`).
 6. **Anna, Rico and Sammy run in order.** Each goes through
    `backend/src/agents/criticLoop.ts: runWithCritic`.
    - Anna (`backend/src/agents/anna.ts: analyze`) gets the 30-day context.
@@ -84,6 +88,11 @@ flowchart TD
      text.
    - Sammy (`backend/src/agents/sammy.ts: summarize`) gets Anna's and Rico's
      final texts.
+
+   Ciri grades each one against what that agent was given. So Anna is checked
+   against the data and the 60-day history, while Rico and Sammy are checked
+   only against the text they received. Anna uses `MODEL_MINI`; Rico, Sammy
+   and Ciri use `MODEL_FULL`.
 7. **The critic loop** (`criticLoop.ts: runCriticLoop`). See the diagram
    below.
    - The agent writes a first draft. It's saved in `ai_outputs` with
@@ -99,14 +108,16 @@ flowchart TD
      plus the exact issues (`backend/src/agents/revision.ts:
      buildRevisionInput`). The revision is saved with status `revised` and
      points at the draft it replaced (`revises_id`). Ciri reviews it again.
-   - After 2 revisions (`MAX_REVISIONS`), or if Ciri can't produce a
-     review, the last version is marked `flagged`. A flagged output is
-     still shown, with its issues.
+   - After 2 revisions (`MAX_REVISIONS`), if Ciri can't produce a review,
+     or if a revision comes back blank, the latest real version is marked
+     `flagged`. A flagged output is still shown, with its issues.
 8. **Every model call goes through one function.** `backend/src/agents/llm.ts:
    complete` (and `completeJson` for the critic's JSON) calls the model
    through an OpenAI-compatible gateway. If the answer comes back empty, it
    retries once with the same token budget, then once more with double the
-   budget when the first two ran out of room. `tracedCall`
+   budget when the first two ran out of room. `completeJson` retries once
+   with double the budget, and the critic treats a second failure as "no
+   review". `tracedCall`
    records each call as a trace step, with tokens, cost, and the full prompt
    and response.
 9. **The report goes out.** `backend/src/reporting/reports.ts:
@@ -114,7 +125,11 @@ flowchart TD
    `backend/src/platform/emailDelivery.ts: deliverReport` sends it to the
    address on the Settings page (or prints it if none is set). If anything
    threw, `runDaily.ts` sends a failure alert instead
-   (`reporting/reports.ts: formatFailureAlert`).
+   (`reporting/reports.ts: formatFailureAlert`). Two cases are handled
+   differently: a run already going is skipped quietly, and the spend cap
+   alerts once a month (`cronAlerts.ts: alertSpendCeilingOnce`). Only a
+   success counts as "ran today", so a failed run tries again on the next
+   tick, 15 minutes later.
 
 ```mermaid
 flowchart LR
@@ -197,7 +212,7 @@ sequenceDiagram
 3. **The question gets its context.** `backend/src/reporting/ask.ts: ask`
    loads the report output and picks the agent that wrote it, from its
    `agent_type`. It checks the conversation belongs to that output. Then it
-   rebuilds the same data context the pipeline used
+   rebuilds a 30-day data context with the pipeline's function
    (`context.ts: buildFullContext`) for the report's date, and adds the
    conversation's last 10 questions and answers (`buildConversationTranscript`).
 4. **The agent answers.** For example, `anna.ts: answerQuestion` calls
@@ -209,7 +224,7 @@ Things to know:
 - **No critic review.** Answers go straight back; Ciri only reviews pipeline
   outputs.
 - **Not in the Run Inspector.** Ask isn't part of a run, so `trace.ts`
-  records nothing for it.
+  records nothing for it, and its cost isn't tracked.
 - **The demo can't ask.** The demo login is read-only, so `POST /ask` gets
   a 403, and the Ask history is removed from the demo data.
 - **Aska is different.** The "Ask Aska" page is a general assistant, not
@@ -252,6 +267,8 @@ flowchart LR
    - `GET /config` (shows the Demo Mode badge);
    - the login route;
    - `authMiddleware`: every later route needs a token;
+   - `auditDemoLaunch` (`backend/src/api/routes/launches.ts`): a demo launch
+     attempt is written down before it's refused, the demo's one write;
    - `demoReadOnly` (`backend/src/api/authMiddleware.ts`): a demo token
      gets 403 on anything but a read, and on a few private reads such as
      stored prompts;
@@ -277,7 +294,8 @@ flowchart LR
 | Aska | The general voice and chat assistant on the "Ask Aska" page. | `backend/src/agents/assistant.ts` |
 | Emil | The email sender. Not a model. | `backend/src/platform/emailDelivery.ts` |
 
-Each agent's spec is in `docs/planning/original-build/agents/`.
+The specs for Orca, Damon, Anna, Rico, Sammy and Ciri are in
+`docs/planning/original-build/agents/`.
 
 ### Pipeline terms
 
@@ -313,11 +331,12 @@ Each agent's spec is in `docs/planning/original-build/agents/`.
 - **Spend ceiling (spend cap):** the monthly AI-cost limit from the
   Settings page. A run refuses to start once it's reached
   (`pipelineRuns.ts: checkSpendCeiling`).
-- **Dead-man's switch:** an alert when no run has succeeded for 30 hours,
-  which catches the schedule itself going quiet
+- **Dead-man's switch:** an alert when no daily, backup or keyword run has
+  finished for 30 hours, which catches the schedule itself going quiet
   (`cronAlerts.ts: checkDeadMansSwitch`).
-- **Orphaned run:** a run left `running` by a crash. Marked failed on the
-  next start (`pipelineRuns.ts: reconcileOrphanedRuns`).
+- **Orphaned run:** a run left `running` by a crash. Marked failed by the
+  next cron tick or API start once it's 30 minutes old
+  (`pipelineRuns.ts: reconcileOrphanedRuns`).
 - **Partial:** a run that finished but with a step degraded. For example,
   the optimizer stored its suggestions but Kai was unreachable.
 - **Redaction:** removing keys and secrets from text before it's stored
@@ -431,13 +450,33 @@ Every number in [the case study](case-study.md) comes from a CSV.
   a query, every CSV the case study links to exists, and `SNAPSHOT` isn't
   empty.
 
+## Known gaps
+
+All reported as bugs to the project's session.
+
+- **Demo block ignores case:** `DEMO_BLOCKED_GET` matches lower-case paths
+  only, but Express routes ignore case. A demo token asking for
+  `/TRACE/events/1/payloads` gets the stored prompts.
+- **Critic issues can vanish:** `critic.ts: normalizeVerdict` drops an issue
+  with no `quote`, even a high-severity one. With a grade of A to C, the
+  output is then approved.
+- **Failed emails look sent:** `emailDelivery.ts: sendViaResend` ignores the
+  error Resend returns, so a refused send is recorded as `sent`.
+- **Ask and voice costs:** `recordUsage` only counts calls inside a run, so
+  these calls don't count towards the spend cap.
+
 ## Where to change things
 
+- **Run the checks** (the same ones CI runs):
+  `npm ci`, `npm run build -w backend`, `npm run test:backend`,
+  `npm run typecheck -w frontend`, `npm run test:frontend`,
+  `npm run build -w frontend`.
 - **An agent's prompt:** the `SYSTEM_PROMPT` in its file in
   `backend/src/agents/`. Rules shared by all agents are in `prompts.ts`.
 - **The critic's rubric or approval rule:** `GRADING_RUBRIC` and
   `decideApproval` in `backend/src/agents/critic.ts`. The tests are in
-  `critic.test.ts`.
+  `critic.test.ts`. Keep the rubric the same as the text the Learning page
+  shows (`learning.grades` in `frontend/src/i18n/en.ts` and `id.ts`).
 - **How many revisions:** `MAX_REVISIONS` in `backend/src/agents/criticLoop.ts`.
 - **Which model an agent uses:** `MODEL_MINI` and `MODEL_FULL` in
   `backend/src/agents/llm.ts`; each agent picks one.
