@@ -9,10 +9,10 @@
 # so this is correct regardless of what timezone the VPS's own OS is set
 # to — "6am" always means 6am in Indonesia.
 
-*/15 * * * * /path/to/pitcrew-ai-backend/deploy/run_daily.sh
+*/15 * * * * /path/to/pitstop/backend/deploy/run_daily.sh
 
 # DB backup — runs before the earliest possible daily-pipeline fire time
 # so a bad run never overwrites the last known-good backup window.
 # Requires `postgresql-client` installed on the host (apt install
 # postgresql-client) for pg_dump.
-30 5 * * * cd /path/to/pitcrew-ai-backend && node dist/scripts/backupDb.js >> logs/backup.log 2>&1
+30 5 * * * cd /path/to/pitstop/backend && node dist/scripts/backupDb.js >> logs/backup.log 2>&1

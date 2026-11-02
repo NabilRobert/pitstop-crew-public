@@ -90,7 +90,7 @@ The scheduled scripts (`run_daily.sh`) are cron-driven, but the REST API
 manager so it survives reboots and crashes:
 ```bash
 npm install -g pm2
-pm2 start dist/src/api/main.js --name pitcrew-api
+pm2 start dist/src/api/main.js --name pitstop-api
 pm2 save
 pm2 startup   # follow the printed instructions to survive reboots
 ```
