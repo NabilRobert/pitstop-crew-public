@@ -38,7 +38,10 @@ const DEMO_BLOCKED_GET = [
 export function demoReadOnly(req: Request, res: Response, next: NextFunction) {
   if (res.locals.role !== 'demo') return next()
   const readOnlyMethod = req.method === 'GET' || req.method === 'HEAD'
-  if (!readOnlyMethod || DEMO_BLOCKED_GET.some((re) => re.test(req.path))) {
+  // Express routes ignore case but these patterns don't, so match on the
+  // lower-cased path: /TRACE/... must not reach a route /trace/... blocks.
+  const path = req.path.toLowerCase()
+  if (!readOnlyMethod || DEMO_BLOCKED_GET.some((re) => re.test(path))) {
     res.status(403).json({ detail: 'This demo account is read-only.' })
     return
   }
