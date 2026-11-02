@@ -271,11 +271,12 @@ flowchart LR
      attempt is written down before it's refused, the demo's one write;
    - `demoReadOnly` (`backend/src/api/authMiddleware.ts`): a demo token
      gets 403 on anything but a read, and on a few private reads such as
-     stored prompts;
+     stored prompts, however the path is capitalised;
    - the routes in `backend/src/api/routes/`.
 7. **It's checked.** `deploy/demo/verify.py` calls every route as the demo
-   user, checks that every write is refused, that no model was called, that
-   the containers hold no keys, and that the data loaded. CI builds both
+   user. It checks that every write and private read is refused, that no
+   model was called, that the containers hold no keys, and that the data
+   loaded. CI builds both
    images and validates the Caddyfile.
 
 ## Glossary
@@ -454,8 +455,6 @@ Every number in [the case study](case-study.md) comes from a CSV.
 
 All reported as bugs to the project's session.
 
-- **Demo read limits:** `DEMO_BLOCKED_GET` has a gap, reported privately.
-  The details stay out of this public guide until it's fixed.
 - **Critic issues can vanish:** `critic.ts: normalizeVerdict` drops an issue
   with no `quote`, even a high-severity one. With a grade of A to C, the
   output is then approved. A problem Ciri writes only in her feedback
@@ -464,6 +463,9 @@ All reported as bugs to the project's session.
   error Resend returns, so a refused send is recorded as `sent`.
 - **Ask and voice costs:** `recordUsage` only counts calls inside a run, so
   these calls don't count towards the spend cap.
+- **Failed daily runs repeat:** `runDaily.ts: alreadyRanToday` counts only
+  a success, so after a failure each 15-minute tick runs it again and sends
+  another alert. `keywordBlock` guards against this; `reportsBlock` doesn't.
 
 ## Where to change things
 
