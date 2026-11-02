@@ -147,6 +147,9 @@ JOURNEY.md      the log of turning the prototype into this case study
 
 ## Docs
 
+- [docs/guide.md](docs/guide.md): a plain-English guide to the code. It
+  follows one pipeline run, the Ask feature and the demo stack, and has a
+  glossary.
 - [docs/case-study.md](docs/case-study.md): how it ran, what went wrong,
   and what each fix measurably changed.
 - [docs/evidence/](docs/evidence/): the result behind every number in the
