@@ -454,12 +454,12 @@ Every number in [the case study](case-study.md) comes from a CSV.
 
 All reported as bugs to the project's session.
 
-- **Demo block ignores case:** `DEMO_BLOCKED_GET` matches lower-case paths
-  only, but Express routes ignore case. A demo token asking for
-  `/TRACE/events/1/payloads` gets the stored prompts.
+- **Demo read limits:** `DEMO_BLOCKED_GET` has a gap, reported privately.
+  The details stay out of this public guide until it's fixed.
 - **Critic issues can vanish:** `critic.ts: normalizeVerdict` drops an issue
   with no `quote`, even a high-severity one. With a grade of A to C, the
-  output is then approved.
+  output is then approved. A problem Ciri writes only in her feedback
+  doesn't reach `decideApproval` either.
 - **Failed emails look sent:** `emailDelivery.ts: sendViaResend` ignores the
   error Resend returns, so a refused send is recorded as `sent`.
 - **Ask and voice costs:** `recordUsage` only counts calls inside a run, so
