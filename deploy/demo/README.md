@@ -1,7 +1,7 @@
 # Read-only demo
 
 Pitstop's public demo: the real run history (on synthetic ad data), behind a
-read-only login given on request. It can't spend money. There are no model,
+read-only login. It can't spend money. There are no model,
 Google Ads, voice or email keys, no crontab, and the demo account is refused
 every write. `verify.py` checks all of that against the running stack.
 
@@ -13,7 +13,6 @@ What's in the data:
 - **Real:** the run history on top of it. That's the agents' drafts, the
   critiques and the traces the system produced on its schedule, cleaned by
   [`clean.sql`](clean.sql) (below) before the seed is built.
-- The domain uses Pitstop's working name, "pitcrew".
 
 | Container | What | Limits |
 |---|---|---|

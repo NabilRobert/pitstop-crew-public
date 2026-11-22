@@ -2,27 +2,33 @@
 
 [![CI](https://github.com/NabilRobert/pitstop-crew-public/actions/workflows/ci.yml/badge.svg)](https://github.com/NabilRobert/pitstop-crew-public/actions/workflows/ci.yml)
 
-An AI performance dashboard for Google Ads. A small team of LLM agents
-reads an account's stored performance data and writes the analysis. It
-turns that into recommendations and summarises the result. A fourth agent,
-the critic, reviews every output before anyone sees it.
+An AI performance dashboard for Google Ads, and a case study of an agent
+system; the data is synthetic. A small team of LLM agents reads an
+account's stored performance data, writes the analysis, turns it into
+recommendations and summarises the result. A fourth agent, the critic,
+reviews every output before anyone sees it.
+
+Google Ads' own Recommendations tab leans towards spending more. Pitstop
+gives the owner of a small account an analysis that isn't selling
+anything: what changed, why, and what to do about it, with the evidence
+attached.
 
 ![Dashboard overview](docs/images/dashboard-overview.webp)
 
-- **Live demo:** https://pitcrew-public.my.id. It runs in demo mode on
-  synthetic data, and a read-only account is available on request.
-- **Status:** built as a commissioned prototype for a used-car
-  dealership's Google Ads, from August to October 2026. It ran unattended
-  on a daily schedule. The project was shelved before launch, and I've
-  published it as a case study.
+**Live demo:** https://pitcrew-public.my.id, read-only and behind a login.
 
-## Why it exists
+## The result
 
-Google Ads' own Recommendations tab leans towards spending more. Its
-Optimization Score only rises when you accept changes that expand spend,
-whatever they do to cost per lead. Pitstop gives the owner of a small
-account an analysis that isn't selling anything. It shows what changed,
-why, and what to do about it, with the evidence attached.
+It ran unattended on a schedule, making live model calls: 65 of 68
+daily-pipeline runs, scheduled or started by hand, succeeded. Measuring it
+afterwards showed that its own quality chart **understated failures about
+threefold**: it showed 32.5% of August's outputs flagged, when 95.0% of
+the final versions were.
+
+The [case study](docs/case-study.md) covers how it ran, what went wrong,
+what each fix measurably changed, and what is and isn't real. Every number
+comes from a SQL query over the system's own records
+([docs/evidence/](docs/evidence/)).
 
 ## How it works
 
@@ -32,76 +38,18 @@ Google Ads data ──► Postgres ──► Anna (analysis) ──► Rico (rec
                                     └──── Ciri, the critic: approve / revise / flag ┘
 ```
 
-- **Data layer.** It stores a trailing window of account data in
-  Postgres, so trends come from history rather than live snapshots. Facts
-  like rankings, totals and impression-share splits are computed in SQL
-  and handed to the agents as facts. Models are worst at arithmetic over
-  tables.
-- **The critic.** Ciri reviews each agent's output against what that agent
-  was actually given, and can send it back for revision, at most twice.
-  **Code decides approval, not the model:** each issue carries a severity,
-  and an output passes only if there are no high-severity issues.
-- **Every claim can be traced.** Each report section has a "why" trail:
-  draft, critique, revision.
-- **The Run Inspector** records every run as a nested trace: the data it
-  read, every model call with its full prompt and response, each critic
-  review, and the decision that followed.
-- **A keyword optimizer** turns keyword and search-term data into ranked
-  suggestions: negatives, pauses, match-type changes and new keywords.
-  - The ranking engine is deterministic and tested against planted
-    problems with known answers.
-  - Ad copy is built from templates and checked in code: length limits,
-    and only claims the account can back up.
-- **A weekly feedback job** (shown on the Learning page) reads recurring patterns in the
-  critic's reviews and drafts prompt changes. They are never applied
-  automatically.
-
-## Running it unattended
-
-The project is as much about operating agents as building them:
-
-- **A monthly spend ceiling.** The pipeline refuses to start a run once
-  the month's tracked AI cost passes the cap. It doesn't just alert
-  afterwards.
-- **A dead-man's switch.** It catches the schedule itself going quiet, not
-  only runs that fail.
-- **Loud failures.** An empty model response retries with a larger budget,
-  then fails the run and sends an alert. It is never saved as a blank
-  draft.
-- **Recovery.** Daily backups with retention, and automatic recovery from
-  a run orphaned by a crash.
-- **Read-only demo access is enforced on the server.** A demo login gets
-  a 403 on anything but a read; the buttons aren't just hidden.
-
-## What's real and what isn't
-
-- **Real:** the agent pipeline, the critic loop and its grading, cost
-  tracking, the Run Inspector and the operations tooling. They ran on a
-  schedule, making live model calls.
-- **Synthetic:** the ad data. A seeded generator produces an account with
-  deliberate patterns for the agents to find: a declining campaign, a
-  seasonal spike and an outperforming segment. The UI labels it.
-- **Built but not used on a real account:** the live Google Ads path. It
-  reaches the API correctly, but the developer token was never approved
-  beyond test access.
-- **Single-user:** one owner login plus an optional read-only demo login.
-  No multi-tenancy.
-- **Names and places:** Pitstop was built under the working name
-  "pitcrew". That name survives in the demo's address and in a few
-  identifiers, such as the "Pitcrew ad #…" names on simulated launches.
-  The demo's dealer ("Pitstop Used Cars") and its stock are generated too.
-  The cities and suburbs in the data come from the generator's fixed
-  profile. They give the made-up dealer a realistic market, and are
-  illustrative.
-
-The full write-up is in [docs/case-study.md](docs/case-study.md): how it
-ran, what went wrong, and what each fix measurably changed. Every number
-in it comes from a SQL query over the system's own records, in
-[docs/evidence/](docs/evidence/).
+- **Code decides approval, not the model.** The critic gives each issue a
+  severity, and an output with a high-severity issue doesn't pass.
+- **SQL computes the facts.** Rankings and totals reach the agents already
+  worked out, because models are worst at arithmetic over tables.
+- **Every claim can be traced.** Each report section shows its draft,
+  critique and revision, and the Run Inspector records every model call.
+- **A keyword optimizer** ranks suggestions with a deterministic engine,
+  tested against planted problems with known answers.
 
 ## Run it locally
 
-You need Node.js 20+ and a Postgres database. Without Google Ads or model
+You need Node.js 20+ and a Postgres database. With no Google Ads
 credentials it runs in demo mode (`DATA_SOURCE=demo`).
 
 ```bash
@@ -113,60 +61,31 @@ npm run dev:backend                                  # API on :8000
 npm run dev:frontend                                 # UI on :5173
 ```
 
-Running a pipeline makes paid model calls, so it needs a model API key in
-`.env`. It uses Sumopod, an OpenAI-compatible gateway, by default. To call
-OpenAI directly instead, set `SUMOPOD_BASE_URL=https://api.openai.com/v1`
-and put an OpenAI key in `sumopod-api-key` (the variable that holds the
-model gateway's key). No code changes are needed. To look at the UI with no backend and no keys, run
-`npm run mock-api -w frontend`, which serves test data on `:8000`.
+Running a pipeline makes paid model calls, through any OpenAI-compatible
+endpoint: set its URL and key in `.env`. To look at the UI with no backend
+and no keys, run `npm run mock-api -w frontend`, which serves test data on
+`:8000`.
 
-## Tests
-
-```bash
-npm run test:backend     # Vitest: 388 tests
-npm run test:frontend    # 22 checks: render the real pages against a mocked API
-npm run typecheck -w frontend
-```
-
-The backend tests focus on the logic where a silent bug would matter
-most: the critic's approval decision, secret redaction, the spend
-ceiling, and the keyword optimizer's ranking.
+Tests: `npm run test:backend`, `npm run test:frontend` and
+`npm run typecheck -w frontend`.
 
 ## Layout
 
 ```
-backend/src/    agents/ · pipeline/ · data/ (ingestion, demo generator) · reporting/ · platform/ (config, auth, tracing, redaction) · api/
-backend/deploy/ how the API ran on a schedule: crontab, log rotation, the cron wrapper
-frontend/src/   app/ (shell) · features/ (one folder per page) · shared/
+backend/        the API, agents, pipeline and keyword optimizer (TypeScript, Express, Postgres)
+frontend/       the dashboard (Vue 3, Vite, Tailwind)
 db/             the database schema
-evidence/       the SQL behind every number in the case study (results in docs/evidence/)
-deploy/demo/    the read-only demo: containers, data cleaning, and the zero-spend check
-docs/           the case study, its evidence, screenshots, the user manual, and every plan and spec (docs/planning/)
-JOURNEY.md      the log of turning the prototype into this case study
+evidence/       the SQL behind every number in the case study
+deploy/demo/    the read-only demo stack, and the check that it can't spend money
+docs/           the guide, case study, evidence, user manual and planning docs
 ```
 
 ## Docs
 
-- [docs/guide.md](docs/guide.md): a plain-English guide to the code. It
-  follows one pipeline run, the Ask feature and the demo stack, and has a
+- [docs/guide.md](docs/guide.md): a plain-English guide to the code, with a
   glossary.
-- [docs/case-study.md](docs/case-study.md): how it ran, what went wrong,
-  and what each fix measurably changed.
-- [docs/evidence/](docs/evidence/): the result behind every number in the
-  case study, with the queries in [evidence/queries/](evidence/queries/).
-- [JOURNEY.md](JOURNEY.md): the log of the case-study work, in order.
-- [docs/planning/](docs/planning/): every spec and plan. That's the
-  case-study plan, plus the original build's design doc, agent specs, and
-  v2 and v3 plans.
-- [deploy/demo/README.md](deploy/demo/README.md): the read-only demo
-  stack, and how it's proven to spend nothing.
-- [backend/deploy/README.md](backend/deploy/README.md): how the API ran
-  unattended on its own server.
-- [docs/manual/](docs/manual/): the user manual, in Indonesian
-  ([HTML](docs/manual/panduan.html), [PDF](docs/manual/Pitstop-Panduan-Pengguna.pdf)).
-
-## Stack
-
-TypeScript throughout. Node and Express on the backend, with Postgres and
-the official OpenAI SDK, pointed at Sumopod or any OpenAI-compatible
-endpoint. Vue 3, Vite and Tailwind on the frontend.
+- [docs/case-study.md](docs/case-study.md): the full write-up.
+- [deploy/demo/README.md](deploy/demo/README.md): the demo stack.
+- [docs/manual/](docs/manual/): the user manual, in Indonesian.
+- [docs/planning/](docs/planning/): every spec and plan, and
+  [JOURNEY.md](JOURNEY.md), the log of the case-study work.

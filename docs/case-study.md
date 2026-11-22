@@ -5,9 +5,8 @@ reads the account's stored performance data and writes an analysis. It
 turns that into recommendations and summarises the result. A fourth
 agent, the critic, grades every output before anyone sees it.
 
-It was built as a commissioned prototype for a used-car dealership's
-Google Ads. The project was shelved before launch, and I've published it
-as a case study.
+It's a case study of an agent system. It ran unattended on a daily
+schedule, on synthetic data, and was never used on a real account.
 
 This write-up covers what was built, how it behaved while it ran, and what
 went wrong. Every number in it comes from a query over the system's own
@@ -17,7 +16,7 @@ ad data was synthetic throughout;
 see [What is and isn't real](#what-is-and-isnt-real).
 
 - **Live demo:** https://pitcrew-public.my.id. It runs on synthetic data,
-  read-only, with a login available on request.
+  read-only, behind a login.
 - **Code:** this repo. The design rationale is in
   [the original design doc](planning/original-build/design-doc.md), and the
   per-agent specs are in
@@ -64,11 +63,9 @@ Pitstop is the opposite:
   data it read, every model call with its full prompt and response, each
   critic review, and the decision that followed. Secrets are redacted
   before anything is stored, and prompt text is kept for 30 days.
-- **Operations:**
-  - scheduled runs, with failure alerts by email;
-  - a dead-man's switch for when the schedule itself doesn't fire;
-  - a monthly spend ceiling that refuses to start a run;
-  - a live console and a System Health page.
+- **Operations:** scheduled runs with failure alerts by email, a live
+  console and a System Health page. See
+  [Running it unattended](#running-it-unattended).
 - **A keyword optimizer** turns keyword and search-term data into ranked
   suggestions, tied to the dealer's stock: negatives, promotions, pauses,
   match-type changes, new keywords and campaign ideas. Code finds the
@@ -81,6 +78,26 @@ Pitstop is the opposite:
   - "Creating" a campaign is simulated. It's written paused into the
     app's own tables, labelled SIMULATED, and audited. It never reaches
     Google Ads.
+
+## Running it unattended
+
+The project is as much about operating agents as building them:
+
+- **A monthly spend ceiling.** The pipeline refuses to start a run once
+  the month's tracked AI cost passes the cap. It doesn't just alert
+  afterwards.
+- **A dead-man's switch.** It catches the schedule itself going quiet, not
+  only runs that fail.
+- **Loud failures.** An empty model response retries with a larger budget,
+  then fails the run and sends an alert. It is never saved as a blank
+  draft.
+- **Recovery.** A run orphaned by a crash is marked failed automatically.
+- **Read-only demo access is enforced on the server.** A demo login gets
+  a 403 on anything but a read; the buttons aren't just hidden.
+
+The backend tests focus on the logic where a silent bug would matter most:
+the critic's approval decision, secret redaction, the spend ceiling, and
+the keyword optimizer's ranking.
 
 ## How it ran, by the numbers
 
@@ -229,7 +246,9 @@ because of the rule change in item 2, which is counted there.
 
 - **Synthetic:** the ad data. A seeded generator produces an account with
   deliberate patterns for the agents to find: a declining campaign, a
-  seasonal spike and an outperforming segment. The UI labels it.
+  seasonal spike and an outperforming segment. The UI labels it. The
+  advertiser and its stock are generated too, and the places named are
+  illustrative.
 - **Built but never run on a real account:** the live Google Ads path. It
   reaches Google correctly and stops at `DEVELOPER_TOKEN_NOT_APPROVED`,
   because the developer token never got beyond test access.
@@ -238,6 +257,7 @@ because of the rule change in item 2, which is counted there.
   model calls. That's what every number above measures.
 - **Simulated:** the ad launch. The real Google Ads write path isn't built.
 - **Single-user:** one owner login, plus an optional read-only demo login.
+  No multi-tenancy.
 
 ## What I'd do next
 
