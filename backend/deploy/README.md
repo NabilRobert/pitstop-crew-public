@@ -1,6 +1,6 @@
 # Deploying the API (VPS)
 
-How the API ran on its own server, on a schedule.
+How the API ran on its own server, on a schedule, from August to October 2026.
 The public demo now runs as containers instead: see
 [`deploy/demo/README.md`](../../deploy/demo/README.md). The design doc's
 "Deployment" section is in
@@ -20,8 +20,8 @@ npm run build   # compiles src/ + scripts/ to dist/ — the deploy scripts run t
 
 ## 3. Environment variables
 Copy `.env.example` to `.env` (both at repo root) and fill in every value
-— same credentials already in use locally (database connection string,
-model API key, Google Ads credentials, email provider). `.env` is
+— same credentials already in use locally (Sumopod DB connection string,
+Sumopod AI key, Google Ads credentials, email provider). `.env` is
 gitignored; it has to be created fresh on the VPS, not committed.
 
 ## 4. Verify before scheduling anything

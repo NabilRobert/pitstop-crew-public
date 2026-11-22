@@ -10,8 +10,10 @@ Pitstop is an AI performance dashboard for Google Ads. A small team of
 LLM agents reads an account's stored performance data, writes an
 analysis, turns it into recommendations and summarises the result. A
 fourth agent, the critic, reviews every output before anyone sees it.
-It's a case study of an agent system: it ran unattended on a daily
-schedule, and all the ad data in it is synthetic.
+It was built as a commissioned prototype for a used-car dealership's
+Google Ads from August to October 2026, ran unattended on a daily
+schedule, and was shelved before launch. All the ad data in it is
+synthetic.
 
 Each agent has a person's name (Anna, Rico, Sammy, Ciri and so on). The
 [glossary](#glossary) says who is who.
@@ -372,7 +374,7 @@ The specs for Orca, Damon, Anna, Rico, Sammy and Ciri are in
   Strings are in `frontend/src/i18n/en.ts` and `id.ts`; `setLocale` in
   `i18n/index.ts` switches. Reports have their own language setting,
   `report_language`.
-- **Model gateway:** the OpenAI-compatible endpoint the model calls go to
+- **Sumopod:** the OpenAI-compatible gateway the model calls go through
   (`agents/llm.ts: getClient`). `MODEL_MINI` and `MODEL_FULL` name the two
   models used.
 

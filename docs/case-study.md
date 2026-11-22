@@ -5,8 +5,9 @@ reads the account's stored performance data and writes an analysis. It
 turns that into recommendations and summarises the result. A fourth
 agent, the critic, grades every output before anyone sees it.
 
-It's a case study of an agent system. It ran unattended on a daily
-schedule, on synthetic data, and was never used on a real account.
+It was built as a commissioned prototype for a used-car dealership's
+Google Ads. The project was shelved before launch, and I've published it
+as a case study.
 
 This write-up covers what was built, how it behaved while it ran, and what
 went wrong. Every number in it comes from a query over the system's own
@@ -16,7 +17,7 @@ ad data was synthetic throughout;
 see [What is and isn't real](#what-is-and-isnt-real).
 
 - **Live demo:** https://pitcrew-public.my.id. It runs on synthetic data,
-  read-only, behind a login.
+  read-only, with a login available on request.
 - **Code:** this repo. The design rationale is in
   [the original design doc](planning/original-build/design-doc.md), and the
   per-agent specs are in
@@ -63,9 +64,11 @@ Pitstop is the opposite:
   data it read, every model call with its full prompt and response, each
   critic review, and the decision that followed. Secrets are redacted
   before anything is stored, and prompt text is kept for 30 days.
-- **Operations:** scheduled runs with failure alerts by email, a live
-  console and a System Health page. See
-  [Running it unattended](#running-it-unattended).
+- **Operations:**
+  - scheduled runs, with failure alerts by email;
+  - a dead-man's switch for when the schedule itself doesn't fire;
+  - a monthly spend ceiling that refuses to start a run;
+  - a live console and a System Health page.
 - **A keyword optimizer** turns keyword and search-term data into ranked
   suggestions, tied to the dealer's stock: negatives, promotions, pauses,
   match-type changes, new keywords and campaign ideas. Code finds the
@@ -246,9 +249,7 @@ because of the rule change in item 2, which is counted there.
 
 - **Synthetic:** the ad data. A seeded generator produces an account with
   deliberate patterns for the agents to find: a declining campaign, a
-  seasonal spike and an outperforming segment. The UI labels it. The
-  advertiser and its stock are generated too, and the places named are
-  illustrative.
+  seasonal spike and an outperforming segment. The UI labels it.
 - **Built but never run on a real account:** the live Google Ads path. It
   reaches Google correctly and stops at `DEVELOPER_TOKEN_NOT_APPROVED`,
   because the developer token never got beyond test access.
@@ -258,6 +259,9 @@ because of the rule change in item 2, which is counted there.
 - **Simulated:** the ad launch. The real Google Ads write path isn't built.
 - **Single-user:** one owner login, plus an optional read-only demo login.
   No multi-tenancy.
+- **Names and places:** the advertiser and its stock are generated too. The
+  places in the data come from the generator's fixed profile, and are
+  illustrative.
 
 ## What I'd do next
 

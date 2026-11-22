@@ -15,7 +15,8 @@ attached.
 
 ![Dashboard overview](docs/images/dashboard-overview.webp)
 
-**Live demo:** https://pitcrew-public.my.id, read-only and behind a login.
+**Live demo:** https://pitcrew-public.my.id. It runs in demo mode on
+synthetic data, and a read-only account is available on request.
 
 ## The result
 
